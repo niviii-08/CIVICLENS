@@ -731,6 +731,23 @@ FIXTURE_CLAIMS: List[Dict[str, Any]] = [
     }
 ]
 
+# Real integrated claims loaded from disk if available
+import os
+import json
+REAL_INTEGRATED_CLAIMS: List[Dict[str, Any]] = []
+_real_claims_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "phase7", "real_claims_integrated.json")
+if os.path.exists(_real_claims_path):
+    try:
+        with open(_real_claims_path, "r", encoding="utf-8") as _f:
+            REAL_INTEGRATED_CLAIMS = json.load(_f)
+    except Exception:
+        pass
+
+ALL_CLAIMS_REGISTRY: List[Dict[str, Any]] = list(FIXTURE_CLAIMS) + [
+    c for c in REAL_INTEGRATED_CLAIMS if c["claim_id"] not in {x["claim_id"] for x in FIXTURE_CLAIMS}
+]
+
+
 
 def _filter_fixture_claims(claims: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
     filtered = []
@@ -807,13 +824,13 @@ def load_all_claims(filters: Dict[str, Any], use_fixtures_only: bool = False) ->
     except Exception:
         pass
 
-    # Fallback to verified fixtures
-    filtered = _filter_fixture_claims(FIXTURE_CLAIMS, filters)
+    # Fallback to verified fixtures and real integrated registry
+    filtered = _filter_fixture_claims(ALL_CLAIMS_REGISTRY, filters)
     return filtered, True
 
 
 def find_claim_by_id(claim_id: str, use_fixtures_only: bool = False) -> Tuple[Optional[Dict[str, Any]], bool]:
-    """Finds single claim detail via API, falls back to fixtures."""
+    """Finds single claim detail via API, falls back to registry."""
     if not use_fixtures_only:
         try:
             ok, res = api_client.get_claim_detail(claim_id)
@@ -822,8 +839,9 @@ def find_claim_by_id(claim_id: str, use_fixtures_only: bool = False) -> Tuple[Op
         except Exception:
             pass
 
-    # Check fixtures
-    for c in FIXTURE_CLAIMS:
+    # Check registry
+    for c in ALL_CLAIMS_REGISTRY:
         if c["claim_id"] == claim_id:
             return c, True
     return None, True
+

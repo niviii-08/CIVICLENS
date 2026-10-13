@@ -1,0 +1,1148 @@
+[
+  {
+    "claim_id": "CLM-REAL-TN-001",
+    "original_text": "5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு மடிக்கணினி வழங்கப்படும்.",
+    "normalized_text": "5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு மடிக்கணினி வழங்கப்படும்.",
+    "claim_category": "GOVERNMENT_SCHEMES",
+    "language": "ta",
+    "speaker_name": "N. Marie Wilson",
+    "speaker_role": "Minister for Finance and Human Resources",
+    "party": "TVK",
+    "claim_date": "2026-08-05",
+    "publication_date": "2026-08-05",
+    "candidate_source_type": "LEGISLATIVE_RECORD",
+    "attribution_type": "DIRECT_QUOTE",
+    "claim_source_url": "https://www.nakkheeran.in/24-by-7-news/budget-2026-key-annou",
+    "source_document_id": "DOC-NEWS-CL-A-0001",
+    "geographic_scope": "Tamil Nadu",
+    "extraction_method": "MANUAL_CURATION",
+    "status": "VERIFIED",
+    "review_status": "PENDING_REVIEW",
+    "is_human_reviewed": false,
+    "reviewer_role": null,
+    "reviewer_name": null,
+    "review_notes": null,
+    "verification": {
+      "outcome": "insufficient_evidence",
+      "explanation": "Insufficient evidence available in indexed statutory archives, legislative records, or official gazettes. Absence of evidence is not proof that the statement is false.\n\nProposition Breakdown:\nPart 1 ['5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு மடிக்கணினி வழங்கப்படும்.']: UNRESOLVED. No conclusive empirical or statutory record identified.",
+      "methodology": "CIVICLENS_VERIFICATION_METHODOLOGY_V1",
+      "limitations": "Provisional public records subject to ongoing official gazette updates.",
+      "supporting_evidence_ids": [],
+      "contradicting_evidence_ids": [],
+      "source_diversity": 4,
+      "confidence": 0.2,
+      "verification_timestamp": "2026-10-13 15:53:30",
+      "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent."
+    },
+    "atomic_claims": [
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-001-01",
+        "atomic_claim_text": "5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு மடிக்கணினி வழங்கப்படும்.",
+        "language": "ta",
+        "subject": "Tamil Nadu",
+        "predicate": "asserts",
+        "object": "5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு மடிக்கணினி வழங்கப்படும்.",
+        "numeric_value": 5.32,
+        "unit": "units",
+        "time_period": null,
+        "claim_type": "NUMERICAL_STATISTIC",
+        "is_verifiable": true,
+        "confidence": 0.95
+      }
+    ],
+    "relationships": [
+      {
+        "evidence_document_id": "EVD-CL-A-0001",
+        "evidence_title": "பட்ஜெட் 2026 : கவனம் பெற்ற முக்கிய அறிவிப்புகள்!",
+        "publisher": "Nakkheeran",
+        "relationship_type": "unrelated",
+        "relevant_passage": "தமிழக நிதி அமைச்சர் மரிய வில்சன் தவெக அரசின் முதல் பட்ஜெட்டை இன்று (05.08.2026) தாக்கல் செய்து பல்வேறு அறிவிப்புகளை வெளியிட்டார். அதில், “5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு 2026-27 கல்வியாண்டில் அரசு மற்றும் அரசு நிதியுதவி பெறும் பள்ளிகளில் ஹெல்மெட் & வாட்டர் பாட்டில் வசதியுடன் நவீன மிதிவண்",
+        "source_url": "https://www.nakkheeran.in/24-by-7-news/budget-2026-key-announcements-that-grabbed-attention-12231412",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0002",
+        "evidence_title": "தவெக கூட்டணி அரசின் முதல் பட்ஜெட்|2036-க்குள் 1.5 டிரில்லியன் டாலர் பொருளாதார இலக்கு - மகளிர், மாணவர் மற்றும் இளைஞர் நலனுக்காக மெகா திட்டங்கள்!",
+        "publisher": "ETV Bharat (Tamil)",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Published : August 5, 2026 at 2:03 PM IST சென்னை: \"2036 ஆம் ஆண்டிற்குள் தமிழ்நாட்டை 1.5 டிரில்லியன் டாலர் பொருளாதாரமாக மாற்றுவதே இலக்கு\" என்ற பிரகடனத்துடன், டெண்டர் முறைகேடுகளை ஒழிக்கும் அதிரடி சீர்திருத்தங்கள், மாணவர்கள், பெண்கள், இளைஞர்களுக்கான புதிய திட்டங்களுடன் கூடிய தவெக கூட்டணி அரசின் முதல் ப",
+        "source_url": "https://www.etvbharat.com/ta/state/tvk-governments-maiden-budget-2026-focus-on-welfare-schemes-education-and-infrastructure-amid-rs-dot-13-dot-18-lakh-crore-debt-burden-tns26080502863",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0180",
+        "evidence_title": "தாறுமாறாக ஓடிய கார் விபத்து: பள்ளி மாணவன் பலி, காரில் பாம்பு உள்ளிட்ட பிராணிகள். Schoolboy Killed in Car Crash: Snake and Exotic Animals Found Inside Vehicle.",
+        "publisher": "Maalaimalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "திருச்சி மாவட்டம் மணப்பாறையை  அடுத்த  கரட்டுப்பட்டி கருங்குளத்தை சேர்ந்த சிறுவன்  ஜான்சன் (வயது 16). அங்குள்ள பள்ளியில் 11-ம் வகுப்பு படித்து வந்தார். மீன் வியாபாரியான இவரது தந்தை கடந்த சில மாதங்களுக்கு முன்பு இறந்து விட்டதால், விடுமுறை நாளான ஞாயிற்றுக்கிழமை மட்டும் ஜான்சன் மீன் வியாபாரம் செய்து வந்",
+        "source_url": "https://www.maalaimalar.com/news/tamilnadu/car-accident-student-death-police-inquiry",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0186",
+        "evidence_title": "திருப்பூர் கொலை: பழுதான செல்போனுக்கு பணம் திருப்பி தர மறுத்ததால் மாணவர் கொலை. Tiruppur Murder: Student killed over refusal to refund money for faulty phone.",
+        "publisher": "Maalaimalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "திருப்பூர், ஏ.பி.டி., ரோடு, இந்திரா நகரை சேர்ந்த வெள்ளியங்கிரி மகன் ஸ்ரீஹரி. தனியார் கல்லூரி இரண்டாமாண்டு மாணவர். நேற்று மதியம், ஸ்ரீஹரி தன் வீட்டருகே நடந்து சென்றபோது, அவரை பின்தொடர்ந்து வந்த நபர், திடீரென அரிவாளால் சரமாரியாக வெட்டி கொலை செய்தார். பட்டப்பகலில் நடந்த இச்சம்பவம் அப்பகுதியில் பரபரப்பை",
+        "source_url": "https://www.maalaimalar.com/news/tamilnadu/youth-murder-case-police-inquiry-3",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0201",
+        "evidence_title": "DMKs Dig At Vijay Ahead Of Rahul Gandhis Visit",
+        "publisher": "Puthiya Thalaimurai",
+        "relationship_type": "unrelated",
+        "relevant_passage": "கல்வி முறையில் உள்ள குறைபாடுகள், தேர்வு முறைகேடுகள், வேலைவாய்ப்பின்மை மற்றும் மாணவர்களின் உரிமைகள் குறித்து நேரடியாக உரையாடி அவர்களின் கருத்துகளைக் கேட்டறிகிறார்",
+        "source_url": "https://www.puthiyathalaimurai.com/tamilnadu/dmks-dig-at-vijay-ahead-of-rahul-gandhis-visit",
+        "publication_date": "2026-10-09"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0001",
+        "evidence_title": "பட்ஜெட் 2026 : கவனம் பெற்ற முக்கிய அறிவிப்புகள்!",
+        "publisher": "Nakkheeran",
+        "relationship_type": "unrelated",
+        "relevant_passage": "தமிழக நிதி அமைச்சர் மரிய வில்சன் தவெக அரசின் முதல் பட்ஜெட்டை இன்று (05.08.2026) தாக்கல் செய்து பல்வேறு அறிவிப்புகளை வெளியிட்டார். அதில், “5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு 2026-27 கல்வியாண்டில் அரசு மற்றும் அரசு நிதியுதவி பெறும் பள்ளிகளில் ஹெல்மெட் & வாட்டர் பாட்டில் வசதியுடன் நவீன மிதிவண்",
+        "source_url": "https://www.nakkheeran.in/24-by-7-news/budget-2026-key-announcements-that-grabbed-attention-12231412",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0002",
+        "evidence_title": "தவெக கூட்டணி அரசின் முதல் பட்ஜெட்|2036-க்குள் 1.5 டிரில்லியன் டாலர் பொருளாதார இலக்கு - மகளிர், மாணவர் மற்றும் இளைஞர் நலனுக்காக மெகா திட்டங்கள்!",
+        "publisher": "ETV Bharat (Tamil)",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Published : August 5, 2026 at 2:03 PM IST சென்னை: \"2036 ஆம் ஆண்டிற்குள் தமிழ்நாட்டை 1.5 டிரில்லியன் டாலர் பொருளாதாரமாக மாற்றுவதே இலக்கு\" என்ற பிரகடனத்துடன், டெண்டர் முறைகேடுகளை ஒழிக்கும் அதிரடி சீர்திருத்தங்கள், மாணவர்கள், பெண்கள், இளைஞர்களுக்கான புதிய திட்டங்களுடன் கூடிய தவெக கூட்டணி அரசின் முதல் ப",
+        "source_url": "https://www.etvbharat.com/ta/state/tvk-governments-maiden-budget-2026-focus-on-welfare-schemes-education-and-infrastructure-amid-rs-dot-13-dot-18-lakh-crore-debt-burden-tns26080502863",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0180",
+        "evidence_title": "தாறுமாறாக ஓடிய கார் விபத்து: பள்ளி மாணவன் பலி, காரில் பாம்பு உள்ளிட்ட பிராணிகள். Schoolboy Killed in Car Crash: Snake and Exotic Animals Found Inside Vehicle.",
+        "publisher": "Maalaimalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "திருச்சி மாவட்டம் மணப்பாறையை  அடுத்த  கரட்டுப்பட்டி கருங்குளத்தை சேர்ந்த சிறுவன்  ஜான்சன் (வயது 16). அங்குள்ள பள்ளியில் 11-ம் வகுப்பு படித்து வந்தார். மீன் வியாபாரியான இவரது தந்தை கடந்த சில மாதங்களுக்கு முன்பு இறந்து விட்டதால், விடுமுறை நாளான ஞாயிற்றுக்கிழமை மட்டும் ஜான்சன் மீன் வியாபாரம் செய்து வந்",
+        "source_url": "https://www.maalaimalar.com/news/tamilnadu/car-accident-student-death-police-inquiry",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0186",
+        "evidence_title": "திருப்பூர் கொலை: பழுதான செல்போனுக்கு பணம் திருப்பி தர மறுத்ததால் மாணவர் கொலை. Tiruppur Murder: Student killed over refusal to refund money for faulty phone.",
+        "publisher": "Maalaimalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "திருப்பூர், ஏ.பி.டி., ரோடு, இந்திரா நகரை சேர்ந்த வெள்ளியங்கிரி மகன் ஸ்ரீஹரி. தனியார் கல்லூரி இரண்டாமாண்டு மாணவர். நேற்று மதியம், ஸ்ரீஹரி தன் வீட்டருகே நடந்து சென்றபோது, அவரை பின்தொடர்ந்து வந்த நபர், திடீரென அரிவாளால் சரமாரியாக வெட்டி கொலை செய்தார். பட்டப்பகலில் நடந்த இச்சம்பவம் அப்பகுதியில் பரபரப்பை",
+        "source_url": "https://www.maalaimalar.com/news/tamilnadu/youth-murder-case-police-inquiry-3",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0201",
+        "evidence_title": "DMKs Dig At Vijay Ahead Of Rahul Gandhis Visit",
+        "publisher": "Puthiya Thalaimurai",
+        "relationship_type": "unrelated",
+        "relevant_passage": "கல்வி முறையில் உள்ள குறைபாடுகள், தேர்வு முறைகேடுகள், வேலைவாய்ப்பின்மை மற்றும் மாணவர்களின் உரிமைகள் குறித்து நேரடியாக உரையாடி அவர்களின் கருத்துகளைக் கேட்டறிகிறார்",
+        "source_url": "https://www.puthiyathalaimurai.com/tamilnadu/dmks-dig-at-vijay-ahead-of-rahul-gandhis-visit",
+        "publication_date": "2026-10-09"
+      }
+    ],
+    "cross_phase": {
+      "historical_scheme": null,
+      "promise": null,
+      "news_article": null,
+      "financial_document": null,
+      "representative": null
+    }
+  },
+  {
+    "claim_id": "CLM-REAL-TN-002",
+    "original_text": "2036-க்குள் 1.5 லட்சம் கோடி டாலர் பொருளாதாரத்தை எட்ட தமிழ்நாடு அரசு இலக்கு நிர்ணயித்துள்ளது.",
+    "normalized_text": "2036-க்குள் 1.5 லட்சம் கோடி டாலர் பொருளாதாரத்தை எட்ட தமிழ்நாடு அரசு இலக்கு நிர்ணயித்துள்ளது.",
+    "claim_category": "EMPLOYMENT_ECONOMIC",
+    "language": "ta",
+    "speaker_name": "N. Marie Wilson",
+    "speaker_role": "Minister for Finance and Human Resources",
+    "party": "TVK",
+    "claim_date": "2026-08-05",
+    "publication_date": "2026-08-05",
+    "candidate_source_type": "LEGISLATIVE_RECORD",
+    "attribution_type": "DIRECT_QUOTE",
+    "claim_source_url": "https://bernama.com/tam/news.php?id=2590665",
+    "source_document_id": "DOC-NEWS-CL-A-0003",
+    "geographic_scope": "Tamil Nadu",
+    "extraction_method": "MANUAL_CURATION",
+    "status": "VERIFIED",
+    "review_status": "PENDING_REVIEW",
+    "is_human_reviewed": false,
+    "reviewer_role": null,
+    "reviewer_name": null,
+    "review_notes": null,
+    "verification": {
+      "outcome": "insufficient_evidence",
+      "explanation": "Insufficient evidence available in indexed statutory archives, legislative records, or official gazettes. Absence of evidence is not proof that the statement is false.\n\nProposition Breakdown:\nPart 1 ['2036-க்குள் 1.5 லட்சம் கோடி டாலர் பொருளாதாரத்தை எட்ட தமிழ்நாடு அரசு இலக்கு நிர்ணயித்துள்ளது.']: UNRESOLVED. No conclusive empirical or statutory record identified.",
+      "methodology": "CIVICLENS_VERIFICATION_METHODOLOGY_V1",
+      "limitations": "Provisional public records subject to ongoing official gazette updates.",
+      "supporting_evidence_ids": [],
+      "contradicting_evidence_ids": [],
+      "source_diversity": 4,
+      "confidence": 0.2,
+      "verification_timestamp": "2026-10-13 15:53:30",
+      "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent."
+    },
+    "atomic_claims": [
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-002-01",
+        "atomic_claim_text": "2036-க்குள் 1.5 லட்சம் கோடி டாலர் பொருளாதாரத்தை எட்ட தமிழ்நாடு அரசு இலக்கு நிர்ணயித்துள்ளது.",
+        "language": "ta",
+        "subject": "Tamil Nadu",
+        "predicate": "asserts",
+        "object": "2036-க்குள் 1.5 லட்சம் கோடி டாலர் பொருளாதாரத்தை எட்ட தமிழ்நாடு அரசு இலக்கு நிர்ணயித்துள்ளது.",
+        "numeric_value": 1.5,
+        "unit": "lakh",
+        "time_period": null,
+        "claim_type": "NUMERICAL_STATISTIC",
+        "is_verifiable": true,
+        "confidence": 0.95
+      }
+    ],
+    "relationships": [
+      {
+        "evidence_document_id": "EVD-CL-A-0002",
+        "evidence_title": "தவெக கூட்டணி அரசின் முதல் பட்ஜெட்|2036-க்குள் 1.5 டிரில்லியன் டாலர் பொருளாதார இலக்கு - மகளிர், மாணவர் மற்றும் இளைஞர் நலனுக்காக மெகா திட்டங்கள்!",
+        "publisher": "ETV Bharat (Tamil)",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Published : August 5, 2026 at 2:03 PM IST சென்னை: \"2036 ஆம் ஆண்டிற்குள் தமிழ்நாட்டை 1.5 டிரில்லியன் டாலர் பொருளாதாரமாக மாற்றுவதே இலக்கு\" என்ற பிரகடனத்துடன், டெண்டர் முறைகேடுகளை ஒழிக்கும் அதிரடி சீர்திருத்தங்கள், மாணவர்கள், பெண்கள், இளைஞர்களுக்கான புதிய திட்டங்களுடன் கூடிய தவெக கூட்டணி அரசின் முதல் ப",
+        "source_url": "https://www.etvbharat.com/ta/state/tvk-governments-maiden-budget-2026-focus-on-welfare-schemes-education-and-infrastructure-amid-rs-dot-13-dot-18-lakh-crore-debt-burden-tns26080502863",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0073",
+        "evidence_title": "மத்திய - மாநில அரசு இணைந்து செயல்பட வேண்டும்: முதல்வர் விஜய் Central and State governments must work together: Chief Minister Vijay",
+        "publisher": "Dinamani",
+        "relationship_type": "unrelated",
+        "relevant_passage": "மதுரை, கோவை மாவட்டங்களில் மெட்ரோ ரயில் திட்டங்களைக் கொண்டுவர வேண்டும் என முதல்வர் விஜய் பேச்சு... பிரதமர் நரேந்திர மோடியுடம் முதல்வர் விஜய் - டிஐபிஆர் மத்திய அரசும் மாநில அரசும் இணைந்து செயல்படும்போது அதனால் உருவாகும் பலன் மக்களுக்கு கூடுதல் நலன்களை வழங்கும் என முதல்வர் சி. ஜோசப் விஜய் இன்று (அக். 1",
+        "source_url": "https://www.dinamani.com/tamilnadu/2026/Oct/11/central-and-state-governments-must-work-together-chief-minister-vijay",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0080",
+        "evidence_title": "\"வாழ்க்கையில் புதிதாக கற்க விரும்புவோருக்கு திருக்குறள் ஒரு வழிகாட்டி..\" - பிரதமர் மோடி |  \"Thirukkural is a guide for those who wish to learn something new in life.\" – Prime Minister Modi",
+        "publisher": "Daily Thanthi",
+        "relationship_type": "unrelated",
+        "relevant_passage": "சென்னையில் உள்ள ஜெய்கோபால் கரோடியா இந்து வித்யாலயா மெட்ரிக் மேல்நிலைப் பள்ளியின் பொன்விழா கொண்டாட்டங்களில் பிரதமர் நரேந்திர மோடி பங்கேற்றார். பின்னர் அந்த பொன்விழாவில் பிரதமர் மோடி பேசியதாவது:- 2047-க்குள் இந்தியாவை மேம்படுத்துவோம். அதைச் செய்வோம். உலகின் முதல் மூன்று பொருளாதாரங்களில் ஒன்றாகத் திகழ்",
+        "source_url": "https://www.dailythanthi.com/news/tamilnadu/thirukkural-is-a-guide-for-those-who-wish-to-learn-something-new-in-life-prime-minister-modi",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0089",
+        "evidence_title": "மத்திய, மாநில அரசுகள் இணைந்து செயல்பட வேண்டும்: பிரதமர் முன்னிலையில் முதல்வர் விஜய் பேச்சு",
+        "publisher": "Dinamalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "UPDATED : அக் 11, 2026 05:40 PM ADDED : அக் 11, 2026 03:00 PM சென்னை:   பிரதமர் மோடி, 13 ஆயிரம் கோடி மதிப்பிலான  நலத்திட்டங்கள் துவக்கி வைத்த விழாவில் முதல்வர் விஜய் பேசியதாவது: தமிழக மக்கள் சார்பில் பிரதமர் மோடியை வரவேற்கிறேன். சென்னை மெட்ரோ  ரயில் திட்டத்தை துவக்கி வைத்ததற்காக நன்றி. பல்லாயிரம் ஆண",
+        "source_url": "https://www.dinamalar.com/news/tamil-nadu-news/central-and-state-governments-should-work-together-cm-vijay-speaks-in-front-of-pm/4346238",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0152",
+        "evidence_title": "கடையநல்லூர் அரசு மருத்துவமனையில் நடந்தது என்ன? - விரிவான விசாரணைக்கு சுகாதாரத்துறை உத்தரவு | What happened at the Kadayanallur Government Hospital? – Health Department orders a detailed inquiry.",
+        "publisher": "Daily Thanthi",
+        "relationship_type": "unrelated",
+        "relevant_passage": "இச்சம்பவம் குறித்து பெறப்பட்ட முதற்கட்ட தகவலின்படி, அவசர சிகிச்சைப் பிரிவில் மருத்துவர் பணியில் இருந்தபோதிலும், நோயாளியின் நிலை குறித்து செவிலியர்கள் உரிய நேரத்தில் மருத்துவருக்கு தகவல் தெரிவிக்காமல் காலதாமதம் ஏற்பட்டது எனத் தெரியவந்துள்ளது",
+        "source_url": "https://www.dailythanthi.com/news/tamilnadu/what-happened-at-the-kadayanallur-government-hospital-health-department-orders-a-detailed-inquiry",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0002",
+        "evidence_title": "தவெக கூட்டணி அரசின் முதல் பட்ஜெட்|2036-க்குள் 1.5 டிரில்லியன் டாலர் பொருளாதார இலக்கு - மகளிர், மாணவர் மற்றும் இளைஞர் நலனுக்காக மெகா திட்டங்கள்!",
+        "publisher": "ETV Bharat (Tamil)",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Published : August 5, 2026 at 2:03 PM IST சென்னை: \"2036 ஆம் ஆண்டிற்குள் தமிழ்நாட்டை 1.5 டிரில்லியன் டாலர் பொருளாதாரமாக மாற்றுவதே இலக்கு\" என்ற பிரகடனத்துடன், டெண்டர் முறைகேடுகளை ஒழிக்கும் அதிரடி சீர்திருத்தங்கள், மாணவர்கள், பெண்கள், இளைஞர்களுக்கான புதிய திட்டங்களுடன் கூடிய தவெக கூட்டணி அரசின் முதல் ப",
+        "source_url": "https://www.etvbharat.com/ta/state/tvk-governments-maiden-budget-2026-focus-on-welfare-schemes-education-and-infrastructure-amid-rs-dot-13-dot-18-lakh-crore-debt-burden-tns26080502863",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0073",
+        "evidence_title": "மத்திய - மாநில அரசு இணைந்து செயல்பட வேண்டும்: முதல்வர் விஜய் Central and State governments must work together: Chief Minister Vijay",
+        "publisher": "Dinamani",
+        "relationship_type": "unrelated",
+        "relevant_passage": "மதுரை, கோவை மாவட்டங்களில் மெட்ரோ ரயில் திட்டங்களைக் கொண்டுவர வேண்டும் என முதல்வர் விஜய் பேச்சு... பிரதமர் நரேந்திர மோடியுடம் முதல்வர் விஜய் - டிஐபிஆர் மத்திய அரசும் மாநில அரசும் இணைந்து செயல்படும்போது அதனால் உருவாகும் பலன் மக்களுக்கு கூடுதல் நலன்களை வழங்கும் என முதல்வர் சி. ஜோசப் விஜய் இன்று (அக். 1",
+        "source_url": "https://www.dinamani.com/tamilnadu/2026/Oct/11/central-and-state-governments-must-work-together-chief-minister-vijay",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0080",
+        "evidence_title": "\"வாழ்க்கையில் புதிதாக கற்க விரும்புவோருக்கு திருக்குறள் ஒரு வழிகாட்டி..\" - பிரதமர் மோடி |  \"Thirukkural is a guide for those who wish to learn something new in life.\" – Prime Minister Modi",
+        "publisher": "Daily Thanthi",
+        "relationship_type": "unrelated",
+        "relevant_passage": "சென்னையில் உள்ள ஜெய்கோபால் கரோடியா இந்து வித்யாலயா மெட்ரிக் மேல்நிலைப் பள்ளியின் பொன்விழா கொண்டாட்டங்களில் பிரதமர் நரேந்திர மோடி பங்கேற்றார். பின்னர் அந்த பொன்விழாவில் பிரதமர் மோடி பேசியதாவது:- 2047-க்குள் இந்தியாவை மேம்படுத்துவோம். அதைச் செய்வோம். உலகின் முதல் மூன்று பொருளாதாரங்களில் ஒன்றாகத் திகழ்",
+        "source_url": "https://www.dailythanthi.com/news/tamilnadu/thirukkural-is-a-guide-for-those-who-wish-to-learn-something-new-in-life-prime-minister-modi",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0089",
+        "evidence_title": "மத்திய, மாநில அரசுகள் இணைந்து செயல்பட வேண்டும்: பிரதமர் முன்னிலையில் முதல்வர் விஜய் பேச்சு",
+        "publisher": "Dinamalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "UPDATED : அக் 11, 2026 05:40 PM ADDED : அக் 11, 2026 03:00 PM சென்னை:   பிரதமர் மோடி, 13 ஆயிரம் கோடி மதிப்பிலான  நலத்திட்டங்கள் துவக்கி வைத்த விழாவில் முதல்வர் விஜய் பேசியதாவது: தமிழக மக்கள் சார்பில் பிரதமர் மோடியை வரவேற்கிறேன். சென்னை மெட்ரோ  ரயில் திட்டத்தை துவக்கி வைத்ததற்காக நன்றி. பல்லாயிரம் ஆண",
+        "source_url": "https://www.dinamalar.com/news/tamil-nadu-news/central-and-state-governments-should-work-together-cm-vijay-speaks-in-front-of-pm/4346238",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0152",
+        "evidence_title": "கடையநல்லூர் அரசு மருத்துவமனையில் நடந்தது என்ன? - விரிவான விசாரணைக்கு சுகாதாரத்துறை உத்தரவு | What happened at the Kadayanallur Government Hospital? – Health Department orders a detailed inquiry.",
+        "publisher": "Daily Thanthi",
+        "relationship_type": "unrelated",
+        "relevant_passage": "இச்சம்பவம் குறித்து பெறப்பட்ட முதற்கட்ட தகவலின்படி, அவசர சிகிச்சைப் பிரிவில் மருத்துவர் பணியில் இருந்தபோதிலும், நோயாளியின் நிலை குறித்து செவிலியர்கள் உரிய நேரத்தில் மருத்துவருக்கு தகவல் தெரிவிக்காமல் காலதாமதம் ஏற்பட்டது எனத் தெரியவந்துள்ளது",
+        "source_url": "https://www.dailythanthi.com/news/tamilnadu/what-happened-at-the-kadayanallur-government-hospital-health-department-orders-a-detailed-inquiry",
+        "publication_date": "2026-10-11"
+      }
+    ],
+    "cross_phase": {
+      "historical_scheme": null,
+      "promise": null,
+      "news_article": null,
+      "financial_document": null,
+      "representative": null
+    }
+  },
+  {
+    "claim_id": "CLM-REAL-TN-003",
+    "original_text": "Under Pudhumai Penn scheme, female students from government schools receive Rs 1,000 monthly for higher education.",
+    "normalized_text": "Under Pudhumai Penn scheme, female students from government schools receive Rs 1,000 monthly for higher education.",
+    "claim_category": "GOVERNMENT_SCHEMES",
+    "language": "en",
+    "speaker_name": "M.K. Stalin",
+    "speaker_role": "Chief Minister of Tamil Nadu",
+    "party": "DMK",
+    "claim_date": "2023-08-15",
+    "publication_date": "2023-08-15",
+    "candidate_source_type": "OFFICIAL_STATEMENT",
+    "attribution_type": "DIRECT_QUOTE",
+    "claim_source_url": "https://www.tn.gov.in/scheme/data_view/9905",
+    "source_document_id": "DOC-SCHEME-CL-D-0017",
+    "geographic_scope": "Tamil Nadu",
+    "extraction_method": "STRUCTURED_EXTRACTION",
+    "status": "VERIFIED",
+    "review_status": "PENDING_REVIEW",
+    "is_human_reviewed": false,
+    "reviewer_role": null,
+    "reviewer_name": null,
+    "review_notes": null,
+    "verification": {
+      "outcome": "insufficient_evidence",
+      "explanation": "Insufficient evidence available in indexed statutory archives, legislative records, or official gazettes. Absence of evidence is not proof that the statement is false.\n\nProposition Breakdown:\nPart 1 ['Under Pudhumai Penn scheme, female students from government schools receive Rs 1,000 monthly for higher education.']: UNRESOLVED. No conclusive empirical or statutory record identified.",
+      "methodology": "CIVICLENS_VERIFICATION_METHODOLOGY_V1",
+      "limitations": "Provisional public records subject to ongoing official gazette updates.",
+      "supporting_evidence_ids": [],
+      "contradicting_evidence_ids": [],
+      "source_diversity": 4,
+      "confidence": 0.2,
+      "verification_timestamp": "2026-10-13 15:53:30",
+      "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent."
+    },
+    "atomic_claims": [
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-003-01",
+        "atomic_claim_text": "Under Pudhumai Penn scheme, female students from government schools receive Rs 1,000 monthly for higher education.",
+        "language": "en",
+        "subject": "Pudhumai Penn",
+        "predicate": "asserts",
+        "object": "Under Pudhumai Penn scheme, female students from government schools receive Rs 1,000 monthly for higher education.",
+        "numeric_value": 1000.0,
+        "unit": "INR",
+        "time_period": null,
+        "claim_type": "SCHEME_BENEFIT",
+        "is_verifiable": true,
+        "confidence": 0.95
+      }
+    ],
+    "relationships": [
+      {
+        "evidence_document_id": "EVD-CL-A-0006",
+        "evidence_title": "Gold, laptops and no 'cuts': Vijay govt goes big in Tamil Nadu maiden Budget",
+        "publisher": "Deccan Herald",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Another Rs 560 crore has been allocated for the gold ring scheme for babies born in government hospitals, while Rs 2,000 crore has been set aside for providing laptops to college students under the \"Vettri Madikanini Thittam",
+        "source_url": "https://www.deccanherald.com/amp/story/india/tamil-nadu/gold-laptops-and-no-cuts-vijay-govt-goes-big-in-tamil-nadu-maiden-budget-4099841",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0112",
+        "evidence_title": "Life-Saving Irrigation Scheme launched to protect orchards in Sri Sathya Sai district - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Published - October 11, 2026 06:12 pm IST - PUTTAPARTHI With borewells drying up and horticulture crops wilting due to El Niño-induced heat and deficient rainfall, the Andhra Pradesh Horticulture Department has launched the Life-Saving I",
+        "source_url": "https://www.thehindu.com/news/national/andhra-pradesh/life-saving-irrigation-scheme-launched-to-protect-orchards-in-sri-sathya-sai-district/article71571311.ece",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0015",
+        "evidence_title": "Kalaignar Magalir Urimai Thogai — Women's Welfare Entitlement Scheme",
+        "publisher": "Government of Tamil Nadu, Social Welfare Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Direct cash transfer scheme providing Rs.1,000/month to eligible women — DMK election manifesto promise.",
+        "source_url": "https://www.tn.gov.in/scheme/data_view/9899",
+        "publication_date": "2023-09-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0016",
+        "evidence_title": "Chief Minister's Breakfast Scheme — Free Breakfast for Government School Students",
+        "publisher": "Government of Tamil Nadu, School Education Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Tamil Nadu government scheme providing free breakfast to government school students across the state.",
+        "source_url": "https://www.tn.gov.in/",
+        "publication_date": "2022-09-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0017",
+        "evidence_title": "Pudhumai Penn Higher Education Grant for Women",
+        "publisher": "Government of Tamil Nadu, Higher Education Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Scheme providing Rs.1,000/month stipend to women students in government colleges who passed Class 12 from government schools.",
+        "source_url": "https://www.tn.gov.in/scheme/data_view/9905",
+        "publication_date": "2023-08-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0006",
+        "evidence_title": "Gold, laptops and no 'cuts': Vijay govt goes big in Tamil Nadu maiden Budget",
+        "publisher": "Deccan Herald",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Another Rs 560 crore has been allocated for the gold ring scheme for babies born in government hospitals, while Rs 2,000 crore has been set aside for providing laptops to college students under the \"Vettri Madikanini Thittam",
+        "source_url": "https://www.deccanherald.com/amp/story/india/tamil-nadu/gold-laptops-and-no-cuts-vijay-govt-goes-big-in-tamil-nadu-maiden-budget-4099841",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0112",
+        "evidence_title": "Life-Saving Irrigation Scheme launched to protect orchards in Sri Sathya Sai district - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Published - October 11, 2026 06:12 pm IST - PUTTAPARTHI With borewells drying up and horticulture crops wilting due to El Niño-induced heat and deficient rainfall, the Andhra Pradesh Horticulture Department has launched the Life-Saving I",
+        "source_url": "https://www.thehindu.com/news/national/andhra-pradesh/life-saving-irrigation-scheme-launched-to-protect-orchards-in-sri-sathya-sai-district/article71571311.ece",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0015",
+        "evidence_title": "Kalaignar Magalir Urimai Thogai — Women's Welfare Entitlement Scheme",
+        "publisher": "Government of Tamil Nadu, Social Welfare Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Direct cash transfer scheme providing Rs.1,000/month to eligible women — DMK election manifesto promise.",
+        "source_url": "https://www.tn.gov.in/scheme/data_view/9899",
+        "publication_date": "2023-09-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0016",
+        "evidence_title": "Chief Minister's Breakfast Scheme — Free Breakfast for Government School Students",
+        "publisher": "Government of Tamil Nadu, School Education Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Tamil Nadu government scheme providing free breakfast to government school students across the state.",
+        "source_url": "https://www.tn.gov.in/",
+        "publication_date": "2022-09-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0017",
+        "evidence_title": "Pudhumai Penn Higher Education Grant for Women",
+        "publisher": "Government of Tamil Nadu, Higher Education Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Scheme providing Rs.1,000/month stipend to women students in government colleges who passed Class 12 from government schools.",
+        "source_url": "https://www.tn.gov.in/scheme/data_view/9905",
+        "publication_date": "2023-08-15"
+      }
+    ],
+    "cross_phase": {
+      "historical_scheme": null,
+      "promise": null,
+      "news_article": null,
+      "financial_document": null,
+      "representative": null
+    }
+  },
+  {
+    "claim_id": "CLM-REAL-TN-004",
+    "original_text": "கலைஞர் மகளிர் உரிமைத் திட்டத்தின் கீழ் குடும்பத் தலைவிகளுக்கு மாதம் ரூ.1,000 உரிமைத் தொகை வழங்கப்படுகிறது.",
+    "normalized_text": "கலைஞர் மகளிர் உரிமைத் திட்டத்தின் கீழ் குடும்பத் தலைவிகளுக்கு மாதம் ரூ.1,000 உரிமைத் தொகை வழங்கப்படுகிறது.",
+    "claim_category": "GOVERNMENT_SCHEMES",
+    "language": "ta",
+    "speaker_name": "M.K. Stalin",
+    "speaker_role": "Chief Minister of Tamil Nadu",
+    "party": "DMK",
+    "claim_date": "2023-09-15",
+    "publication_date": "2023-09-15",
+    "candidate_source_type": "OFFICIAL_STATEMENT",
+    "attribution_type": "DIRECT_QUOTE",
+    "claim_source_url": "https://www.tn.gov.in/scheme/data_view/9899",
+    "source_document_id": "DOC-SCHEME-CL-D-0015",
+    "geographic_scope": "Tamil Nadu",
+    "extraction_method": "STRUCTURED_EXTRACTION",
+    "status": "VERIFIED",
+    "review_status": "PENDING_REVIEW",
+    "is_human_reviewed": false,
+    "reviewer_role": null,
+    "reviewer_name": null,
+    "review_notes": null,
+    "verification": {
+      "outcome": "insufficient_evidence",
+      "explanation": "Insufficient evidence available in indexed statutory archives, legislative records, or official gazettes. Absence of evidence is not proof that the statement is false.\n\nProposition Breakdown:\nPart 1 ['கலைஞர் மகளிர் உரிமைத் திட்டத்தின் கீழ் குடும்பத் தலைவிகளுக்கு மாதம் ரூ.1,000 உரிமைத் தொகை வழங்கப்படுகிறது.']: UNRESOLVED. No conclusive empirical or statutory record identified.",
+      "methodology": "CIVICLENS_VERIFICATION_METHODOLOGY_V1",
+      "limitations": "Provisional public records subject to ongoing official gazette updates.",
+      "supporting_evidence_ids": [],
+      "contradicting_evidence_ids": [],
+      "source_diversity": 4,
+      "confidence": 0.2,
+      "verification_timestamp": "2026-10-13 15:53:30",
+      "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent."
+    },
+    "atomic_claims": [
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-004-01",
+        "atomic_claim_text": "கலைஞர் மகளிர் உரிமைத் திட்டத்தின் கீழ் குடும்பத் தலைவிகளுக்கு மாதம் ரூ.1,000 உரிமைத் தொகை வழங்கப்படுகிறது.",
+        "language": "ta",
+        "subject": "Kalaignar Magalir Urimai Thittam",
+        "predicate": "asserts",
+        "object": "கலைஞர் மகளிர் உரிமைத் திட்டத்தின் கீழ் குடும்பத் தலைவிகளுக்கு மாதம் ரூ.1,000 உரிமைத் தொகை வழங்கப்படுகிறது.",
+        "numeric_value": 1000.0,
+        "unit": "INR",
+        "time_period": null,
+        "claim_type": "SCHEME_BENEFIT",
+        "is_verifiable": true,
+        "confidence": 0.95
+      }
+    ],
+    "relationships": [
+      {
+        "evidence_document_id": "EVD-CL-A-0001",
+        "evidence_title": "பட்ஜெட் 2026 : கவனம் பெற்ற முக்கிய அறிவிப்புகள்!",
+        "publisher": "Nakkheeran",
+        "relationship_type": "unrelated",
+        "relevant_passage": "தமிழக நிதி அமைச்சர் மரிய வில்சன் தவெக அரசின் முதல் பட்ஜெட்டை இன்று (05.08.2026) தாக்கல் செய்து பல்வேறு அறிவிப்புகளை வெளியிட்டார். அதில், “5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு 2026-27 கல்வியாண்டில் அரசு மற்றும் அரசு நிதியுதவி பெறும் பள்ளிகளில் ஹெல்மெட் & வாட்டர் பாட்டில் வசதியுடன் நவீன மிதிவண்",
+        "source_url": "https://www.nakkheeran.in/24-by-7-news/budget-2026-key-announcements-that-grabbed-attention-12231412",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0002",
+        "evidence_title": "தவெக கூட்டணி அரசின் முதல் பட்ஜெட்|2036-க்குள் 1.5 டிரில்லியன் டாலர் பொருளாதார இலக்கு - மகளிர், மாணவர் மற்றும் இளைஞர் நலனுக்காக மெகா திட்டங்கள்!",
+        "publisher": "ETV Bharat (Tamil)",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Published : August 5, 2026 at 2:03 PM IST சென்னை: \"2036 ஆம் ஆண்டிற்குள் தமிழ்நாட்டை 1.5 டிரில்லியன் டாலர் பொருளாதாரமாக மாற்றுவதே இலக்கு\" என்ற பிரகடனத்துடன், டெண்டர் முறைகேடுகளை ஒழிக்கும் அதிரடி சீர்திருத்தங்கள், மாணவர்கள், பெண்கள், இளைஞர்களுக்கான புதிய திட்டங்களுடன் கூடிய தவெக கூட்டணி அரசின் முதல் ப",
+        "source_url": "https://www.etvbharat.com/ta/state/tvk-governments-maiden-budget-2026-focus-on-welfare-schemes-education-and-infrastructure-amid-rs-dot-13-dot-18-lakh-crore-debt-burden-tns26080502863",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0157",
+        "evidence_title": "தமிழகத்திற்கு ரூ.13,000 கோடியிலான வளர்ச்சித் திட்டங்கள்: பிரதமருக்கு நயினார் நாகேந்திரன் நன்றி! | Development projects worth ₹13,000 crore for Tamil Nadu: Nainar Nagendran thanks the Prime Minister!",
+        "publisher": "Daily Thanthi",
+        "relationship_type": "unrelated",
+        "relevant_passage": "தமிழகத்திற்கு ரூ.13,000 கோடி மதிப்பிலான வளர்ச்சித் திட்டங்களைத் தொடங்கி வைத்து நாட்டுக்கு அர்ப்பணித்த பாரதப் பிரதமர் நரேந்திர மோடிக்கு நயினார் நாகேந்திரன் நன்றி தெரிவித்துள்ளார். இது தொடர்பாக தமிழக பாஜக தலைவர் நயினார் நாகேந்திரன் வெளியிட்டுள்ள செய்திக்குறிப்பில் தெரிவித்திருப்பதாவது;- தமிழகத்தின் மீ",
+        "source_url": "https://www.dailythanthi.com/news/tamilnadu/development-projects-worth-13000-crore-for-tamil-nadu-nainar-nagendran-thanks-the-prime-minister",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0212",
+        "evidence_title": "2 மாதங்களில் மின் வாரிய தலைவர் மாற்றம்: புதிய தலைவருக்கு முழு சுதந்திரம் அவசியம்",
+        "publisher": "Dinamalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "சென்னை: தமிழக மின் வாரிய தலைவராக, கடந்த ஜூலையில் நியமிக்கப்பட்ட அருண்ராய் மாற்றப்பட்டு, புதிய தலைவராக ராஜேஷ் லக்கானி நியமிக்கப்பட்டு உள்ளார். புதிய தலைவரை முழு சுதந்திரமாக செயல்பட அனுமதித்தால் தான், மின் தடை உள்ளிட்ட பிரச்னைகளுக்கு விரைவாக தீர்வு காண முடியும் என்கின்றனர், பணியாளர்கள். தமிழகத்தில் மி",
+        "source_url": "https://www.dinamalar.com/news/tamil-nadu-news/power-board-chairman-change-in-2-months-new-chairman-needs-full-independence/4346161",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0015",
+        "evidence_title": "Kalaignar Magalir Urimai Thogai — Women's Welfare Entitlement Scheme",
+        "publisher": "Government of Tamil Nadu, Social Welfare Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Direct cash transfer scheme providing Rs.1,000/month to eligible women — DMK election manifesto promise.",
+        "source_url": "https://www.tn.gov.in/scheme/data_view/9899",
+        "publication_date": "2023-09-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0001",
+        "evidence_title": "பட்ஜெட் 2026 : கவனம் பெற்ற முக்கிய அறிவிப்புகள்!",
+        "publisher": "Nakkheeran",
+        "relationship_type": "unrelated",
+        "relevant_passage": "தமிழக நிதி அமைச்சர் மரிய வில்சன் தவெக அரசின் முதல் பட்ஜெட்டை இன்று (05.08.2026) தாக்கல் செய்து பல்வேறு அறிவிப்புகளை வெளியிட்டார். அதில், “5.32 இலட்சம் 11ஆம் வகுப்பு மாணாக்கர்களுக்கு 2026-27 கல்வியாண்டில் அரசு மற்றும் அரசு நிதியுதவி பெறும் பள்ளிகளில் ஹெல்மெட் & வாட்டர் பாட்டில் வசதியுடன் நவீன மிதிவண்",
+        "source_url": "https://www.nakkheeran.in/24-by-7-news/budget-2026-key-announcements-that-grabbed-attention-12231412",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0002",
+        "evidence_title": "தவெக கூட்டணி அரசின் முதல் பட்ஜெட்|2036-க்குள் 1.5 டிரில்லியன் டாலர் பொருளாதார இலக்கு - மகளிர், மாணவர் மற்றும் இளைஞர் நலனுக்காக மெகா திட்டங்கள்!",
+        "publisher": "ETV Bharat (Tamil)",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Published : August 5, 2026 at 2:03 PM IST சென்னை: \"2036 ஆம் ஆண்டிற்குள் தமிழ்நாட்டை 1.5 டிரில்லியன் டாலர் பொருளாதாரமாக மாற்றுவதே இலக்கு\" என்ற பிரகடனத்துடன், டெண்டர் முறைகேடுகளை ஒழிக்கும் அதிரடி சீர்திருத்தங்கள், மாணவர்கள், பெண்கள், இளைஞர்களுக்கான புதிய திட்டங்களுடன் கூடிய தவெக கூட்டணி அரசின் முதல் ப",
+        "source_url": "https://www.etvbharat.com/ta/state/tvk-governments-maiden-budget-2026-focus-on-welfare-schemes-education-and-infrastructure-amid-rs-dot-13-dot-18-lakh-crore-debt-burden-tns26080502863",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0157",
+        "evidence_title": "தமிழகத்திற்கு ரூ.13,000 கோடியிலான வளர்ச்சித் திட்டங்கள்: பிரதமருக்கு நயினார் நாகேந்திரன் நன்றி! | Development projects worth ₹13,000 crore for Tamil Nadu: Nainar Nagendran thanks the Prime Minister!",
+        "publisher": "Daily Thanthi",
+        "relationship_type": "unrelated",
+        "relevant_passage": "தமிழகத்திற்கு ரூ.13,000 கோடி மதிப்பிலான வளர்ச்சித் திட்டங்களைத் தொடங்கி வைத்து நாட்டுக்கு அர்ப்பணித்த பாரதப் பிரதமர் நரேந்திர மோடிக்கு நயினார் நாகேந்திரன் நன்றி தெரிவித்துள்ளார். இது தொடர்பாக தமிழக பாஜக தலைவர் நயினார் நாகேந்திரன் வெளியிட்டுள்ள செய்திக்குறிப்பில் தெரிவித்திருப்பதாவது;- தமிழகத்தின் மீ",
+        "source_url": "https://www.dailythanthi.com/news/tamilnadu/development-projects-worth-13000-crore-for-tamil-nadu-nainar-nagendran-thanks-the-prime-minister",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0212",
+        "evidence_title": "2 மாதங்களில் மின் வாரிய தலைவர் மாற்றம்: புதிய தலைவருக்கு முழு சுதந்திரம் அவசியம்",
+        "publisher": "Dinamalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "சென்னை: தமிழக மின் வாரிய தலைவராக, கடந்த ஜூலையில் நியமிக்கப்பட்ட அருண்ராய் மாற்றப்பட்டு, புதிய தலைவராக ராஜேஷ் லக்கானி நியமிக்கப்பட்டு உள்ளார். புதிய தலைவரை முழு சுதந்திரமாக செயல்பட அனுமதித்தால் தான், மின் தடை உள்ளிட்ட பிரச்னைகளுக்கு விரைவாக தீர்வு காண முடியும் என்கின்றனர், பணியாளர்கள். தமிழகத்தில் மி",
+        "source_url": "https://www.dinamalar.com/news/tamil-nadu-news/power-board-chairman-change-in-2-months-new-chairman-needs-full-independence/4346161",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0015",
+        "evidence_title": "Kalaignar Magalir Urimai Thogai — Women's Welfare Entitlement Scheme",
+        "publisher": "Government of Tamil Nadu, Social Welfare Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Direct cash transfer scheme providing Rs.1,000/month to eligible women — DMK election manifesto promise.",
+        "source_url": "https://www.tn.gov.in/scheme/data_view/9899",
+        "publication_date": "2023-09-15"
+      }
+    ],
+    "cross_phase": {
+      "historical_scheme": null,
+      "promise": null,
+      "news_article": null,
+      "financial_document": null,
+      "representative": null
+    }
+  },
+  {
+    "claim_id": "CLM-REAL-TN-005",
+    "original_text": "Tamil Nadu Global Investors Meet 2024 attracted prospective investment commitments exceeding Rs. 6 lakh crore.",
+    "normalized_text": "Tamil Nadu Global Investors Meet 2024 attracted prospective investment commitments exceeding Rs. 6 lakh crore.",
+    "claim_category": "EMPLOYMENT_ECONOMIC",
+    "language": "en",
+    "speaker_name": "M.K. Stalin",
+    "speaker_role": "Chief Minister of Tamil Nadu",
+    "party": "DMK",
+    "claim_date": "2024-01-07",
+    "publication_date": "2024-01-07",
+    "candidate_source_type": "PRESS_RELEASE",
+    "attribution_type": "DIRECT_QUOTE",
+    "claim_source_url": "https://www.dipr.tn.gov.in/",
+    "source_document_id": "DOC-DIPR-CL-D-0021",
+    "geographic_scope": "Tamil Nadu",
+    "extraction_method": "STRUCTURED_EXTRACTION",
+    "status": "VERIFIED",
+    "review_status": "PENDING_REVIEW",
+    "is_human_reviewed": false,
+    "reviewer_role": null,
+    "reviewer_name": null,
+    "review_notes": null,
+    "verification": {
+      "outcome": "contradicted_by_available_evidence",
+      "explanation": "Contradicted by available official audits, legislative records, or empirical datasets demonstrating significant discrepancy or non-delivery.\n\nProposition Breakdown:\nPart 1 ['Tamil Nadu Global Investors Meet 2024 attracted prospective investment commitments exceeding Rs. 6 lakh crore.']: CONTRADICTED by available evidence. Evidence shows non-fulfillment or shortfall (Ref: Subscribed with another email? Logout and Login with that one. Updated  - October 10, 2026 05:26 pm IST - CHENNAI Image used for representational purposes only.\n                                       ).",
+      "methodology": "CIVICLENS_VERIFICATION_METHODOLOGY_V1",
+      "limitations": "Provisional public records subject to ongoing official gazette updates.",
+      "supporting_evidence_ids": [],
+      "contradicting_evidence_ids": [
+        "CER-CLM-REAL-TN-005-PSG-CL-A-0147-01",
+        "CER-CLM-REAL-TN-005-PSG-CL-D-0008-01",
+        "CER-CLM-REAL-TN-005-PSG-CL-D-0012-01",
+        "CER-CLM-REAL-TN-005-ACM-CLM-REAL-TN-005-01-PSG-CL-A-0147-01",
+        "CER-CLM-REAL-TN-005-ACM-CLM-REAL-TN-005-01-PSG-CL-D-0008-01",
+        "CER-CLM-REAL-TN-005-ACM-CLM-REAL-TN-005-01-PSG-CL-D-0012-01"
+      ],
+      "source_diversity": 4,
+      "confidence": 0.88,
+      "verification_timestamp": "2026-10-13 15:53:30",
+      "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent."
+    },
+    "atomic_claims": [
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-005-01",
+        "atomic_claim_text": "Tamil Nadu Global Investors Meet 2024 attracted prospective investment commitments exceeding Rs. 6 lakh crore.",
+        "language": "en",
+        "subject": "Tamil Nadu",
+        "predicate": "asserts",
+        "object": "Tamil Nadu Global Investors Meet 2024 attracted prospective investment commitments exceeding Rs. 6 lakh crore.",
+        "numeric_value": 6.0,
+        "unit": "lakh",
+        "time_period": null,
+        "claim_type": "NUMERICAL_STATISTIC",
+        "is_verifiable": true,
+        "confidence": 0.95
+      }
+    ],
+    "relationships": [
+      {
+        "evidence_document_id": "EVD-CL-A-0147",
+        "evidence_title": "From mission to action – future of road safety in Tamil Nadu - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "contradicts",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Updated  - October 10, 2026 05:26 pm IST - CHENNAI Image used for representational purposes only.\n                                       ",
+        "source_url": "https://www.thehindu.com/news/national/tamil-nadu/from-mission-to-action-future-of-road-safety-in-tamil-nadu/article71562858.ece",
+        "publication_date": "2026-10-10"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0208",
+        "evidence_title": "நாம் பேசக்கூடாது; நம் செயல்கள் பேச வேண்டுமென நினைப்பவன் நான்: இபிஎஸ் கருத்து",
+        "publisher": "Dinamalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "சென்னை: 'அ.தி.மு.க., ஆட்சியில் விதைத்த விதைகள், விருட்சமாவதை காண்பது மகிழ்ச்சியை தருகிறது' என, அ.தி.மு.க., பொதுச்செயலர் இபிஎஸ் தெரிவித்து உள்ளார். சென்னை மெட்ரோ ரயிலை தொடங்கி வைத்த பிரதமர் மோடியை, சென்னை விமான நிலையத்தில் வரவேற்றேன். இந்த திட்டமானது, என் தலைமையிலான அ.தி.மு.க., ஆட்சியின்போது, விரிவான",
+        "source_url": "https://www.dinamalar.com/news/tamil-nadu-news/we-shouldnt-talk-im-the-one-who-thinks-our-actions-should-talk-eps/4346444",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0008",
+        "evidence_title": "Tamil Nadu Budget Analysis 2024-25 — PRS Legislative Research",
+        "publisher": "PRS Legislative Research",
+        "relationship_type": "contradicts",
+        "relevant_passage": "PRS analysis of Tamil Nadu's state budget for 2024-25 presented by Finance Minister Thangam Thennarasu.",
+        "source_url": "https://prsindia.org/budgets/states/tamil-nadu-budget-analysis-2024-25",
+        "publication_date": "2024-02-19"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0012",
+        "evidence_title": "ECI Statistical Report — General Elections 2024 Tamil Nadu",
+        "publisher": "Election Commission of India",
+        "relationship_type": "contradicts",
+        "relevant_passage": "ECI statistical report on 2024 Lok Sabha election results for Tamil Nadu constituencies.",
+        "source_url": "https://eci.gov.in/files/file/14464-general-election-2024-statistical-report/",
+        "publication_date": "2024-06-04"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0021",
+        "evidence_title": "DIPR Press Release: Tamil Nadu Global Investors Meet 2024",
+        "publisher": "Directorate of Information and Public Relations, Government of Tamil Nadu",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "Tamil Nadu government press release on the Global Investors Meet 2024 held in Chennai, attracting investments over Rs.6 lakh crore.",
+        "source_url": "https://www.dipr.tn.gov.in/",
+        "publication_date": "2024-01-07"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0147",
+        "evidence_title": "From mission to action – future of road safety in Tamil Nadu - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "contradicts",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Updated  - October 10, 2026 05:26 pm IST - CHENNAI Image used for representational purposes only.\n                                       ",
+        "source_url": "https://www.thehindu.com/news/national/tamil-nadu/from-mission-to-action-future-of-road-safety-in-tamil-nadu/article71562858.ece",
+        "publication_date": "2026-10-10"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0208",
+        "evidence_title": "நாம் பேசக்கூடாது; நம் செயல்கள் பேச வேண்டுமென நினைப்பவன் நான்: இபிஎஸ் கருத்து",
+        "publisher": "Dinamalar",
+        "relationship_type": "unrelated",
+        "relevant_passage": "சென்னை: 'அ.தி.மு.க., ஆட்சியில் விதைத்த விதைகள், விருட்சமாவதை காண்பது மகிழ்ச்சியை தருகிறது' என, அ.தி.மு.க., பொதுச்செயலர் இபிஎஸ் தெரிவித்து உள்ளார். சென்னை மெட்ரோ ரயிலை தொடங்கி வைத்த பிரதமர் மோடியை, சென்னை விமான நிலையத்தில் வரவேற்றேன். இந்த திட்டமானது, என் தலைமையிலான அ.தி.மு.க., ஆட்சியின்போது, விரிவான",
+        "source_url": "https://www.dinamalar.com/news/tamil-nadu-news/we-shouldnt-talk-im-the-one-who-thinks-our-actions-should-talk-eps/4346444",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0008",
+        "evidence_title": "Tamil Nadu Budget Analysis 2024-25 — PRS Legislative Research",
+        "publisher": "PRS Legislative Research",
+        "relationship_type": "contradicts",
+        "relevant_passage": "PRS analysis of Tamil Nadu's state budget for 2024-25 presented by Finance Minister Thangam Thennarasu.",
+        "source_url": "https://prsindia.org/budgets/states/tamil-nadu-budget-analysis-2024-25",
+        "publication_date": "2024-02-19"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0012",
+        "evidence_title": "ECI Statistical Report — General Elections 2024 Tamil Nadu",
+        "publisher": "Election Commission of India",
+        "relationship_type": "contradicts",
+        "relevant_passage": "ECI statistical report on 2024 Lok Sabha election results for Tamil Nadu constituencies.",
+        "source_url": "https://eci.gov.in/files/file/14464-general-election-2024-statistical-report/",
+        "publication_date": "2024-06-04"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0021",
+        "evidence_title": "DIPR Press Release: Tamil Nadu Global Investors Meet 2024",
+        "publisher": "Directorate of Information and Public Relations, Government of Tamil Nadu",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "Tamil Nadu government press release on the Global Investors Meet 2024 held in Chennai, attracting investments over Rs.6 lakh crore.",
+        "source_url": "https://www.dipr.tn.gov.in/",
+        "publication_date": "2024-01-07"
+      }
+    ],
+    "cross_phase": {
+      "historical_scheme": null,
+      "promise": null,
+      "news_article": null,
+      "financial_document": null,
+      "representative": null
+    }
+  },
+  {
+    "claim_id": "CLM-REAL-TN-006",
+    "original_text": "Makkalai Thedi Maruthuvam scheme provides healthcare screening and essential medicines at doorsteps across Tamil Nadu.",
+    "normalized_text": "Makkalai Thedi Maruthuvam scheme provides healthcare screening and essential medicines at doorsteps across Tamil Nadu.",
+    "claim_category": "HEALTHCARE_EDUCATION",
+    "language": "en",
+    "speaker_name": "M.K. Stalin",
+    "speaker_role": "Chief Minister of Tamil Nadu",
+    "party": "DMK",
+    "claim_date": "2021-08-05",
+    "publication_date": "2021-08-05",
+    "candidate_source_type": "OFFICIAL_STATEMENT",
+    "attribution_type": "DIRECT_QUOTE",
+    "claim_source_url": "https://www.tn.gov.in/scheme/data_view/9912",
+    "source_document_id": "DOC-HEALTH-CL-D-0032",
+    "geographic_scope": "Tamil Nadu",
+    "extraction_method": "STRUCTURED_EXTRACTION",
+    "status": "VERIFIED",
+    "review_status": "PENDING_REVIEW",
+    "is_human_reviewed": false,
+    "reviewer_role": null,
+    "reviewer_name": null,
+    "review_notes": null,
+    "verification": {
+      "outcome": "missing_important_context",
+      "explanation": "The claim omits important fiscal, temporal, or administrative context (e.g. historical baseline vs contemporary state, or restricted pilot scope).\n\nProposition Breakdown:\nPart 1 ['Makkalai Thedi Maruthuvam scheme provides healthcare screening']: UNRESOLVED. No conclusive empirical or statutory record identified.\nPart 2 ['essential medicines at doorsteps across Tamil Nadu.']: UNRESOLVED. No conclusive empirical or statutory record identified.",
+      "methodology": "CIVICLENS_VERIFICATION_METHODOLOGY_V1",
+      "limitations": "Provisional public records subject to ongoing official gazette updates.",
+      "supporting_evidence_ids": [],
+      "contradicting_evidence_ids": [],
+      "source_diversity": 4,
+      "confidence": 0.78,
+      "verification_timestamp": "2026-10-13 15:53:30",
+      "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent."
+    },
+    "atomic_claims": [
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-006-01",
+        "atomic_claim_text": "Makkalai Thedi Maruthuvam scheme provides healthcare screening",
+        "language": "en",
+        "subject": "Makkalai Thedi Maruthuvam",
+        "predicate": "asserts",
+        "object": "Makkalai Thedi Maruthuvam scheme provides healthcare screening",
+        "numeric_value": null,
+        "unit": null,
+        "time_period": null,
+        "claim_type": "SCHEME_BENEFIT",
+        "is_verifiable": true,
+        "confidence": 0.95
+      },
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-006-02",
+        "atomic_claim_text": "essential medicines at doorsteps across Tamil Nadu.",
+        "language": "en",
+        "subject": "Edappadi K. Palaniswami",
+        "predicate": "asserts",
+        "object": "essential medicines at doorsteps across Tamil Nadu.",
+        "numeric_value": null,
+        "unit": null,
+        "time_period": null,
+        "claim_type": "POLICY_DECISION",
+        "is_verifiable": true,
+        "confidence": 0.95
+      }
+    ],
+    "relationships": [
+      {
+        "evidence_document_id": "EVD-CL-A-0008",
+        "evidence_title": "TVK govt presents first Budget in TN Assembly, Fin Min hails Vijay for halting kickbacks in tenders",
+        "publisher": "Telangana Today",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Tamil Nadu Finance Minister N. Marie Wilson presented the TVK government's first Budget, praising Chief Minister C. Joseph Vijay for ending alleged tender \"cuts.\" The Budget reiterated opposition to NEET, urged its abolition, and highlighted financial recovery measures alongside reforms promoting tr",
+        "source_url": "https://telanganatoday.com/tvk-govt-presents-first-budget-in-tn-assembly-fin-min-hails-vijay-for-halting-kickbacks-in-tenders",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0100",
+        "evidence_title": "TVK’s bypoll victories a verdict on four months of good governance: Minister Arunraj - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "unrelated",
+        "relevant_passage": "You don’t have any Active Subscription. Subscribed with another email? Logout and Login with that one. Account subscription benefits alongside Premium Stories, Editorials,\n              Opinions and more. Unlock these with Subscription Updated  - October 10, 2026 02:00 pm IST - ERODE K.G. Arunraj. F",
+        "source_url": "https://www.thehindu.com/news/national/tamil-nadu/tvks-bypoll-wins-a-verdict-on-four-months-of-good-governance-minister-arunraj/article71567203.ece",
+        "publication_date": "2026-10-10"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0141",
+        "evidence_title": "Two seats and Tamil Nadu’s return to a political duopoly - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Updated  - October 11, 2026 07:30 am IST Visible change: In a contrast to his Assembly poll campaign, when he made personal appearances only in a handful of areas, TVK leader and Chief Minister C. Joseph Vijay devoted two days each to Dh",
+        "source_url": "https://www.thehindu.com/news/national/tamil-nadu/two-seats-and-tamil-nadus-return-to-a-political-duopoly/article71569430.ece",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0016",
+        "evidence_title": "Chief Minister's Breakfast Scheme — Free Breakfast for Government School Students",
+        "publisher": "Government of Tamil Nadu, School Education Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Tamil Nadu government scheme providing free breakfast to government school students across the state.",
+        "source_url": "https://www.tn.gov.in/",
+        "publication_date": "2022-09-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0032",
+        "evidence_title": "Makkalai Thedi Maruthuvam Scheme Guidelines and Entitlements",
+        "publisher": "Health and Family Welfare Department, Government of Tamil Nadu",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Official department scheme guidelines detailing door-to-door screening, non-communicable disease medication distribution, and mobile palliative healthcare teams across rural Tamil Nadu.",
+        "source_url": "https://www.tn.gov.in/scheme/data_view/9912",
+        "publication_date": "2021-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0008",
+        "evidence_title": "TVK govt presents first Budget in TN Assembly, Fin Min hails Vijay for halting kickbacks in tenders",
+        "publisher": "Telangana Today",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Tamil Nadu Finance Minister N. Marie Wilson presented the TVK government's first Budget, praising Chief Minister C. Joseph Vijay for ending alleged tender \"cuts.\" The Budget reiterated opposition to NEET, urged its abolition, and highlighted financial recovery measures alongside reforms promoting tr",
+        "source_url": "https://telanganatoday.com/tvk-govt-presents-first-budget-in-tn-assembly-fin-min-hails-vijay-for-halting-kickbacks-in-tenders",
+        "publication_date": "2026-08-05"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0100",
+        "evidence_title": "TVK’s bypoll victories a verdict on four months of good governance: Minister Arunraj - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "You don’t have any Active Subscription. Subscribed with another email? Logout and Login with that one. Account subscription benefits alongside Premium Stories, Editorials,\n              Opinions and more. Unlock these with Subscription Updated  - October 10, 2026 02:00 pm IST - ERODE K.G. Arunraj. F",
+        "source_url": "https://www.thehindu.com/news/national/tamil-nadu/tvks-bypoll-wins-a-verdict-on-four-months-of-good-governance-minister-arunraj/article71567203.ece",
+        "publication_date": "2026-10-10"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0141",
+        "evidence_title": "Two seats and Tamil Nadu’s return to a political duopoly - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Updated  - October 11, 2026 07:30 am IST Visible change: In a contrast to his Assembly poll campaign, when he made personal appearances only in a handful of areas, TVK leader and Chief Minister C. Joseph Vijay devoted two days each to Dh",
+        "source_url": "https://www.thehindu.com/news/national/tamil-nadu/two-seats-and-tamil-nadus-return-to-a-political-duopoly/article71569430.ece",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0016",
+        "evidence_title": "Chief Minister's Breakfast Scheme — Free Breakfast for Government School Students",
+        "publisher": "Government of Tamil Nadu, School Education Department",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Tamil Nadu government scheme providing free breakfast to government school students across the state.",
+        "source_url": "https://www.tn.gov.in/",
+        "publication_date": "2022-09-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0032",
+        "evidence_title": "Makkalai Thedi Maruthuvam Scheme Guidelines and Entitlements",
+        "publisher": "Health and Family Welfare Department, Government of Tamil Nadu",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Official department scheme guidelines detailing door-to-door screening, non-communicable disease medication distribution, and mobile palliative healthcare teams across rural Tamil Nadu.",
+        "source_url": "https://www.tn.gov.in/scheme/data_view/9912",
+        "publication_date": "2021-08-05"
+      }
+    ],
+    "cross_phase": {
+      "historical_scheme": null,
+      "promise": null,
+      "news_article": null,
+      "financial_document": null,
+      "representative": null
+    }
+  },
+  {
+    "claim_id": "CLM-REAL-TN-007",
+    "original_text": "Committed expenditure of Tamil Nadu accounts for approximately 61 percent of total revenue receipts in 2026-27.",
+    "normalized_text": "Committed expenditure of Tamil Nadu accounts for approximately 61 percent of total revenue receipts in 2026-27.",
+    "claim_category": "BUDGET_EXPENDITURE",
+    "language": "en",
+    "speaker_name": "PRS Legislative Research",
+    "speaker_role": "Independent Research Analyst",
+    "party": "Independent",
+    "claim_date": "2026-08-28",
+    "publication_date": "2026-08-28",
+    "candidate_source_type": "FACT_CHECK_ARTICLE",
+    "attribution_type": "PARAPHRASE",
+    "claim_source_url": "https://prsindia.org/budgets/states/tamil-nadu-budget-analysis-2026-27",
+    "source_document_id": "DOC-PRS-CL-D-0001",
+    "geographic_scope": "Tamil Nadu",
+    "extraction_method": "STRUCTURED_EXTRACTION",
+    "status": "VERIFIED",
+    "review_status": "PENDING_REVIEW",
+    "is_human_reviewed": false,
+    "reviewer_role": null,
+    "reviewer_name": null,
+    "review_notes": null,
+    "verification": {
+      "outcome": "disputed_evidence",
+      "explanation": "Direct conflict between available authoritative sources. Official reports and audit scrutiny present diverging empirical findings.\n\nProposition Breakdown:\nPart 1 ['Committed expenditure of Tamil Nadu accounts for approximately 61 percent of total revenue receipts in 2026-27.']: DISPUTED. Conflicting official records found (Ref: Official statutory gazette notification confirming the bye-elections in Tamil Nadu Assembly constituencies 35-Madurantakam (SC) and 101-Dharapuram (SC), held on 6 October 2026, where TVK candidates em).",
+      "methodology": "CIVICLENS_VERIFICATION_METHODOLOGY_V1",
+      "limitations": "Provisional public records subject to ongoing official gazette updates.",
+      "supporting_evidence_ids": [
+        "CER-CLM-REAL-TN-007-ACM-CLM-REAL-TN-007-01-PSG-CL-A-0015-01"
+      ],
+      "contradicting_evidence_ids": [
+        "CER-CLM-REAL-TN-007-ACM-CLM-REAL-TN-007-01-PSG-CL-D-0006-01",
+        "CER-CLM-REAL-TN-007-ACM-CLM-REAL-TN-007-01-PSG-CL-D-0020-01"
+      ],
+      "source_diversity": 4,
+      "confidence": 0.65,
+      "verification_timestamp": "2026-10-13 15:53:30",
+      "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent."
+    },
+    "atomic_claims": [
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-007-01",
+        "atomic_claim_text": "Committed expenditure of Tamil Nadu accounts for approximately 61 percent of total revenue receipts in 2026-27.",
+        "language": "en",
+        "subject": "Tamil Nadu",
+        "predicate": "asserts",
+        "object": "Committed expenditure of Tamil Nadu accounts for approximately 61 percent of total revenue receipts in 2026-27.",
+        "numeric_value": 61.0,
+        "unit": "percent",
+        "time_period": "2026-27",
+        "claim_type": "NUMERICAL_STATISTIC",
+        "is_verifiable": true,
+        "confidence": 0.95
+      }
+    ],
+    "relationships": [
+      {
+        "evidence_document_id": "EVD-CL-A-0015",
+        "evidence_title": "Tamil Nadu Government presents revised Agriculture Budget for 2026-27 in the State Assembly",
+        "publisher": "All India Radio News (Prasar Bharati)",
+        "relationship_type": "supports",
+        "relevant_passage": "7432 Crore will be disbursed to the Tamil Nadu Power Distribution Corporation towards providing free electricity connections to farmers",
+        "source_url": "https://newsonair.gov.in/tamil-nadu-government-presents-revised-agriculture-budget-for-2026-27-in-the-state-assembly/",
+        "publication_date": "2026-08-06"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0106",
+        "evidence_title": "T.N. students, youth will not fall for Rahul Gandhi’s ‘false propaganda’, says Nagenthran - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Published - October 11, 2026 06:28 pm IST - CHENNAI BJP State president Nainar Nagenthran.\n                                          | Photo Credit: N. BASHKARAN BJP State president Nainar Nagenthran said on Sunday that the students and ",
+        "source_url": "https://www.thehindu.com/news/national/tamil-nadu/tn-students-youth-will-not-fall-for-rahul-gandhis-false-propaganda-says-nagenthran/article71571140.ece",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0001",
+        "evidence_title": "Tamil Nadu Budget Analysis 2026-27",
+        "publisher": "PRS Legislative Research",
+        "relationship_type": "unrelated",
+        "relevant_passage": "Independent summary of TN revised budget 2026-27 presented on 5 Aug 2026 (committed expenditure about 61 per cent of revenue receipts, per the document)",
+        "source_url": "https://prsindia.org/budgets/states/tamil-nadu-budget-analysis-2026-27",
+        "publication_date": "2026-08-28"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0006",
+        "evidence_title": "Election Commission of India Bye-Elections 2026 Declaration of Results for 35-Madurantakam (SC) and 101-Dharapuram (SC)",
+        "publisher": "Election Commission of India",
+        "relationship_type": "contradicts",
+        "relevant_passage": "Official statutory gazette notification confirming the bye-elections in Tamil Nadu Assembly constituencies 35-Madurantakam (SC) and 101-Dharapuram (SC), held on 6 October 2026, where TVK candidates em",
+        "source_url": "https://stationeryprinting.tn.gov.in/extraordinary/2026/383_Ex_V_4_2026.pdf",
+        "publication_date": "2026-10-09"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0020",
+        "evidence_title": "Tamil Nadu 2026 Assembly Election Schedule — ECI Notification",
+        "publisher": "Election Commission of India",
+        "relationship_type": "contradicts",
+        "relevant_passage": "ECI notification for Tamil Nadu Legislative Assembly General Elections 2026, including schedule, model code of conduct, and candidate list deadlines.",
+        "source_url": "https://eci.gov.in/",
+        "publication_date": "2026-03-15"
+      }
+    ],
+    "cross_phase": {
+      "historical_scheme": null,
+      "promise": null,
+      "news_article": null,
+      "financial_document": null,
+      "representative": null
+    }
+  },
+  {
+    "claim_id": "CLM-REAL-TN-008",
+    "original_text": "Tamil Nadu achieved zero infant mortality across all district hospitals during the last fiscal year.",
+    "normalized_text": "Tamil Nadu achieved zero infant mortality across all district hospitals during the last fiscal year.",
+    "claim_category": "HEALTHCARE_EDUCATION",
+    "language": "en",
+    "speaker_name": "Unverified Campaigner",
+    "speaker_role": "Citizen Campaigner",
+    "party": "Independent",
+    "claim_date": "2026-05-10",
+    "publication_date": "2026-05-10",
+    "candidate_source_type": "PUBLIC_SPEECH",
+    "attribution_type": "USER_SUBMITTED",
+    "claim_source_url": "https://public-forum.tn.in/post/10492",
+    "source_document_id": "DOC-PUBLIC-POST-01",
+    "geographic_scope": "Tamil Nadu",
+    "extraction_method": "USER_SUBMITTED",
+    "status": "VERIFIED",
+    "review_status": "PENDING_REVIEW",
+    "is_human_reviewed": false,
+    "reviewer_role": null,
+    "reviewer_name": null,
+    "review_notes": null,
+    "verification": {
+      "outcome": "missing_important_context",
+      "explanation": "The claim omits important fiscal, temporal, or administrative context (e.g. historical baseline vs contemporary state, or restricted pilot scope).\n\nProposition Breakdown:\nPart 1 ['Tamil Nadu achieved zero infant mortality across all district hospitals during the last fiscal year.']: SUPPORTED by available statutory/empirical evidence (Ref: 7432 Crore will be disbursed to the Tamil Nadu Power Distribution Corporation towards providing free electricity connections to farmers).",
+      "methodology": "CIVICLENS_VERIFICATION_METHODOLOGY_V1",
+      "limitations": "Provisional public records subject to ongoing official gazette updates.",
+      "supporting_evidence_ids": [
+        "CER-CLM-REAL-TN-008-ACM-CLM-REAL-TN-008-01-PSG-CL-A-0015-01"
+      ],
+      "contradicting_evidence_ids": [],
+      "source_diversity": 4,
+      "confidence": 0.78,
+      "verification_timestamp": "2026-10-13 15:53:30",
+      "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent."
+    },
+    "atomic_claims": [
+      {
+        "atomic_claim_id": "ACM-CLM-REAL-TN-008-01",
+        "atomic_claim_text": "Tamil Nadu achieved zero infant mortality across all district hospitals during the last fiscal year.",
+        "language": "en",
+        "subject": "Tamil Nadu",
+        "predicate": "achieved",
+        "object": "Tamil Nadu achieved zero infant mortality across all district hospitals during the last fiscal year.",
+        "numeric_value": null,
+        "unit": null,
+        "time_period": null,
+        "claim_type": "POLICY_DECISION",
+        "is_verifiable": true,
+        "confidence": 0.95
+      }
+    ],
+    "relationships": [
+      {
+        "evidence_document_id": "EVD-CL-A-0015",
+        "evidence_title": "Tamil Nadu Government presents revised Agriculture Budget for 2026-27 in the State Assembly",
+        "publisher": "All India Radio News (Prasar Bharati)",
+        "relationship_type": "supports",
+        "relevant_passage": "7432 Crore will be disbursed to the Tamil Nadu Power Distribution Corporation towards providing free electricity connections to farmers",
+        "source_url": "https://newsonair.gov.in/tamil-nadu-government-presents-revised-agriculture-budget-for-2026-27-in-the-state-assembly/",
+        "publication_date": "2026-08-06"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0113",
+        "evidence_title": "PM Modi in Chennai updates | Prime Minister inaugurates Metro Rail's Phase 2 stretch, ₹13000-crore worth development projects  - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Updated  - October 11, 2026 06:04 pm IST Prime Minister Narendra Modi, along with Tamil Nadu Chief Minister C. Joseph Vijay inaugurated development projects worth ₹13,000 crore across Tamil Nadu, during an event at Kendriya Vidyalaya in ",
+        "source_url": "https://www.thehindu.com/news/cities/chennai/chennai-metro-phase-two-inauguration-poonamallee-vadapalani-narendra-modi-visit-schedule-cm-vijay-meeting-live-updates/article71570613.ece",
+        "publication_date": "2026-10-11"
+      },
+      {
+        "evidence_document_id": "EVD-CL-A-0147",
+        "evidence_title": "From mission to action – future of road safety in Tamil Nadu - The Hindu",
+        "publisher": "The Hindu",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "Subscribed with another email? Logout and Login with that one. Updated  - October 10, 2026 05:26 pm IST - CHENNAI Image used for representational purposes only.\n                                          | Photo Credit: G. Karthikeyan Road safety in India has reached a scale that warrants a sustained",
+        "source_url": "https://www.thehindu.com/news/national/tamil-nadu/from-mission-to-action-future-of-road-safety-in-tamil-nadu/article71562858.ece",
+        "publication_date": "2026-10-10"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0016",
+        "evidence_title": "Chief Minister's Breakfast Scheme — Free Breakfast for Government School Students",
+        "publisher": "Government of Tamil Nadu, School Education Department",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "Tamil Nadu government scheme providing free breakfast to government school students across the state.",
+        "source_url": "https://www.tn.gov.in/",
+        "publication_date": "2022-09-15"
+      },
+      {
+        "evidence_document_id": "EVD-CL-D-0028",
+        "evidence_title": "ECI Schedule for General Election to the Legislative Assembly of Tamil Nadu 2021",
+        "publisher": "Election Commission of India",
+        "relationship_type": "contextualizes",
+        "relevant_passage": "Official press note outlining the single-phase election schedule for all 234 assembly constituencies in Tamil Nadu on April 6, 2021, with counting on May 2, 2021.",
+        "source_url": "https://eci.gov.in/files/file/13010-schedule-for-general-election-to-the-legislative-assemblies/",
+        "publication_date": "2021-02-26"
+      }
+    ],
+    "cross_phase": {
+      "historical_scheme": null,
+      "promise": null,
+      "news_article": null,
+      "financial_document": null,
+      "representative": null
+    }
+  }
+]

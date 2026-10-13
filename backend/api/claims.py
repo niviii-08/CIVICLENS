@@ -258,7 +258,9 @@ def list_claims():
         if search_query:
             query = query.filter(
                 (Claim.original_text.ilike(f"%{search_query}%")) |
-                (Claim.normalized_text.ilike(f"%{search_query}%"))
+                (Claim.normalized_text.ilike(f"%{search_query}%")) |
+                (Claim.speaker_name.ilike(f"%{search_query}%")) |
+                (Claim.speaker_role.ilike(f"%{search_query}%"))
             )
 
         if outcome_param:

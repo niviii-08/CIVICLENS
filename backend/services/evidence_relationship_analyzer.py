@@ -652,8 +652,9 @@ class EvidenceRelationshipAnalyzer:
         if is_syndicated:
             reasoning.append("Marked as syndicated copy: anti-echo chamber rule prevents inflating corroboration weight.")
 
+        atomic_id_part = f"-{atomic_claim.atomic_claim_id}" if atomic_claim else ""
         return {
-            "relationship_id": f"CER-{claim.claim_id}-{passage.passage_id}",
+            "relationship_id": f"CER-{claim.claim_id}{atomic_id_part}-{passage.passage_id}",
             "claim_id": claim.claim_id,
             "atomic_claim_id": atomic_claim.atomic_claim_id if atomic_claim else None,
             "evidence_document_id": document.document_id,

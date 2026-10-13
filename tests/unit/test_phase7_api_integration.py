@@ -152,91 +152,89 @@ def api_client(db_session):
     app.config["TESTING"] = True
 
     from backend.database.session import engine
-    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    # Re-insert the base cross-phase records into engine
+    # Re-insert the base cross-phase records into engine if not present
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    dept = BudgetDepartment(id=1, name="Finance Department TN", code="DEMAND_01")
-    bscheme = BudgetScheme(id=1, department_id=1, name="Kalaignar Magalir Urimai Thittam")
-    hscheme = HistoricalScheme(
-        id=101,
-        scheme_name="Kalaignar Magalir Urimai Thittam",
-        department_id=1,
-        financial_year="2023-2024",
-        objectives="Monthly direct benefit transfer to women heads of families."
-    )
-    session.add_all([dept, bscheme, hscheme])
+    if not session.query(BudgetDepartment).filter(BudgetDepartment.id == 1).first():
+        dept = BudgetDepartment(id=1, name="Finance Department TN", code="DEMAND_01")
+        bscheme = BudgetScheme(id=1, department_id=1, name="Kalaignar Magalir Urimai Thittam")
+        hscheme = HistoricalScheme(
+            id=101,
+            scheme_name="Kalaignar Magalir Urimai Thittam",
+            department_id=1,
+            financial_year="2023-2024",
+            objectives="Monthly direct benefit transfer to women heads of families."
+        )
+        session.add_all([dept, bscheme, hscheme])
 
-    manifesto = Manifesto(
-        manifesto_id="MAN-2021-DMK",
-        party="DMK",
-        election_year=2021,
-        title="DMK 2021 State Assembly Manifesto"
-    )
-    promise = PoliticalPromise(
-        promise_id="PRM-2021-DMK-042",
-        manifesto_id="MAN-2021-DMK",
-        original_text="Rs 1,000 monthly basic income for eligible women heads of families.",
-        normalized_text="rs 1000 monthly basic income for eligible women heads of families",
-        classification="social_welfare"
-    )
-    session.add_all([manifesto, promise])
+        manifesto = Manifesto(
+            manifesto_id="MAN-2021-DMK",
+            party="DMK",
+            election_year=2021,
+            title="DMK 2021 State Assembly Manifesto"
+        )
+        promise = PoliticalPromise(
+            promise_id="PRM-2021-DMK-042",
+            manifesto_id="MAN-2021-DMK",
+            original_text="Rs 1,000 monthly basic income for eligible women heads of families.",
+            normalized_text="rs 1000 monthly basic income for eligible women heads of families",
+            classification="social_welfare"
+        )
+        session.add_all([manifesto, promise])
 
-    news_src = NewsSource(
-        source_id="NS-THE-HINDU",
-        source_name="The Hindu Tamil",
-        domain="thehindu.com",
-        language="ta"
-    )
-    article = Article(
-        article_id="ART-2024-HIN-001",
-        source_id="NS-THE-HINDU",
-        url="https://www.thehindu.com/news/national/tamil-nadu/magalir-urimai-launch.html",
-        title="Over 1.15 crore women receive monthly assistance in Tamil Nadu",
-        article_text="The Chief Minister launched the ground disbursals under KMUT across all districts.",
-        publication_date=datetime(2023, 9, 16, tzinfo=timezone.utc),
-        text_hash="hash-news-art-001"
-    )
-    session.add_all([news_src, article])
+        news_src = NewsSource(
+            source_id="NS-THE-HINDU",
+            source_name="The Hindu Tamil",
+            domain="thehindu.com",
+            language="ta"
+        )
+        article = Article(
+            article_id="ART-2024-HIN-001",
+            source_id="NS-THE-HINDU",
+            url="https://www.thehindu.com/news/national/tamil-nadu/magalir-urimai-launch.html",
+            title="Over 1.15 crore women receive monthly assistance in Tamil Nadu",
+            article_text="The Chief Minister launched the ground disbursals under KMUT across all districts.",
+            publication_date=datetime(2023, 9, 16, tzinfo=timezone.utc),
+            text_hash="hash-news-art-001"
+        )
+        session.add_all([news_src, article])
 
-    findoc = FinancialDocument(
-        document_id="FIN-DMK-2023-01",
-        source_id="ECI-TRANSPARENCY-PORTAL",
-        financial_year="2022-2023",
-        filing_type="AnnualAudit",
-        file_hash_sha256="hash-fin-doc-001",
-        source_url="https://eci.gov.in/contributions/dmk-2022-23.pdf"
-    )
-    session.add(findoc)
+        findoc = FinancialDocument(
+            document_id="FIN-DMK-2023-01",
+            source_id="ECI-TRANSPARENCY-PORTAL",
+            financial_year="2022-2023",
+            filing_type="AnnualAudit",
+            file_hash_sha256="hash-fin-doc-001",
+            source_url="https://eci.gov.in/contributions/dmk-2022-23.pdf"
+        )
+        session.add(findoc)
 
-    constituency = Constituency(
-        constituency_id="CON-TN-KOLATHUR",
-        official_name="Kolathur",
-        constituency_type=ConstituencyType.ASSEMBLY,
-        district="Chennai",
-        state="Tamil Nadu",
-        valid_from="2008"
-    )
-    representative = Representative(
-        representative_id="REP-TN-MLA-001",
-        official_name="M.K. Stalin",
-        representative_type="MLA",
-        party_id="DMK",
-        constituency_id="CON-TN-KOLATHUR",
-        term_start="2021-05-07"
-    )
-    session.add_all([constituency, representative])
+        constituency = Constituency(
+            constituency_id="CON-TN-KOLATHUR",
+            official_name="Kolathur",
+            constituency_type=ConstituencyType.ASSEMBLY,
+            district="Chennai",
+            state="Tamil Nadu",
+            valid_from="2008"
+        )
+        representative = Representative(
+            representative_id="REP-TN-MLA-001",
+            official_name="M.K. Stalin",
+            representative_type="MLA",
+            party_id="DMK",
+            constituency_id="CON-TN-KOLATHUR",
+            term_start="2021-05-07"
+        )
+        session.add_all([constituency, representative])
+        session.commit()
 
-    session.commit()
     session.close()
 
     with app.test_client() as client:
         yield client
-
-    Base.metadata.drop_all(bind=engine)
 
 
 # ---------------------------------------------------------------------------
