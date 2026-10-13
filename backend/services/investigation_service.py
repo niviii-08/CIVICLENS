@@ -88,11 +88,12 @@ class CrossPhaseInvestigationService:
             CivicEvidenceEdge.provenance_status.notin_([GraphProvenanceStatus.RETRACTED, GraphProvenanceStatus.SUPERSEDED]),
         ).all()
 
-        # Related schemes (promises -> scheme)
-        scheme_node_ids = [
-            e.target_node_id for e in edges
-            if e.relationship_type in (GraphRelationshipType.PROMISES, GraphRelationshipType.RELATES_TO)
-        ]
+        # Related schemes (connected via PROMISES or RELATES_TO in either direction)
+        scheme_node_ids = []
+        for e in edges:
+            if e.relationship_type in (GraphRelationshipType.PROMISES, GraphRelationshipType.RELATES_TO):
+                other_id = e.target_node_id if e.source_node_id == node_id else e.source_node_id
+                scheme_node_ids.append(other_id)
         schemes = session.query(CivicGraphNode).filter(CivicGraphNode.node_id.in_(scheme_node_ids)).all() if scheme_node_ids else []
 
         # Budgets funding those schemes
@@ -181,13 +182,15 @@ class CrossPhaseInvestigationService:
         ).all()
 
         response_node_ids = [
-            e.source_node_id for e in edges
-            if e.relationship_type == GraphRelationshipType.RESPONDS_TO
+            (e.target_node_id if e.source_node_id == node_id else e.source_node_id)
+            for e in edges
+            if e.relationship_type in (GraphRelationshipType.RESPONDS_TO, GraphRelationshipType.RELATES_TO)
         ]
         response_nodes = session.query(CivicGraphNode).filter(CivicGraphNode.node_id.in_(response_node_ids)).all() if response_node_ids else []
 
         evidence_node_ids = [
-            e.source_node_id for e in edges
+            (e.target_node_id if e.source_node_id == node_id else e.source_node_id)
+            for e in edges
             if e.relationship_type == GraphRelationshipType.PROVIDES_EVIDENCE_FOR
         ]
         evidence_nodes = session.query(CivicGraphNode).filter(CivicGraphNode.node_id.in_(evidence_node_ids)).all() if evidence_node_ids else []
