@@ -117,8 +117,8 @@ def load_all_civic_data() -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], L
 
     # 7. Source Documents
     ok_docs, res_docs = api_client.get_civic_source_documents()
-    if ok_docs and isinstance(res_docs, dict) and res_docs.get("documents"):
-        source_docs = res_docs.get("documents", [])
+    if ok_docs and isinstance(res_docs, dict) and (res_docs.get("source_documents") or res_docs.get("documents")):
+        source_docs = res_docs.get("source_documents") or res_docs.get("documents", [])
     else:
         source_docs = FIXTURE_SOURCE_DOCUMENTS
 
