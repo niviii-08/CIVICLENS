@@ -565,24 +565,7 @@ class ClaimVerificationService:
             VerificationResult.is_current == True
         ).first()
 
-        evidence_items = []
-        for cer in claim.evidence_relationships:
-            passage = cer.passage
-            doc = passage.document if passage else None
-            evidence_items.append({
-                "relationship_id": cer.relationship_id,
-                "relationship_type": cer.relationship_type.value,
-                "relevance_score": cer.relevance_score,
-                "confidence_score": cer.confidence_score,
-                "contradiction_score": cer.contradiction_score,
-                "notes": cer.reconciliation_notes,
-                "passage_text": passage.passage_text if passage else None,
-                "page_number": passage.page_number if passage else None,
-                "document_title": doc.title if doc else None,
-                "source_name": doc.source_name if doc else None,
-                "source_tier": doc.source_tier.value if doc else None,
-                "file_hash_sha256": doc.file_hash_sha256 if doc else None
-            })
+        evidence_items = [cer.to_dict() for cer in claim.evidence_relationships]
 
         return {
             "claim_id": claim.claim_id,

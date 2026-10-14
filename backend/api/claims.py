@@ -895,6 +895,7 @@ def get_claim_evidence_relationships(claim_id: str):
     """
     Retrieves all established evidence relationships for a claim.
     Ensures contradictory evidence remains visible alongside supporting documents.
+    Groups relationships by type and atomic proposition with explicit citation metadata and empty states.
     """
     db = SessionLocal()
     try:
@@ -903,14 +904,154 @@ def get_claim_evidence_relationships(claim_id: str):
             return error_response(f"Claim '{claim_id}' not found", status_code=404)
 
         rels = list(claim.evidence_relationships)
+        rel_dicts = [r.to_dict() for r in rels]
+
+        # Categorize by relationship type
+        supporting = [r for r in rel_dicts if r.get("relationship_type") in ["supports", "partially_supports"]]
+        contradicting = [r for r in rel_dicts if r.get("relationship_type") == "contradicts"]
+        contextual = [r for r in rel_dicts if r.get("relationship_type") == "contextualizes"]
+        other = [r for r in rel_dicts if r.get("relationship_type") not in ["supports", "partially_supports", "contradicts", "contextualizes"]]
+
+        # Group by atomic claim
+        by_atomic = {}
+        for ac in claim.atomic_claims:
+            ac_id = ac.atomic_claim_id
+            ac_rels = [r for r in rel_dicts if r.get("atomic_claim_id") == ac_id]
+            by_atomic[ac_id] = {
+                "atomic_claim_id": ac_id,
+                "atomic_claim_text": ac.atomic_claim_text,
+                "supporting": [r for r in ac_rels if r.get("relationship_type") in ["supports", "partially_supports"]],
+                "contradicting": [r for r in ac_rels if r.get("relationship_type") == "contradicts"],
+                "contextual": [r for r in ac_rels if r.get("relationship_type") == "contextualizes"],
+                "all_relationships": ac_rels
+            }
+
+        # Identify syndicated wire service copy clusters
+        syndicated_clusters = {}
+        for r in rel_dicts:
+            if r.get("is_syndicated_copy") and r.get("syndication_cluster_id"):
+                cid = r["syndication_cluster_id"]
+                syndicated_clusters.setdefault(cid, []).append(r["relationship_id"])
+
         return success_response(
             data={
                 "claim_id": claim_id,
                 "total_relationships": len(rels),
-                "relationships": [r.to_dict() for r in rels],
+                "relationships": rel_dicts,
+                "by_relationship_type": {
+                    "supporting": supporting,
+                    "contradicting": contradicting,
+                    "contextual": contextual,
+                    "other": other
+                },
+                "by_atomic_claim": by_atomic,
+                "syndicated_clusters": syndicated_clusters,
+                "empty_states": {
+                    "supporting": "No directly supporting empirical evidence identified in examined sources." if not supporting else None,
+                    "contradicting": "No contradictory statutory or audit records identified in examined sources." if not contradicting else None,
+                    "contextual": "No qualifying scope divergence detected." if not contextual else None
+                },
                 "epistemic_disclaimer": "Retains all supporting, partially supporting, and contradictory evidence without suppression."
             },
             message="Retrieved claim-evidence relationships successfully"
+        )
+    finally:
+        db.close()
+
+
+@claims_bp.route("/<string:claim_id>/evidence-explorer", methods=["GET"])
+def get_claim_evidence_explorer(claim_id: str):
+    """
+    Unified auditable dossier for Claim Verification Evidence Explorer.
+    Traverses the full verification trajectory:
+    ORIGINAL CLAIM -> ATOMIC CLAIMS -> SUPPORTING EVIDENCE -> CONTRADICTING EVIDENCE
+    -> CONTEXTUAL EVIDENCE -> VERIFICATION REASONING -> FINAL EVIDENCE ASSESSMENT
+    -> ORIGINAL SOURCE DOCUMENTS
+    """
+    db = SessionLocal()
+    try:
+        claim = db.query(Claim).filter(Claim.claim_id == claim_id).first()
+        if not claim:
+            return error_response(f"Claim '{claim_id}' not found", status_code=404)
+
+        current_res = next((r for r in claim.verification_results if r.is_current), None)
+        rels = list(claim.evidence_relationships)
+        rel_dicts = [r.to_dict() for r in rels]
+
+        # Partitioned evidence
+        supporting = [r for r in rel_dicts if r.get("relationship_type") in ["supports", "partially_supports"]]
+        contradicting = [r for r in rel_dicts if r.get("relationship_type") == "contradicts"]
+        contextual = [r for r in rel_dicts if r.get("relationship_type") == "contextualizes"]
+
+        # Atomic propositions with their dedicated evidence subsets
+        atomic_propositions = []
+        for ac in claim.atomic_claims:
+            ac_dict = ac.to_dict()
+            ac_rels = [r for r in rel_dicts if r.get("atomic_claim_id") == ac.atomic_claim_id]
+            ac_supp = [r for r in ac_rels if r.get("relationship_type") in ["supports", "partially_supports"]]
+            ac_contra = [r for r in ac_rels if r.get("relationship_type") == "contradicts"]
+            ac_ctx = [r for r in ac_rels if r.get("relationship_type") == "contextualizes"]
+
+            res_status = "UNRESOLVED"
+            if ac_contra and ac_supp:
+                res_status = "DISPUTED"
+            elif ac_contra:
+                res_status = "CONTRADICTED"
+            elif ac_supp:
+                res_status = "SUPPORTED"
+            elif ac_ctx:
+                res_status = "CONTEXTUALIZED"
+
+            atomic_propositions.append({
+                "atomic_claim": ac_dict,
+                "supporting_evidence": ac_supp,
+                "contradicting_evidence": ac_contra,
+                "contextual_evidence": ac_ctx,
+                "resolution_status": res_status
+            })
+
+        # Structured 10-point reasoning
+        structured_reasoning = current_res.get_structured_reasoning() if current_res else None
+
+        # Source documents referenced
+        referenced_doc_ids = sorted(list(set(r.get("document_id") for r in rel_dicts if r.get("document_id"))))
+        docs = db.query(EvidenceDocument).filter(EvidenceDocument.document_id.in_(referenced_doc_ids)).all() if referenced_doc_ids else []
+
+        # Audit history & reviews
+        history = [h.to_dict() for h in claim.verification_history]
+        reviews = [rev.to_dict() for rev in claim.reviews]
+
+        return success_response(
+            data={
+                "claim_id": claim.claim_id,
+                "original_claim": claim.to_dict(),
+                "atomic_claims": atomic_propositions,
+                "evidence_comparison": {
+                    "supporting": supporting,
+                    "contradicting": contradicting,
+                    "contextual": contextual,
+                    "empty_states": {
+                        "supporting": "No directly supporting empirical evidence identified in examined sources." if not supporting else None,
+                        "contradicting": "No contradictory statutory or audit records identified in examined sources." if not contradicting else None,
+                        "contextual": "No qualifying scope divergence detected." if not contextual else None
+                    }
+                },
+                "verification_reasoning": {
+                    "structured_reasoning": structured_reasoning,
+                    "explanation": current_res.explanation if current_res else None,
+                    "outcome": current_res.outcome.value if current_res and current_res.outcome else "pending_review",
+                    "confidence": current_res.confidence if current_res else 0.0,
+                    "uncertainty_indicator": current_res.uncertainty_indicator if current_res else 0.0,
+                    "methodology_version": current_res.methodology_version if current_res else "METHODOLOGY_V1",
+                    "model_version": current_res.model_version if current_res else "civiclens-verifier-v1.0",
+                    "limitations": current_res.limitations_and_caveats if current_res else None,
+                    "epistemic_disclaimer": "Evaluates available proposition support; strictly non-defamatory and without politician honesty scoring."
+                },
+                "source_documents": [d.to_dict() for d in docs],
+                "verification_history": history,
+                "human_reviews": reviews
+            },
+            message="Evidence Explorer dossier retrieved successfully"
         )
     finally:
         db.close()

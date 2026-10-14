@@ -686,6 +686,8 @@ class EvidencePassage(Base):
             "extracted_entities": self.extracted_entities or {},
             "numerical_values": self.numerical_values or {},
             "document_title": doc.title if doc else None,
+            "source_title": doc.title if doc else None,
+            "source_url": doc.source_url if doc else None,
             "publisher": doc.publisher if doc else None,
             "source_tier": (doc.source_tier.value if hasattr(doc.source_tier, "value") else str(doc.source_tier)) if doc else None,
             "created_at": self.created_at.isoformat() if self.created_at else None
@@ -744,21 +746,57 @@ class ClaimEvidenceRelationship(Base):
     def evidence_passage_id(self) -> str:
         return self.passage_id
 
+    @evidence_passage_id.setter
+    def evidence_passage_id(self, value: str) -> None:
+        self.passage_id = value
+
     def to_dict(self) -> Dict[str, Any]:
+        passage = self.passage
+        doc = passage.document if passage and getattr(passage, "document", None) else getattr(self, "document", None)
+
+        doc_id = self.evidence_document_id or (doc.document_id if doc else None)
+        src_url = doc.source_url if doc else None
+        src_title = doc.title if doc else None
+        publisher = doc.publisher or (doc.source_name if doc else None)
+        pub_date = doc.publication_date.isoformat() if doc and doc.publication_date else None
+        ret_date = doc.retrieval_date.isoformat() if doc and doc.retrieval_date else None
+        lang = doc.language if doc else None
+        source_tier = (doc.source_tier.value if hasattr(doc.source_tier, "value") else str(doc.source_tier)) if doc else None
+
+        page_num = passage.page_number if passage else None
+        sec_table = passage.section_or_table if passage else None
+        passage_ref = self.supporting_text_reference or self.contradicting_text_reference or (passage.passage_text if passage else None)
+        rel_type_str = self.relationship_type.value.lower() if hasattr(self.relationship_type, "value") else str(self.relationship_type).lower()
+        verif_status = self.human_review_status.value if hasattr(self.human_review_status, "value") else str(self.human_review_status)
+
         return {
+            "evidence_id": self.relationship_id,
             "relationship_id": self.relationship_id,
             "claim_id": self.claim_id,
             "atomic_claim_id": self.atomic_claim_id,
-            "evidence_document_id": self.evidence_document_id,
+            "document_id": doc_id,
+            "evidence_document_id": doc_id,
             "evidence_passage_id": self.passage_id,
             "passage_id": self.passage_id,
-            "relationship_type": self.relationship_type.value.lower() if hasattr(self.relationship_type, "value") else str(self.relationship_type).lower(),
+            "source_url": src_url,
+            "source_title": src_title,
+            "publisher": publisher,
+            "publication_date": pub_date,
+            "retrieval_date": ret_date,
+            "language": lang,
+            "source_tier": source_tier,
+            "page_number": page_num,
+            "section_or_table": sec_table,
+            "passage_reference": passage_ref,
+            "evidence_relationship": rel_type_str,
+            "relationship_type": rel_type_str,
+            "verification_status": verif_status,
             "supporting_text_reference": self.supporting_text_reference,
             "contradicting_text_reference": self.contradicting_text_reference,
             "analysis_method": self.analysis_method,
             "confidence": self.confidence,
             "model_version": self.model_version,
-            "human_review_status": self.human_review_status.value if hasattr(self.human_review_status, "value") else str(self.human_review_status),
+            "human_review_status": verif_status,
             "entity_alignment": self.entity_alignment,
             "temporal_alignment": self.temporal_alignment,
             "geographic_alignment": self.geographic_alignment,
@@ -779,6 +817,7 @@ class ClaimEvidenceRelationship(Base):
     # Relationships
     claim = relationship("Claim", back_populates="evidence_relationships")
     passage = relationship("EvidencePassage", back_populates="claim_relationships")
+    document = relationship("EvidenceDocument", foreign_keys=[evidence_document_id])
 
 
 # ---------------------------------------------------------------------------
@@ -917,6 +956,48 @@ class VerificationResult(Base):
     def verification_id(self) -> str:
         return self.result_id
 
+    def get_structured_reasoning(self) -> Dict[str, Any]:
+        """
+        Returns 10-point structured explainable reasoning breakdown for auditable verification:
+        1. Claim being evaluated
+        2. Specific proposition being checked
+        3. Evidence supporting the proposition
+        4. Evidence contradicting the proposition
+        5. Relevant context and qualifications
+        6. Important evidence gaps
+        7. Source reliability and limitations
+        8. Reason the selected outcome follows from the available evidence
+        9. Remaining uncertainty
+        10. Methodology and model version
+        """
+        if isinstance(self.empirical_findings, dict) and "structured_reasoning" in self.empirical_findings:
+            return self.empirical_findings["structured_reasoning"]
+
+        claim_text = self.claim.original_text if self.claim else "Political assertion"
+        propositions = (
+            [ac.atomic_claim_text for ac in self.claim.atomic_claims]
+            if self.claim and self.claim.atomic_claims
+            else [claim_text]
+        )
+        supp_count = len(self.supporting_evidence_ids or [])
+        contra_count = len(self.contradicting_evidence_ids or [])
+        ctx_count = len(self.context_evidence_ids or [])
+        outcome_val = self.outcome.value if hasattr(self.outcome, "value") else str(self.outcome)
+        unc_val = self.uncertainty_indicator if self.uncertainty_indicator is not None else 0.0
+
+        return {
+            "claim_evaluated": claim_text,
+            "specific_propositions": propositions,
+            "supporting_evidence_summary": f"{supp_count} corroborating passage(s) identified in statutory/gazetted sources." if supp_count > 0 else "No directly supporting empirical evidence identified in examined sources.",
+            "contradicting_evidence_summary": f"{contra_count} contradictory passage(s) demonstrating shortfall or conflicting baseline." if contra_count > 0 else "No contradictory statutory or audit records identified in examined sources.",
+            "context_and_qualifications": f"{ctx_count} contextual record(s) indicating scope, pipeline realization, or demographic baseline nuances." if ctx_count > 0 else "No qualifying scope divergence detected.",
+            "evidence_gaps": "Unresolved propositions or missing statutory records present." if outcome_val in ["insufficient_evidence", "pending_review", "partially_supported"] else "Comprehensive statutory records indexed.",
+            "source_reliability_and_limitations": self.limitations_and_caveats or "Provisional records subject to final statutory audit by CAG / departmental reconciliation. Deduplication applied to syndicated wire services.",
+            "outcome_justification": f"Outcome '{outcome_val}' directly assigned based on evidentiary balance: {supp_count} supporting vs {contra_count} contradicting signals across {self.source_diversity.get('independent_non_syndicated_sources', 1) if isinstance(self.source_diversity, dict) else 1} independent sources.",
+            "remaining_uncertainty": f"Uncertainty index: {unc_val:.2f}. Absence of proof does not establish proof of falsehood.",
+            "methodology_and_model": f"{self.methodology_version or 'CIVICLENS_VERIFICATION_METHODOLOGY_V1'} (Model: {self.model_version or 'civiclens-verifier-v1.0'})"
+        }
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "verification_id": self.result_id,
@@ -928,6 +1009,7 @@ class VerificationResult(Base):
             "verdict": self.verdict.value if self.verdict else (self.outcome.value if self.outcome else "SUPPORTED"),
             "explanation": self.explanation or self.rationale,
             "rationale": self.explanation or self.rationale,
+            "structured_reasoning": self.get_structured_reasoning(),
             "supporting_evidence_ids": self.supporting_evidence_ids or [],
             "contradicting_evidence_ids": self.contradicting_evidence_ids or [],
             "context_evidence_ids": self.context_evidence_ids or [],

@@ -846,6 +846,14 @@ class APIClient:
         except requests.exceptions.RequestException as e:
             return False, {"message": str(e)}
 
+    def get_claim_evidence_explorer(self, claim_id: str) -> Tuple[bool, Any]:
+        """Get unified Evidence Explorer dossier for auditable claim verification."""
+        try:
+            response = requests.get(f"{self.base_url}/api/claims/{claim_id}/evidence-explorer", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
     # -------------------------------------------------------------------------
     # PHASE 8: CIVIC ISSUE INTELLIGENCE ENDPOINTS
     # -------------------------------------------------------------------------

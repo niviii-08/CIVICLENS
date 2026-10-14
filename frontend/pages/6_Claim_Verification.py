@@ -26,6 +26,11 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
 from frontend.services.api import api_client
+from frontend.pages.six_claim_verification_test_helper import (
+    build_evidence_explorer_dossier,
+    normalize_evidence_relationship,
+    ensure_structured_reasoning,
+)
 
 st.set_page_config(
     page_title="Claim Verification & Evidence Intelligence - CIVICLENS TN",
@@ -1046,8 +1051,8 @@ with tab1:
 # TAB 2: CLAIM DETAIL (MANDATORY STRICT FLOW)
 # -----------------------------------------------------------------------------
 with tab2:
-    st.subheader("Claim Detail & Verification Dossier")
-    st.caption("Structured proposition breakdown strictly following statutory and evidentiary provenance standards.")
+    st.subheader("Auditable Claim Detail & Evidence Explorer")
+    st.caption("Complete, reproducible verification trajectory from verbatim political assertion to atomic propositions, conflicting empirical records, structured reasoning, and source documents.")
 
     # Select Claim ID
     available_ids = [c["claim_id"] for c in claims_list]
@@ -1067,169 +1072,358 @@ with tab2:
     if not claim_item:
         st.error(f"Claim record for `{selected_cid}` could not be retrieved.")
     else:
+        # Load complete auditable dossier via API or verified fallback helper
+        dossier = None
+        if not use_fixtures_only:
+            try:
+                ok, resp = api_client.get_claim_evidence_explorer(selected_cid)
+                if ok and resp and resp.get("claim_id"):
+                    dossier = resp
+            except Exception:
+                pass
+        if not dossier:
+            dossier = build_evidence_explorer_dossier(claim_item)
+
+        orig_claim = dossier.get("original_claim", claim_item)
+        atomic_propositions = dossier.get("atomic_claims", [])
+        ev_comp = dossier.get("evidence_comparison", {})
+        v_reason = dossier.get("verification_reasoning", {})
+        source_docs = dossier.get("source_documents", [])
+        v_hist = dossier.get("verification_history", [])
+
         # ---------------------------------------------------------------------
-        # 1. ORIGINAL CLAIM
+        # SECTION 1: ORIGINAL POLITICAL CLAIM (Verbatim Preservation)
         # ---------------------------------------------------------------------
-        st.markdown("### 1. 📌 ORIGINAL CLAIM (Verbatim Preservation)")
+        st.markdown("### 1. 📌 ORIGINAL POLITICAL CLAIM (Verbatim Preservation)")
         with st.container():
             st.markdown(
-                f"""<div style="border-left: 5px solid #0056b3; background-color: #f8f9fa; padding: 15px; border-radius: 4px; font-size: 17px; line-height: 1.5; color: #111;">
-                    <strong>"{claim_item.get('original_text', '')}"</strong>
+                f"""<div style="border-left: 6px solid #0056b3; background-color: #f8f9fa; padding: 18px; border-radius: 6px; font-size: 18px; line-height: 1.6; color: #111;">
+                    <strong>"{orig_claim.get('original_text', '')}"</strong>
                 </div>""",
                 unsafe_allow_html=True
             )
             c1, c2, c3, c4 = st.columns(4)
             with c1:
-                st.write(f"**Speaker:** {claim_item.get('speaker_name', 'Unverified')}")
-                st.write(f"**Role:** {claim_item.get('speaker_role', 'Not stated')}")
+                st.write(f"👤 **Speaker:** {orig_claim.get('speaker_name', 'Unverified')}")
+                st.write(f"💼 **Role:** {orig_claim.get('speaker_role', 'Not stated')}")
             with c2:
-                st.write(f"**Party:** `{claim_item.get('party', 'N/A')}`")
-                st.write(f"**Scope:** {claim_item.get('geographic_scope', 'Tamil Nadu')}")
+                st.write(f"🏛️ **Party:** `{orig_claim.get('party', 'N/A')}`")
+                st.write(f"📍 **Scope:** {orig_claim.get('geographic_scope', 'Tamil Nadu')}")
             with c3:
-                st.write(f"**Claim Date:** {claim_item.get('claim_date', 'N/A')}")
-                st.write(f"**Publication Date:** {claim_item.get('publication_date', 'N/A')}")
+                st.write(f"📅 **Claim Date:** {orig_claim.get('claim_date', 'N/A')}")
+                st.write(f"📰 **Publication Date:** {orig_claim.get('publication_date', 'N/A')}")
             with c4:
-                st.write(f"**Candidate Channel:** `{claim_item.get('candidate_source_type', 'N/A')}`")
-                st.write(f"**Attribution Type:** `{claim_item.get('attribution_type', 'N/A')}`")
+                st.write(f"📡 **Source Channel:** `{orig_claim.get('candidate_source_type', 'N/A')}`")
+                st.write(f"🗣️ **Attribution Type:** `{orig_claim.get('attribution_type', 'N/A')}`")
 
-        st.write("---")
+            st.caption(
+                f"🏷️ **Category:** `{orig_claim.get('claim_category', 'N/A')}` | "
+                f"🌐 **Language:** `{orig_claim.get('language', 'ta')}` | "
+                f"⚙️ **Extraction Method:** `{orig_claim.get('extraction_method', 'MANUAL')}` | "
+                f"🛡️ **Review Status:** {REVIEW_STATUS_BADGES.get(orig_claim.get('review_status', 'UNREVIEWED'), orig_claim.get('review_status', 'UNREVIEWED'))}"
+            )
+            st.info("ℹ️ **Epistemic Notice:** This module evaluates the empirical grounding of the specific assertions made. It strictly avoids evaluating politician intent, honesty, or truthfulness scores.")
+
+        st.markdown("---")
 
         # ---------------------------------------------------------------------
-        # 2. ATOMIC CLAIMS
+        # SECTION 2: ATOMIC CLAIMS (Proposition Decomposition & Filter)
         # ---------------------------------------------------------------------
-        st.markdown("### 2. 🔬 ATOMIC CLAIMS (Granular Decomposition)")
-        atomic_claims = claim_item.get("atomic_claims", [])
-        if not atomic_claims:
+        st.markdown("### 2. 🔬 ATOMIC CLAIMS (Granular Proposition Decomposition)")
+        st.caption("Each factual assertion is isolated into a subject-predicate-object proposition to enable granular verification against gazetted records.")
+
+        if not atomic_propositions:
             st.info("No atomic claims decomposed yet. Statement preserved as a single indivisible proposition.")
+            selected_prop_id = "ALL"
         else:
-            for a_idx, atm in enumerate(atomic_claims):
-                with st.expander(f"Proposition {a_idx + 1}: {atm.get('atomic_claim_text', 'N/A')}", expanded=True):
-                    ac1, ac2, ac3 = st.columns(3)
-                    with ac1:
-                        st.write(f"**Subject:** {atm.get('subject', 'N/A')}")
-                        st.write(f"**Predicate / Action:** {atm.get('predicate', 'N/A')}")
-                        st.write(f"**Object:** {atm.get('object', 'N/A')}")
-                    with ac2:
-                        st.write(f"**Numeric Target:** `{atm.get('numeric_value', 'None')}`")
-                        st.write(f"**Unit / Metric:** `{atm.get('unit', 'None')}`")
-                        st.write(f"**Temporal Scope:** {atm.get('time_period', 'None')}")
-                    with ac3:
-                        st.write(f"**Classification:** `{atm.get('claim_type', 'FACTUAL')}`")
-                        st.write(f"**Verifiability:** {'✅ Verifiable' if atm.get('is_verifiable', True) else '❌ Non-Verifiable (Subjective/Slogan)'}")
-                        st.write(f"**Confidence:** {int(atm.get('confidence', 0.9) * 100)}%")
+            prop_options = ["ALL"] + [p["atomic_claim"].get("atomic_claim_id") for p in atomic_propositions]
+            prop_labels = {
+                "ALL": f"All Propositions ({len(atomic_propositions)} total)",
+                **{p["atomic_claim"].get("atomic_claim_id"): f"{p['atomic_claim'].get('atomic_claim_id')} — {p['atomic_claim'].get('atomic_claim_text', '')[:70]}..." for p in atomic_propositions}
+            }
+            
+            selected_prop_id = st.selectbox(
+                "🎯 Isolate Evidence for Proposition:",
+                prop_options,
+                format_func=lambda x: prop_labels.get(x, x),
+                key=f"prop_selector_{selected_cid}"
+            )
 
-        st.write("---")
+            for a_idx, atm_entry in enumerate(atomic_propositions):
+                atm = atm_entry.get("atomic_claim", {})
+                atm_id = atm.get("atomic_claim_id", f"ATM-{a_idx}")
+                res_status = atm_entry.get("resolution_status", "UNRESOLVED")
 
-        # ---------------------------------------------------------------------
-        # 3. SUPPORTING EVIDENCE
-        # ---------------------------------------------------------------------
-        st.markdown("### 3. 🟢 SUPPORTING EVIDENCE")
-        relationships = claim_item.get("relationships", [])
-        supporting = [r for r in relationships if r.get("relationship_type") in ["supports", "partially_supports"]]
-        if not supporting:
-            st.info("No directly supporting gazetted or independent evidence was found in the verified registry.")
-        else:
-            for s_idx, sup in enumerate(supporting):
-                with st.container():
-                    st.markdown(f"**[{s_idx + 1}] {sup.get('evidence_title', 'Supporting Document')}**")
-                    st.caption(f"🏛️ **Publisher:** {sup.get('publisher', 'N/A')} | 📅 **Date:** {sup.get('publication_date', 'N/A')} | 🔗 [Source Document URL]({sup.get('source_url', '#')})")
-                    st.markdown(f"> *\"{sup.get('relevant_passage', 'No excerpt available.')}\"*")
-                    st.markdown(f"**Relationship:** `supports` | **Evidence ID:** `{sup.get('evidence_document_id', 'N/A')}`")
-                    st.write("")
+                status_colors = {
+                    "SUPPORTED": "#28a745",
+                    "CONTRADICTED": "#dc3545",
+                    "DISPUTED": "#d63384",
+                    "CONTEXTUALIZED": "#ffc107",
+                    "UNRESOLVED": "#6c757d"
+                }
+                res_color = status_colors.get(res_status, "#6c757d")
 
-        st.write("---")
+                with st.expander(f"Proposition {a_idx + 1} [`{atm_id}`]: {atm.get('atomic_claim_text', 'N/A')}", expanded=(selected_prop_id in ["ALL", atm_id])):
+                    col_p1, col_p2, col_p3 = st.columns(3)
+                    with col_p1:
+                        st.markdown(f"**Subject:** {atm.get('subject', 'N/A')}")
+                        st.markdown(f"**Predicate / Action:** {atm.get('predicate', 'N/A')}")
+                        st.markdown(f"**Object:** {atm.get('object', 'N/A')}")
+                    with col_p2:
+                        st.markdown(f"**Target Value:** `{atm.get('numeric_value', 'None')}`")
+                        st.markdown(f"**Unit / Metric:** `{atm.get('unit', 'None')}`")
+                        st.markdown(f"**Temporal Scope:** {atm.get('time_period', 'None')}")
+                    with col_p3:
+                        st.markdown(f"**Claim Type:** `{atm.get('claim_type', 'FACTUAL')}`")
+                        st.markdown(f"**Verifiability:** {'✅ Verifiable' if atm.get('is_verifiable', True) else '❌ Non-Verifiable'}")
+                        st.markdown(f"**Extraction Confidence:** {int(atm.get('confidence', 0.9) * 100)}%")
 
-        # ---------------------------------------------------------------------
-        # 4. CONTRADICTING EVIDENCE (PROMINENTLY DISPLAYED)
-        # ---------------------------------------------------------------------
-        st.markdown("### 4. 🔴 CONTRADICTING EVIDENCE (Conflicting Findings & Baselines)")
-        contradicting = [r for r in relationships if r.get("relationship_type") in ["contradicts", "disputed"]]
-        if not contradicting:
-            st.success("✅ No contradictory gazetted records or contradictory statistical databases identified.")
-        else:
-            st.warning("⚠️ **Conflicting Evidence Identified:** The following gazetted records contradict or dispute aspects of the claim proposition:")
-            for c_idx, con in enumerate(contradicting):
-                with st.container():
-                    st.markdown(f"**[{c_idx + 1}] {con.get('evidence_title', 'Contradictory Document')}**")
-                    st.caption(f"🏛️ **Publisher:** {con.get('publisher', 'N/A')} | 📅 **Date:** {con.get('publication_date', 'N/A')} | 🔗 [Source Document URL]({con.get('source_url', '#')})")
-                    st.markdown(f"> *\"{con.get('relevant_passage', 'No excerpt available.')}\"*")
-                    st.markdown(f"**Relationship:** `contradicts` | **Evidence ID:** `{con.get('evidence_document_id', 'N/A')}`")
-                    st.write("")
+                    st.markdown(
+                        f"""<div style="background-color: {res_color}; color: white; display: inline-block; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 13px;">
+                            Proposition Resolution: {res_status}
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+                    st.caption(f"Linked Evidence: {len(atm_entry.get('supporting_evidence', []))} Supporting | {len(atm_entry.get('contradicting_evidence', []))} Contradicting | {len(atm_entry.get('contextual_evidence', []))} Contextual")
 
-        st.write("---")
+        st.markdown("---")
 
         # ---------------------------------------------------------------------
-        # 5. CONTEXT & NUANCE
+        # SECTION 3: EVIDENCE COMPARISON & DRILL-DOWN INSPECTOR
         # ---------------------------------------------------------------------
-        st.markdown("### 5. ℹ️ CONTEXT, DENOMINATORS & OMISSIONS")
-        contextualizing = [r for r in relationships if r.get("relationship_type") == "contextualizes"]
-        if contextualizing:
-            for cx in contextualizing:
-                st.markdown(f"**{cx.get('evidence_title', 'Context Note')}** ({cx.get('publisher', 'N/A')}):")
-                st.markdown(f"> *\"{cx.get('relevant_passage', '')}\"*")
-        
-        v_info = claim_item.get("verification", {})
-        if v_info.get("limitations"):
-            st.markdown(f"**Contextual Caveat:** {v_info.get('limitations')}")
-        else:
-            st.markdown("No significant baseline shifts or omitted demographic baselines detected.")
+        st.markdown("### 3. ⚖️ EVIDENCE COMPARISON & DRILL-DOWN INSPECTOR")
+        st.caption("Inspect and compare empirical evidence documents. Contradictory evidence is displayed with equal prominence.")
 
-        st.write("---")
+        # Multi-filter controls for evidence items
+        col_ef1, col_ef2, col_ef3 = st.columns(3)
+        with col_ef1:
+            rel_filter = st.selectbox(
+                "Filter by Relationship Type",
+                ["All Types", "Supporting Only", "Contradicting Only", "Contextual Only"],
+                index=0,
+                key=f"rel_filter_{selected_cid}"
+            )
+        with col_ef2:
+            tier_filter = st.selectbox(
+                "Filter by Publisher Tier",
+                ["All Tiers", "TIER_1_STATUTORY", "TIER_2_GOVT_REPORT", "TIER_3_INDEPENDENT_AUDIT", "TIER_4_REPUTABLE_MEDIA"],
+                index=0,
+                key=f"tier_filter_{selected_cid}"
+            )
+        with col_ef3:
+            kw_filter = st.text_input("Filter Excerpts by Keyword", placeholder="e.g. enrolment, growth, crore...", key=f"kw_filter_{selected_cid}")
+
+        # Helper to apply filters to an evidence list
+        def _filter_evidence_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            filtered = []
+            for item in items:
+                # Proposition filter
+                if selected_prop_id != "ALL":
+                    item_atm_id = item.get("atomic_claim_id")
+                    if item_atm_id and item_atm_id != selected_prop_id:
+                        continue
+                # Tier filter
+                if tier_filter != "All Tiers" and item.get("source_tier") != tier_filter:
+                    continue
+                # Keyword filter
+                if kw_filter.strip():
+                    kw = kw_filter.strip().lower()
+                    title_match = kw in item.get("source_title", "").lower()
+                    passage_match = kw in item.get("passage_reference", "").lower()
+                    pub_match = kw in item.get("publisher", "").lower()
+                    if not (title_match or passage_match or pub_match):
+                        continue
+                filtered.append(item)
+            return filtered
+
+        supp_list = _filter_evidence_items(ev_comp.get("supporting", []))
+        contra_list = _filter_evidence_items(ev_comp.get("contradicting", []))
+        ctx_list = _filter_evidence_items(ev_comp.get("contextual", []))
+
+        # Re-usable renderer for evidence items with full drill-down inspector
+        def _render_evidence_card(item: Dict[str, Any], badge_color: str, badge_label: str):
+            with st.container():
+                st.markdown(
+                    f"""<div style="border-left: 5px solid {badge_color}; background-color: #ffffff; padding: 14px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="font-size: 16px; color: #111;">{item.get('source_title', 'Verified Evidence Record')}</strong>
+                            <span style="background-color: {badge_color}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                {badge_label}
+                            </span>
+                        </div>
+                        <div style="font-size: 13px; color: #555; margin-bottom: 8px;">
+                            🏛️ <strong>Publisher:</strong> {item.get('publisher', 'N/A')} | 
+                            📅 <strong>Date:</strong> {item.get('publication_date') or 'Undated'} | 
+                            🏷️ <strong>Tier:</strong> <code>{item.get('source_tier', 'TIER_1_STATUTORY')}</code> | 
+                            🆔 <code>{item.get('evidence_id', 'EVD-N/A')}</code>
+                        </div>
+                        <blockquote style="margin: 0 0 10px 0; padding: 8px 12px; background-color: #f8f9fa; border-left: 3px solid #ccc; font-style: italic; color: #222;">
+                            "{item.get('passage_reference', 'Passage reference not preserved.')}"
+                        </blockquote>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+
+                # Syndication callout if syndicated copy
+                if item.get("is_syndicated_copy"):
+                    st.warning(
+                        f"⚠️ **Syndicated Wire Copy:** This document is syndicated from cluster `{item.get('syndication_cluster_id')}` "
+                        f"and relies on primary reporting from `{item.get('primary_source_publisher', 'Original Agency')}`. "
+                        f"It is not counted as an independent corroborating source."
+                    )
+
+                # Evidence Drill-Down Inspector (Step 7 requirement)
+                with st.expander(f"🔍 Drill-Down Inspector: `{item.get('evidence_id')}` ({item.get('source_title', 'Document')[:50]}...)", expanded=False):
+                    d_col1, d_col2 = st.columns(2)
+                    with d_col1:
+                        st.markdown("##### 📄 Document & Publisher Details")
+                        st.markdown(f"- **Document ID:** `{item.get('document_id', item.get('evidence_document_id', 'N/A'))}`")
+                        st.markdown(f"- **Publisher:** {item.get('publisher', 'N/A')}")
+                        st.markdown(f"- **Source Tier:** `{item.get('source_tier', 'TIER_1_STATUTORY')}`")
+                        st.markdown(f"- **Publication Date:** {item.get('publication_date') or 'Not specified'}")
+                        st.markdown(f"- **Retrieval Date:** {item.get('retrieval_date') or 'Not specified'}")
+                        st.markdown(f"- **Language:** `{item.get('language', 'en')}`")
+                        if item.get("source_url"):
+                            st.markdown(f"- **Direct Source URL:** [Open Official Document ↗]({item.get('source_url')})")
+                        else:
+                            st.caption("- **Direct Source URL:** Not provided (local gazetted record)")
+
+                    with d_col2:
+                        st.markdown("##### 🔬 Passage & Proposition Grounding")
+                        st.markdown(f"- **Target Proposition ID:** `{item.get('atomic_claim_id', 'General Claim')}`")
+                        st.markdown(f"- **Page Number:** `{item.get('page_number') if item.get('page_number') is not None else 'Not specified'}`")
+                        st.markdown(f"- **Section / Table:** `{item.get('section_or_table') if item.get('section_or_table') is not None else 'Not specified'}`")
+                        st.markdown(f"- **Verification Status:** `{item.get('verification_status', 'PROVISIONALLY_INDEXED')}`")
+                        st.markdown(f"- **Analysis Method:** `{item.get('analysis_method', 'SEMANTIC_SIMILARITY_AND_NUMERICAL_CROSSCHECK')}`")
+                        st.markdown(f"- **Relevance Score:** `{item.get('relevance_score', 0.88)}` (Similarity: `{item.get('semantic_similarity', 0.85)}`)")
+
+                    # Numerical cross-check metrics where available
+                    if item.get("numeric_value") is not None or orig_claim.get("numeric_value") is not None:
+                        st.markdown("##### 📊 Quantitative Baseline Comparison")
+                        q_col1, q_col2, q_col3 = st.columns(3)
+                        with q_col1:
+                            st.metric("Claimed Metric", f"{orig_claim.get('numeric_value', 'N/A')} {orig_claim.get('unit', '')}")
+                        with q_col2:
+                            st.metric("Document Metric", f"{item.get('numeric_value', 'See text')} {item.get('unit', '')}")
+                        with q_col3:
+                            st.caption(f"**Baseline / Denominator:** {item.get('time_period', 'Gazetted period')} | {item.get('geographic_scope', 'Tamil Nadu')}")
+
+        # Tabbed Evidence Panels
+        tab_ev_supp, tab_ev_contra, tab_ev_ctx = st.tabs([
+            f"🟢 Supporting Evidence ({len(supp_list)})",
+            f"🔴 Contradicting Evidence ({len(contra_list)})",
+            f"ℹ️ Contextual & Nuancing ({len(ctx_list)})"
+        ])
+
+        with tab_ev_supp:
+            if rel_filter in ["All Types", "Supporting Only"]:
+                if not supp_list:
+                    empty_msg = ev_comp.get("empty_states", {}).get("supporting") or "No directly supporting empirical evidence was found in the examined records. The absence of evidence does not indicate falsehood or truth."
+                    st.info(f"ℹ️ {empty_msg}")
+                else:
+                    st.success(f"Found {len(supp_list)} corroborating record(s) matching your filters:")
+                    for s_item in supp_list:
+                        _render_evidence_card(s_item, "#28a745", "SUPPORTS")
+
+        with tab_ev_contra:
+            if rel_filter in ["All Types", "Contradicting Only"]:
+                if not contra_list:
+                    empty_msg = ev_comp.get("empty_states", {}).get("contradicting") or "No contradictory statutory or audit records were found in the examined records. The absence of evidence does not indicate falsehood or truth."
+                    st.success(f"✅ {empty_msg}")
+                else:
+                    st.warning(f"⚠️ **Conflicting Findings Identified:** {len(contra_list)} gazetted or statistical record(s) contradict or dispute aspects of the claim:")
+                    for c_item in contra_list:
+                        _render_evidence_card(c_item, "#dc3545", "CONTRADICTS")
+
+        with tab_ev_ctx:
+            if rel_filter in ["All Types", "Contextual Only"]:
+                if not ctx_list:
+                    empty_msg = ev_comp.get("empty_states", {}).get("contextual") or "No qualifying scope divergence or omitted denominator detected."
+                    st.info(f"ℹ️ {empty_msg}")
+                else:
+                    st.info(f"Found {len(ctx_list)} contextual record(s) qualifying scope or denominators:")
+                    for x_item in ctx_list:
+                        _render_evidence_card(x_item, "#ffc107", "CONTEXTUALIZES")
+
+        st.markdown("---")
 
         # ---------------------------------------------------------------------
-        # 6. VERIFICATION OUTCOME
+        # SECTION 4: VERIFICATION REASONING & 10-POINT BREAKDOWN
         # ---------------------------------------------------------------------
-        st.markdown("### 6. ⚖️ VERIFICATION OUTCOME & EXPLANATION")
-        outc = v_info.get("outcome", "pending_review")
+        st.markdown("### 4. 🧠 VERIFICATION REASONING & STRUCTURED SYNTHESIS")
+        st.caption("Transparent, multi-dimensional reasoning matrix explaining how the evidence determines the final assessment.")
+
+        outc = v_reason.get("outcome", "pending_review")
         outc_color = OUTCOME_COLORS.get(outc, "#6c757d")
         outc_label = OUTCOME_LABELS.get(outc, outc)
 
         st.markdown(
-            f"""<div style="border: 2px solid {outc_color}; background-color: #ffffff; padding: 16px; border-radius: 8px; margin-bottom: 15px;">
-                <h3 style="color: {outc_color}; margin-top: 0;">Verdict: {outc_label}</h3>
-                <p style="font-size: 16px; color: #222; line-height: 1.5;">{v_info.get('explanation', 'Verification explanation pending.')}</p>
+            f"""<div style="border: 2px solid {outc_color}; background-color: #ffffff; padding: 18px; border-radius: 8px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h3 style="color: {outc_color}; margin: 0;">Verdict: {outc_label}</h3>
+                    <span style="background-color: {outc_color}; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold;">
+                        Confidence: {int(v_reason.get('confidence', 0.85) * 100)}% (Uncertainty: {int(v_reason.get('uncertainty_indicator', 0.15) * 100)}%)
+                    </span>
+                </div>
+                <p style="font-size: 16px; color: #222; line-height: 1.6; margin-bottom: 0;">{v_reason.get('explanation', 'Verification explanation pending.')}</p>
             </div>""",
             unsafe_allow_html=True
         )
 
-        r_badge = REVIEW_STATUS_BADGES.get(claim_item.get("review_status", "UNREVIEWED"), "Unreviewed")
-        st.write(f"**Audit Status:** {r_badge}")
-        if claim_item.get("is_human_reviewed"):
-            st.success(f"Verified by Human Reviewer: **{claim_item.get('reviewer_name', 'Senior Fact Checker')}** ({claim_item.get('reviewer_role', 'Fact Checker')})")
-            if claim_item.get("review_notes"):
-                st.caption(f"Review Rationale Notes: *{claim_item.get('review_notes')}*")
-        else:
-            st.info("🟡 **Automated Model Output:** This initial assessment was generated by algorithmic NLP extraction and is pending human confirmation.")
+        # 10-Point Structured Reasoning Breakdown Accordion
+        sr = v_reason.get("structured_reasoning", {})
+        if sr:
+            with st.expander("🔍 10-Point Structured Explainability Breakdown", expanded=True):
+                props_display = ", ".join(sr.get("specific_propositions", [])) if isinstance(sr.get("specific_propositions"), list) else sr.get("specific_propositions", "")
+                r_items = [
+                    ("1. Claim Evaluated & Propositions", sr.get("1_proposition_decomposition") or (f"Claim: \"{sr.get('claim_evaluated')}\"" + (f" | Propositions: {props_display}" if props_display else ""))),
+                    ("2. Supporting Evidence Synthesis", sr.get("3_supporting_evidence_synthesis") or sr.get("supporting_evidence_summary", "Corroborated by available records.")),
+                    ("3. Contradictory Evidence Synthesis", sr.get("4_contradictory_evidence_synthesis") or sr.get("contradicting_evidence_summary", "No contradictory statutory filings.")),
+                    ("4. Context & Qualifications", sr.get("5_contextual_divergence_and_omissions") or sr.get("context_and_qualifications", "No qualifying scope divergence detected.")),
+                    ("5. Evidence Gaps & Completeness", sr.get("9_empirical_gaps_and_unresolved_points") or sr.get("evidence_gaps", "Records indexed.")),
+                    ("6. Source Reliability & Limitations", sr.get("2_evidence_sufficiency") or sr.get("source_reliability_and_limitations", "Official statutory records.")),
+                    ("7. Outcome Justification", sr.get("7_source_diversity_and_independence") or sr.get("outcome_justification", "Assigned based on available evidence.")),
+                    ("8. Remaining Uncertainty & Confidence", sr.get("8_epistemic_uncertainty_and_confidence") or sr.get("remaining_uncertainty", "High confidence on audited records.")),
+                    ("9. Methodology & Model", sr.get("6_statistical_denominator_audit") or sr.get("methodology_and_model", "CIVICLENS_VERIFICATION_METHODOLOGY_V1")),
+                    ("10. Epistemic Integrity Disclaimer", sr.get("10_epistemic_disclaimer") or "Evaluates available empirical evidence; strictly does not judge politician intent or honesty.")
+                ]
+                for title, text in r_items:
+                    st.markdown(f"**{title}**")
+                    st.markdown(f"> {text}")
+                    st.write("")
 
-        st.write("---")
+        st.caption(f"🛡️ **Statutory Epistemic Disclaimer:** {v_reason.get('epistemic_disclaimer', 'Evaluates available records; does not judge personal truthfulness.')}")
+
+        st.markdown("---")
 
         # ---------------------------------------------------------------------
-        # 7. METHODOLOGY AND LIMITATIONS
+        # SECTION 5: SOURCE DOCUMENTS & REPOSITORY INTEGRITY
         # ---------------------------------------------------------------------
-        st.markdown("### 7. 🛡️ METHODOLOGY AND LIMITATIONS")
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            st.markdown(f"**Methodology:** {v_info.get('methodology', 'Multilingual Claim-to-Evidence NLP Engine v7.8')}")
-            st.markdown(f"**Source Diversity:** {v_info.get('source_diversity', 1)} independent official publisher(s)")
-            st.markdown(f"**Algorithm Confidence:** {int(v_info.get('confidence', 0.85) * 100)}%")
-        with col_m2:
-            st.markdown(f"**Statutory Limitation:** {v_info.get('limitations', 'Provisional accounts subject to Comptroller & Auditor General (CAG) audit.')}")
-            st.markdown(f"**Disclaimer:** {v_info.get('epistemic_disclaimer', 'Assessment evaluates available records; does not judge personal truthfulness.')}")
+        st.markdown("### 5. 📄 SOURCE DOCUMENTS & REPOSITORY INTEGRITY")
+        st.caption("Immutable cryptographic and provenance records verifying document authenticity and open public accessibility.")
 
-        st.write("---")
+        col_sd1, col_sd2 = st.columns([2, 1])
+        with col_sd1:
+            if not source_docs:
+                st.caption("No external source document records attached.")
+            else:
+                for doc in source_docs:
+                    with st.container():
+                        st.markdown(f"**{doc.get('title', 'Gazetted Document')}** [`{doc.get('document_id', 'DOC')}`]")
+                        st.markdown(
+                            f"🏛️ **Publisher:** {doc.get('publisher', 'N/A')} | "
+                            f"📅 **Date:** {doc.get('publication_date') or 'N/A'} | "
+                            f"🏷️ **Tier:** `{doc.get('source_tier', 'TIER_1_STATUTORY')}` | "
+                            f"🔒 **Access:** `{doc.get('access_status', 'OPEN_PUBLIC')}`"
+                        )
+                        st.caption(f"🔐 **Cryptographic SHA-256:** `{doc.get('file_hash_sha256', 'sha256_uncomputed')}`")
+                        if doc.get("source_url"):
+                            st.markdown(f"🔗 [Direct Source Document URL ↗]({doc.get('source_url')})")
+                        st.write("")
 
-        # ---------------------------------------------------------------------
-        # 8. SOURCE DOCUMENTS & CROSS-PHASE INTEGRATION
-        # ---------------------------------------------------------------------
-        st.markdown("### 8. 📄 SOURCE DOCUMENTS & CROSS-PHASE RECORD LINKS")
-        sc1, sc2 = st.columns(2)
-        with sc1:
-            st.markdown(f"**Original Source Document ID:** `{claim_item.get('source_document_id', 'N/A')}`")
-            st.markdown(f"**Source URL:** [Inspect Original Statement Source]({claim_item.get('claim_source_url', '#')})")
-            st.markdown(f"**Extraction Method:** `{claim_item.get('extraction_method', 'MANUAL')}`")
-        with sc2:
-            cross = claim_item.get("cross_phase", {})
-            st.markdown("#### Connected CivicLens Modules:")
+        with col_sd2:
+            st.markdown("#### Connected CivicLens Modules")
+            cross = orig_claim.get("cross_phase", {})
             if cross.get("historical_scheme"):
                 hs = cross["historical_scheme"]
                 st.markdown(f"- 🏛️ **Phase 2 (Scheme):** `{hs.get('scheme_name')}` (FY {hs.get('financial_year')})")
@@ -1247,6 +1441,30 @@ with tab2:
                 st.markdown(f"- 👤 **Phase 6 (Representative):** `{rep.get('official_name')}` ({rep.get('representative_type')})")
             if not any(cross.values()):
                 st.caption("No cross-phase entities linked to this specific statement.")
+
+        st.markdown("---")
+
+        # ---------------------------------------------------------------------
+        # SECTION 6: VERIFICATION HISTORY & AUDIT TRAIL
+        # ---------------------------------------------------------------------
+        st.markdown("### 6. 📜 VERIFICATION HISTORY & AUDIT TRAIL")
+        st.caption("Immutable chronological record distinguishing automated NLP synthesis runs from human peer reviewer determinations.")
+
+        if not v_hist:
+            st.info("No prior verification history recorded for this assertion.")
+        else:
+            for h_idx, log_entry in enumerate(v_hist):
+                act_color = "#0056b3" if log_entry.get("action") == "AUTOMATED_VERIFICATION" else "#28a745"
+                with st.container():
+                    st.markdown(
+                        f"""<div style="border-left: 4px solid {act_color}; padding: 8px 12px; background-color: #fdfdfd; margin-bottom: 8px;">
+                            <strong>[{log_entry.get('timestamp')}] {log_entry.get('action')}</strong> — Outcome: <code>{log_entry.get('outcome')}</code><br/>
+                            👤 <em>Actor:</em> {log_entry.get('reviewer')}<br/>
+                            📝 <em>Notes:</em> {log_entry.get('notes')}
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+
 
 
 # -----------------------------------------------------------------------------

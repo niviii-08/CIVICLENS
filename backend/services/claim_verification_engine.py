@@ -220,12 +220,51 @@ class ClaimVerificationEngine:
             uncertainty = 0.60
             summary = "Inconclusive automated alignment; referred for expert human review."
 
+        # Assemble 10-point structured explainable reasoning
+        propositions_list = [getattr(ac, "atomic_claim_text", None) or f"Proposition {i+1}" for i, ac in enumerate(atomics)] if atomics else [claim.original_text]
+        supp_summary = f"{len(supp_ids)} corroborating passage(s) identified in statutory/gazetted sources." if supp_ids else "No directly supporting empirical evidence identified in examined sources."
+        contra_summary = f"{len(contra_ids)} contradictory passage(s) demonstrating shortfall or conflicting baseline." if contra_ids else "No contradictory statutory or audit records identified in examined sources."
+        ctx_summary = f"{len(context_ids)} contextual record(s) indicating scope, pipeline realization, or demographic baseline nuances." if context_ids else "No qualifying scope divergence detected."
+        gaps_summary = "Unresolved propositions or missing statutory records present." if outcome in [VerificationOutcome.INSUFFICIENT_EVIDENCE, VerificationOutcome.PENDING_REVIEW, VerificationOutcome.PARTIALLY_SUPPORTED] else "Comprehensive statutory records indexed."
+        limitations_summary = "Provisional records subject to final statutory audit by CAG / departmental reconciliation. Deduplication applied to syndicated wire services."
+        outcome_justification = f"Outcome '{outcome.value}' directly assigned based on evidentiary balance: {len(supp_ids)} supporting vs {len(contra_ids)} contradicting signals across {source_diversity['independent_non_syndicated_sources']} independent sources."
+        uncertainty_summary = f"Uncertainty index: {round(uncertainty, 4)}. Absence of proof does not establish proof of falsehood."
+        methodology_summary = f"{self.METHODOLOGY_VERSION} (Model: {self.MODEL_VERSION})"
+
+        structured_reasoning = {
+            "claim_evaluated": claim.original_text,
+            "specific_propositions": propositions_list,
+            "supporting_evidence_summary": supp_summary,
+            "contradicting_evidence_summary": contra_summary,
+            "context_and_qualifications": ctx_summary,
+            "evidence_gaps": gaps_summary,
+            "source_reliability_and_limitations": limitations_summary,
+            "outcome_justification": outcome_justification,
+            "remaining_uncertainty": uncertainty_summary,
+            "methodology_and_model": methodology_summary
+        }
+
         # Assemble full explanation identifying supported, contradicted, and unresolved components
-        full_explanation = f"{summary}\n\nProposition Breakdown:\n" + ("\n".join(part_explanations) if part_explanations else "Single atomic proposition evaluated.")
+        full_explanation = (
+            f"{summary}\n\n"
+            f"### Structured Verification Reasoning:\n"
+            f"1. **Claim Being Evaluated:** \"{claim.original_text}\"\n"
+            f"2. **Specific Propositions Checked:** {', '.join(propositions_list)}\n"
+            f"3. **Supporting Evidence:** {supp_summary}\n"
+            f"4. **Contradicting Evidence:** {contra_summary}\n"
+            f"5. **Context & Qualifications:** {ctx_summary}\n"
+            f"6. **Important Evidence Gaps:** {gaps_summary}\n"
+            f"7. **Source Reliability & Limitations:** {limitations_summary}\n"
+            f"8. **Outcome Justification:** {outcome_justification}\n"
+            f"9. **Remaining Uncertainty:** {uncertainty_summary}\n"
+            f"10. **Methodology & Model:** {methodology_summary}\n\n"
+            f"Proposition Breakdown:\n" + ("\n".join(part_explanations) if part_explanations else "Single atomic proposition evaluated.")
+        )
 
         return {
             "outcome": outcome,
             "explanation": full_explanation,
+            "structured_reasoning": structured_reasoning,
             "atomic_claim_ids": [ac.atomic_claim_id for ac in atomics],
             "supporting_evidence_ids": supp_ids,
             "contradicting_evidence_ids": contra_ids,
@@ -305,6 +344,7 @@ class ClaimVerificationEngine:
             verdict=legacy_verdict,
             confidence_score=synthesis["confidence"],
             rationale=synthesis["explanation"],
+            empirical_findings={"structured_reasoning": synthesis["structured_reasoning"]},
             is_current=True,
             created_at=datetime.now(timezone.utc)
         )
