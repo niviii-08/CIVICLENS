@@ -47,6 +47,8 @@ from frontend.pages.eight_civic_dashboard_helper import (
     render_status_badge,
     render_verification_badge,
     render_severity_badge,
+    render_origin_badge,
+    render_assessment_badge,
 )
 
 # -----------------------------------------------------------------------------
@@ -251,6 +253,8 @@ for issue in all_issues:
 # -----------------------------------------------------------------------------
 # TABS INTERFACE (10 VIEWS)
 # -----------------------------------------------------------------------------
+issue_id_map = {f"{i['id']} — {i.get('title', '')[:50]}...": i['id'] for i in all_issues}
+
 tabs = st.tabs([
     "1. Issue Explorer",
     "2. Issue Detail",
@@ -477,49 +481,189 @@ with tabs[3]:
 
 
 # =============================================================================
-# TAB 5: RESOLUTION EVIDENCE TIMELINE
+# TAB 5: RESOLUTION EVIDENCE TIMELINE & TRACEABILITY AUDIT TRAIL
 # =============================================================================
 with tabs[4]:
-    st.markdown("### ⏱️ Resolution Evidence & Event Audit Trail")
-    st.write("Chronological sequence of citizen filings, departmental responses, action-taken reports, and empirical verification artifacts.")
+    st.markdown("### ⏱️ Resolution Evidence & Traceability Audit Trail")
+    st.write(
+        "Trace an issue from its original public petition through departmental routing, "
+        "action-taken reports, and closure declarations to empirical proof and role-governed audits."
+    )
 
     selected_t5_label = st.selectbox("Select Issue for Chronological Audit:", list(issue_id_map.keys()), key="t5_select")
-    t5_issue = next((i for i in all_issues if i["id"] == issue_id_map[selected_t5_label]), None)
+    selected_t5_id = issue_id_map.get(selected_t5_label)
 
-    if t5_issue:
-        st.markdown(f"#### Audit Trace for `{t5_issue.get('id')}` — {t5_issue.get('title')}")
+    # Attempt to load unified timeline from API
+    ok_tl, tl_resp = api_client.get_civic_issue_timeline(str(selected_t5_id))
+    tl_data = tl_resp if (ok_tl and isinstance(tl_resp, dict) and "chain" in tl_resp) else None
 
-        st.markdown("##### 1. Departmental Responses & Action-Taken Reports (ATR)")
-        responses = t5_issue.get("responses", [])
-        if responses:
-            for r in responses:
-                with st.container():
-                    st.markdown(f"""
-                    <div style="border-left: 4px solid #0d6efd; padding-left: 12px; margin-bottom: 12px; background: #f8f9fa;">
-                        <strong>Date:</strong> {r.get('date')} &nbsp;|&nbsp; <strong>Designation:</strong> {r.get('officer_designation')}<br/>
-                        <strong>Response Type:</strong> <code>{r.get('response_type')}</code> &nbsp;|&nbsp; <strong>Reference:</strong> <code>{r.get('source_ref')}</code><br/>
-                        <p style="margin-top: 5px;">{r.get('summary')}</p>
+    if tl_data:
+        # High-level traceability KPIs
+        k1, k2, k3, k4 = st.columns(4)
+        comp_score = tl_data.get("completeness_score", 0.0)
+        gaps_cnt = tl_data.get("gaps_count", 0)
+        k1.metric("Traceability Completeness", f"{comp_score * 100:.0f}%", f"{7 - gaps_cnt}/7 Stages Complete")
+        k2.metric("Data Gaps Flagged", f"{gaps_cnt} Gap(s)", delta_color="inverse")
+        
+        cur_status = tl_data.get("current_status", "unknown")
+        ver_status = tl_data.get("verification_status", "PENDING_VERIFICATION")
+        ev_assess = tl_data.get("evidence_assessment", "pending_review")
+
+        with k3:
+            st.markdown(f"**Reported Status:**<br/>{render_status_badge(cur_status.lower())}", unsafe_allow_html=True)
+        with k4:
+            st.markdown(f"**Evidence Assessment:**<br/>{render_assessment_badge(ev_assess)}", unsafe_allow_html=True)
+
+        # Contradictions Alert
+        contradictions = tl_data.get("contradictions_detected", [])
+        if contradictions:
+            st.error(
+                f"🚨 **Contradictory Ground Reports Detected ({len(contradictions)} items)**: "
+                "Independent citizen audits or field inspection reports directly contradict the department's closure claim. "
+                "Status has been routed to DISPUTED.",
+                icon="🚨",
+            )
+            for c in contradictions:
+                st.caption(f"- **Contradiction:** [{c.get('evidence_type')}] {c.get('title')} — *{c.get('description')}*")
+
+        st.markdown("---")
+        st.markdown("#### 📜 The 7-Stage Canonical Evidence Timeline")
+
+        # Render each stage in sequence
+        for hop in tl_data.get("chain", []):
+            st_idx = hop.get("stage_index")
+            st_name = hop.get("stage_name", "").replace("_", " ").title()
+            badge_html = render_origin_badge(hop.get("origin_badge", "NOT_AVAILABLE"))
+            is_gap = hop.get("is_gap", False)
+
+            border_color = "#dc3545" if is_gap else ("#198754" if "OFFICIAL" in hop.get("origin_badge", "") else "#0d6efd")
+            bg_color = "#fff5f5" if is_gap else "#f8f9fa"
+
+            with st.container():
+                st.markdown(
+                    f"""
+                    <div style="border-left: 5px solid {border_color}; background-color: {bg_color}; padding: 12px 16px; margin-bottom: 12px; border-radius: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <strong>Stage {st_idx}: {st_name}</strong>
+                            <div>{badge_html}</div>
+                        </div>
+                        <h5 style="margin: 4px 0;">{hop.get('title')}</h5>
+                        <p style="margin: 4px 0; color: #333;">{hop.get('description')}</p>
+                        <div style="font-size: 11px; color: #666; margin-top: 6px;">
+                            <span>⏱️ Timestamp: <code>{hop.get('timestamp') or 'Unrecorded / Not Available'}</code></span> &nbsp;|&nbsp;
+                            <span>🔍 Method: <code>{hop.get('matching_method') or 'None'}</code></span> &nbsp;|&nbsp;
+                            <span>🎯 Confidence: <code>{hop.get('confidence', 0.0):.2f}</code></span>
+                        </div>
                     </div>
-                    """, unsafe_allow_html=True)
-        else:
-            st.info("No departmental response records logged yet.")
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-        st.markdown("##### 2. Independent Resolution Evidence (Empirical Proof)")
-        evidence_list = t5_issue.get("evidence", [])
-        if evidence_list:
-            for ev in evidence_list:
-                with st.container():
-                    border_color = "#198754" if ev.get("verification_status") == "VERIFIED_RESOLVED" else "#ffc107"
-                    st.markdown(f"""
-                    <div style="border-left: 4px solid {border_color}; padding-left: 12px; margin-bottom: 12px; background: #f8f9fa;">
-                        <strong>Inspection Date:</strong> {ev.get('inspection_date')} &nbsp;|&nbsp; <strong>Inspector:</strong> {ev.get('inspector')}<br/>
-                        <strong>Evidence Type:</strong> <code>{ev.get('evidence_type')}</code> &nbsp;|&nbsp; <strong>Outcome:</strong> {render_verification_badge(ev.get('verification_status'))}<br/>
-                        <p style="margin-top: 5px;">{ev.get('description')}</p>
-                        <a href="{ev.get('document_url', '#')}" target="_blank">🔗 Inspect Evidence Artifact Document</a>
-                    </div>
-                    """, unsafe_allow_html=True)
-        else:
-            st.warning("⚠️ No independent resolution evidence artifacts filed. Resolution remains purely self-reported.")
+                if is_gap:
+                    st.caption(f"⚠️ **Gap Diagnostic**: {hop.get('gap_reason')}")
+
+                # If stage 6 has evidence attachments
+                if hop.get("evidences"):
+                    with st.expander(f"📁 View {len(hop['evidences'])} Corroborating Empirical Artifact(s)", expanded=False):
+                        for ev in hop["evidences"]:
+                            col_a, col_b = st.columns([3, 1])
+                            col_a.markdown(f"**[{ev.get('evidence_type')}] {ev.get('title')}**\n*{ev.get('description')}*")
+                            if ev.get("evidence_url"):
+                                col_b.markdown(f"[🔗 Inspect Document]({ev.get('evidence_url')})")
+                            col_b.caption(f"Hash: `{ev.get('sha256_hash', '')[:12]}...`")
+
+                # If stage 7 has audit entries
+                if hop.get("audit_history"):
+                    with st.expander("👤 Reviewer Audit History", expanded=True):
+                        for ah in hop["audit_history"]:
+                            st.markdown(
+                                f"- **{ah.get('created_at', '')[:19]}** — `[{ah.get('reviewer_role')}]` {ah.get('reviewer_id')}: "
+                                f"Action: **{ah.get('action')}** | Reason: *{ah.get('reason')}*"
+                            )
+
+        # Backward Navigation Drawer
+        with st.expander("🔄 Backward Navigation & Provenance Graph", expanded=False):
+            b_nav = tl_data.get("backward_navigation", {})
+            st.markdown("""
+            **Traceability Invariant**: You can navigate backwards from any resolution proof directly to the original grievance.
+            """)
+            st.json(b_nav)
+
+        st.markdown("---")
+        # Reviewer Action Panel (RBAC Protected)
+        st.markdown("#### ⚖️ Role-Governed Resolution Review Action (Step 4 & 7)")
+        st.write("Authorized civic auditors and ombudspersons may verify, dispute, reopen, or revise the resolution assessment.")
+
+        with st.form("reviewer_action_form"):
+            c_r1, c_r2 = st.columns(2)
+            reviewer_role = c_r1.selectbox(
+                "Reviewer Role (Header X-Reviewer-Role):",
+                ["SENIOR_CIVIC_AUDITOR", "DISTRICT_AUDITOR", "CIVIC_OMBUDSPERSON", "ADMIN"],
+            )
+            reviewer_action = c_r2.selectbox(
+                "Review Action:",
+                ["VERIFY_RESOLUTION", "DISPUTE_RESOLUTION", "REOPEN_ISSUE", "REQUEST_EVIDENCE", "UPDATE_ASSESSMENT"],
+            )
+            reviewer_reason = st.text_area(
+                "Audit Rationale & Findings (Mandatory, min 5 chars, PII scrubbed automatically):",
+                placeholder="State empirical grounds for verification, contradiction, or reopening...",
+            )
+            submit_rev = st.form_submit_button("Submit Auditor Review Decision", type="primary")
+
+            if submit_rev:
+                if not reviewer_reason or len(reviewer_reason.strip()) < 5:
+                    st.error("Audit rationale is required and must contain at least 5 characters.")
+                else:
+                    rev_payload = {
+                        "action": reviewer_action,
+                        "reason": reviewer_reason.strip(),
+                        "reviewer_id": f"AUDITOR-{reviewer_role[:3]}",
+                    }
+                    ok_rev, res_rev = api_client.submit_civic_issue_review(
+                        str(selected_t5_id), rev_payload, reviewer_role=reviewer_role
+                    )
+                    if ok_rev:
+                        st.success(f"Review audit action '{reviewer_action}' successfully registered and committed to the audit trail!")
+                        st.rerun()
+                    else:
+                        st.error(f"Review submission failed: {res_rev.get('message', 'Unknown error')}")
+
+    else:
+        # Graceful fallback to fixture rendering if API is not live
+        t5_issue = next((i for i in all_issues if i["id"] == selected_t5_id), None)
+        if t5_issue:
+            st.markdown(f"#### Audit Trace for `{t5_issue.get('id')}` — {t5_issue.get('title')}")
+            st.markdown("##### 1. Departmental Responses & Action-Taken Reports (ATR)")
+            responses = t5_issue.get("responses", [])
+            if responses:
+                for r in responses:
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="border-left: 4px solid #0d6efd; padding-left: 12px; margin-bottom: 12px; background: #f8f9fa;">
+                            <strong>Date:</strong> {r.get('date')} &nbsp;|&nbsp; <strong>Designation:</strong> {r.get('officer_designation')}<br/>
+                            <strong>Response Type:</strong> <code>{r.get('response_type')}</code> &nbsp;|&nbsp; <strong>Reference:</strong> <code>{r.get('source_ref')}</code><br/>
+                            <p style="margin-top: 5px;">{r.get('summary')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+            else:
+                st.info("No departmental response records logged yet.")
+
+            st.markdown("##### 2. Independent Resolution Evidence (Empirical Proof)")
+            evidence_list = t5_issue.get("evidence", [])
+            if evidence_list:
+                for ev in evidence_list:
+                    with st.container():
+                        border_color = "#198754" if ev.get("verification_status") == "VERIFIED_RESOLVED" else "#ffc107"
+                        st.markdown(f"""
+                        <div style="border-left: 4px solid {border_color}; padding-left: 12px; margin-bottom: 12px; background: #f8f9fa;">
+                            <strong>Inspection Date:</strong> {ev.get('inspection_date')} &nbsp;|&nbsp; <strong>Inspector:</strong> {ev.get('inspector')}<br/>
+                            <strong>Evidence Type:</strong> <code>{ev.get('evidence_type')}</code> &nbsp;|&nbsp; <strong>Outcome:</strong> {render_verification_badge(ev.get('verification_status'))}<br/>
+                            <p style="margin-top: 5px;">{ev.get('description')}</p>
+                            <a href="{ev.get('document_url', '#')}" target="_blank">🔗 Inspect Evidence Artifact Document</a>
+                        </div>
+                        """, unsafe_allow_html=True)
+            else:
+                st.warning("⚠️ No independent resolution evidence artifacts filed. Resolution remains purely self-reported.")
 
 
 # =============================================================================
@@ -690,3 +834,56 @@ with tabs[9]:
     - **Boundary Immutability**: Historical boundary changes are preserved without retroactively remapping past wards to altered corporation boundaries.
     - **Anti-Hallucination Barrier**: When official documents fail to state a ward, the geographic precision is preserved as `DISTRICT_LEVEL` or `LOCAL_BODY_LEVEL` rather than synthesized.
     """)
+
+    st.markdown("---")
+    st.markdown("#### 📊 Evidence Traceability & Resolution Verification Metrics (Phase 8.11)")
+    st.write("Canonical indicators measuring empirical corroboration, administrative closure validity, and audit completeness.")
+
+    ok_m, tr_metrics = api_client.get_civic_traceability_metrics()
+    if ok_m and isinstance(tr_metrics, dict):
+        t_col1, t_col2, t_col3 = st.columns(3)
+        t_col1.metric(
+            "Evidence Coverage Rate",
+            f"{tr_metrics.get('evidence_coverage_percentage', 0)}%",
+            f"{tr_metrics.get('counts', {}).get('resolved_with_evidence_count', 0)} / {tr_metrics.get('total_marked_resolved', 0)} Closures",
+        )
+        t_col2.metric(
+            "Independent Verification Rate",
+            f"{tr_metrics.get('independent_verification_percentage', 0)}%",
+            f"{tr_metrics.get('counts', {}).get('independently_verified_count', 0)} Verified Resolv.",
+        )
+        t_col3.metric(
+            "Department Response Rate",
+            f"{tr_metrics.get('department_response_percentage', 0)}%",
+            f"{tr_metrics.get('counts', {}).get('with_official_response_count', 0)} / {tr_metrics.get('total_issues', 0)} Dockets",
+        )
+
+        t_col4, t_col5, t_col6 = st.columns(3)
+        t_col4.metric(
+            "Unverified Resolution Rate",
+            f"{tr_metrics.get('unverified_resolution_percentage', 0)}%",
+            f"{tr_metrics.get('counts', {}).get('unverified_resolved_count', 0)} Self-Reported",
+            delta_color="inverse",
+        )
+        t_col5.metric(
+            "Conflicting Evidence Rate",
+            f"{tr_metrics.get('conflicting_evidence_percentage', 0)}%",
+            f"{tr_metrics.get('counts', {}).get('conflicting_evidence_count', 0)} Contradictions",
+            delta_color="inverse",
+        )
+        t_col6.metric(
+            "Audit Trail Completeness",
+            f"{tr_metrics.get('audit_trail_completeness_percentage', 0)}%",
+            f"{tr_metrics.get('counts', {}).get('complete_audit_trail_count', 0)} End-to-End Traced",
+        )
+
+        with st.expander("📖 Traceability Methodology & Formula Definitions", expanded=False):
+            st.markdown("""
+            1. **Evidence Coverage Rate ($R_{EC}$)**: Ratio of marked-resolved issues backed by empirical artifacts (completion certificates, work orders) to total marked-resolved issues.
+            2. **Independent Verification Rate ($R_{IV}$)**: Ratio of marked-resolved issues verified by independent third-party audit or empirical evidence.
+            3. **Department Response Rate ($R_{DR}$)**: Proportion of all logged issues having at least one official departmental Action-Taken Report (ATR).
+            4. **Unverified Resolution Rate ($R_{UR}$)**: Proportion of administrative closures lacking independent corroborating proof ($1 - R_{IV}$).
+            5. **Conflicting Evidence Rate ($R_{CE}$)**: Proportion of evidence-backed issues where field inspections or citizen audits contradict the closure declaration.
+            6. **Audit Trail Completeness Rate ($R_{ATC}$)**: Proportion of dockets with unbroken bidirectional audit logs from public petition to resolution audit.
+            """)
+

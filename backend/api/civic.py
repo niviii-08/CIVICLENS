@@ -55,6 +55,10 @@ from backend.models.civic_issue import (
     ResponseRecord,
     ServiceStandard,
     SourceDocument,
+    CivicReviewAudit,
+    EvidenceAssessmentEnum,
+    ResolutionVerificationStatus,
+    sanitize_pii,
 )
 from backend.services.civic_analytics_service import CivicAnalyticsEngine
 
@@ -890,3 +894,859 @@ def get_issue_cross_phase_links(issue_id: str):
         )
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# 15. GET /api/civic/issues/<issue_id>/timeline (Traceability Timeline)
+# ---------------------------------------------------------------------------
+@civic_bp.route("/issues/<issue_id>/timeline", methods=["GET"])
+def get_civic_issue_timeline(issue_id: str):
+    """
+    Returns the complete 7-stage evidence traceability chain for a civic issue:
+    Stage 1: ORIGINAL_PUBLIC_RECORD
+    Stage 2: NORMALIZED_CIVIC_ISSUE
+    Stage 3: RESPONSIBLE_DEPARTMENT
+    Stage 4: OFFICIAL_RESPONSE_ATR
+    Stage 5: REPORTED_RESOLUTION
+    Stage 6: RESOLUTION_EVIDENCE
+    Stage 7: VERIFICATION_STATUS_AND_AUDIT
+
+    Distinguishes:
+    - OFFICIAL_GOVERNMENT_RECORD
+    - AUTOMATED_SYSTEM_INFERENCE
+    - HUMAN_AUDITOR_REVIEW
+    Explicitly flags gaps, missing links, and contradictory evidence.
+    """
+    db: Session = SessionLocal()
+    try:
+        issue = None
+        if issue_id.isdigit():
+            issue = db.query(CivicIssue).filter(CivicIssue.id == int(issue_id)).first()
+        if not issue:
+            issue = db.query(CivicIssue).filter(CivicIssue.issue_code == issue_id).first()
+
+        if not issue:
+            return error_response(message=f"Civic issue '{issue_id}' not found.", status_code=404)
+
+        # Collect components
+        grievance = db.query(GrievanceRecord).filter(GrievanceRecord.civic_issue_id == issue.id).first()
+        department = issue.department
+        area = issue.administrative_area
+        responses = (
+            db.query(ResponseRecord)
+            .filter(ResponseRecord.civic_issue_id == issue.id)
+            .order_by(ResponseRecord.action_taken_date.asc())
+            .all()
+        )
+        works = db.query(PublicWork).filter(PublicWork.civic_issue_id == issue.id).all()
+        audits = (
+            db.query(CivicReviewAudit)
+            .filter(CivicReviewAudit.civic_issue_id == issue.id)
+            .order_by(CivicReviewAudit.created_at.asc())
+            .all()
+        )
+
+        all_evidences = []
+        for r in responses:
+            for e in r.evidences:
+                all_evidences.append(e)
+
+        # Contradictions
+        contradicting_evidences = [
+            e for e in all_evidences
+            if e.contradicts_resolution or (hasattr(e, "evidence_type") and e.evidence_type.value in ["NEWS_REPORT", "CITIZEN_AUDIT"] and not e.is_verified)
+        ]
+
+        chain = []
+        gaps_count = 0
+
+        # Stage 1: ORIGINAL PUBLIC RECORD
+        if grievance:
+            src_doc = grievance.source_document
+            chain.append({
+                "stage_index": 1,
+                "stage_name": "ORIGINAL_PUBLIC_RECORD",
+                "record_type": "GrievanceRecord",
+                "record_id": grievance.grievance_id,
+                "origin_badge": "OFFICIAL_GOVERNMENT_RECORD",
+                "title": f"Grievance Petition [{grievance.source_id}]",
+                "description": sanitize_pii(grievance.description_or_permitted_summary),
+                "timestamp": grievance.submission_date.isoformat() if grievance.submission_date else None,
+                "matching_method": "SOURCE_PORTAL_INGESTION",
+                "confidence": 1.0,
+                "is_gap": False,
+                "gap_reason": None,
+                "source_reference": grievance.source_record_reference,
+                "source_document": src_doc.to_dict() if src_doc else None,
+            })
+        else:
+            gaps_count += 1
+            chain.append({
+                "stage_index": 1,
+                "stage_name": "ORIGINAL_PUBLIC_RECORD",
+                "record_type": None,
+                "record_id": None,
+                "origin_badge": "NOT_AVAILABLE",
+                "title": "Original Grievance Record Missing",
+                "description": "Not available in collected public records or direct gazette entries.",
+                "timestamp": None,
+                "matching_method": None,
+                "confidence": 0.0,
+                "is_gap": True,
+                "gap_reason": "Original public grievance petition not found in the ingested archives.",
+            })
+
+        # Stage 2: NORMALIZED CIVIC ISSUE
+        chain.append({
+            "stage_index": 2,
+            "stage_name": "NORMALIZED_CIVIC_ISSUE",
+            "record_type": "CivicIssue",
+            "record_id": issue.issue_code,
+            "origin_badge": "AUTOMATED_SYSTEM_INFERENCE",
+            "title": f"Civic Issue: {issue.category.name_en if issue.category else 'Uncategorized'}",
+            "description": sanitize_pii(issue.description),
+            "timestamp": issue.reported_date.isoformat() if issue.reported_date else None,
+            "matching_method": grievance.classification_method if grievance else "RULE_BASED",
+            "confidence": grievance.classification_confidence if grievance else 1.0,
+            "is_gap": False,
+            "gap_reason": None,
+            "severity": issue.severity.value if hasattr(issue.severity, "value") else str(issue.severity),
+            "status": issue.status.value if hasattr(issue.status, "value") else str(issue.status),
+        })
+
+        # Stage 3: RESPONSIBLE DEPARTMENT & AUTHORITY
+        if department:
+            chain.append({
+                "stage_index": 3,
+                "stage_name": "RESPONSIBLE_DEPARTMENT",
+                "record_type": "CivicDepartment",
+                "record_id": department.code,
+                "origin_badge": "OFFICIAL_GOVERNMENT_RECORD",
+                "title": f"Routing: {department.name_en}",
+                "description": f"Competent Authority: {department.name_ta} ({department.code}). Jurisdiction Area: {area.name_en if area else 'Statewide'}.",
+                "timestamp": issue.reported_date.isoformat() if issue.reported_date else None,
+                "matching_method": "JURISDICTION_DIRECTORY_ROUTING",
+                "confidence": 1.0,
+                "is_gap": False,
+                "gap_reason": None,
+                "administrative_area": area.to_dict() if area else None,
+            })
+        else:
+            gaps_count += 1
+            chain.append({
+                "stage_index": 3,
+                "stage_name": "RESPONSIBLE_DEPARTMENT",
+                "record_type": None,
+                "record_id": None,
+                "origin_badge": "UNRESOLVED_JURISDICTION",
+                "title": "Unresolved Department Responsibility",
+                "description": "Responsibility is shared or not explicitly assigned in collected records.",
+                "timestamp": None,
+                "matching_method": None,
+                "confidence": 0.0,
+                "is_gap": True,
+                "gap_reason": "No government department officially mapped to this issue docket.",
+            })
+
+        # Stage 4: OFFICIAL RESPONSE / ATR
+        if responses:
+            latest_resp = responses[-1]
+            chain.append({
+                "stage_index": 4,
+                "stage_name": "OFFICIAL_RESPONSE_ATR",
+                "record_type": "ResponseRecord",
+                "record_id": latest_resp.response_code,
+                "origin_badge": "OFFICIAL_GOVERNMENT_RECORD",
+                "title": f"Official Action Taken Report [{latest_resp.action_type.value if hasattr(latest_resp.action_type, 'value') else str(latest_resp.action_type)}]",
+                "description": sanitize_pii(latest_resp.response_summary or latest_resp.official_remark),
+                "timestamp": latest_resp.action_taken_date.isoformat() if latest_resp.action_taken_date else None,
+                "matching_method": "DEPARTMENT_ATR_SUBMISSION",
+                "confidence": 1.0,
+                "is_gap": False,
+                "gap_reason": None,
+                "total_responses_count": len(responses),
+                "reported_status": latest_resp.reported_status,
+                "is_sla_breached": latest_resp.is_sla_breached,
+            })
+        else:
+            gaps_count += 1
+            chain.append({
+                "stage_index": 4,
+                "stage_name": "OFFICIAL_RESPONSE_ATR",
+                "record_type": None,
+                "record_id": None,
+                "origin_badge": "NO_OFFICIAL_RESPONSE",
+                "title": "No Official ATR Filed",
+                "description": "No departmental Action-Taken Report or official reply found in collected records.",
+                "timestamp": None,
+                "matching_method": None,
+                "confidence": 0.0,
+                "is_gap": True,
+                "gap_reason": "Department has not filed an Action-Taken Report or official acknowledgment.",
+            })
+
+        # Stage 5: REPORTED RESOLUTION
+        is_marked_resolved = (
+            issue.status in [CivicIssueStatus.RESOLVED, CivicIssueStatus.VERIFIED_RESOLVED]
+            or any(r.reported_status == "marked_resolved" for r in responses)
+            or issue.actual_resolution_date is not None
+        )
+        if is_marked_resolved:
+            res_date = issue.actual_resolution_date or (responses[-1].action_taken_date if responses else None)
+            chain.append({
+                "stage_index": 5,
+                "stage_name": "REPORTED_RESOLUTION",
+                "record_type": "StatusDeclaration",
+                "record_id": f"RESOLVED-{issue.issue_code}",
+                "origin_badge": "OFFICIAL_GOVERNMENT_RECORD",
+                "title": "Reported Resolution Declared",
+                "description": (
+                    "Department records mark this issue as resolved. "
+                    "Note: 'marked_resolved' represents an official closure claim, "
+                    "not an independently verified empirical outcome."
+                ),
+                "timestamp": res_date.isoformat() if res_date else None,
+                "matching_method": "OFFICIAL_CLOSURE_ENTRY",
+                "confidence": 1.0,
+                "is_gap": False,
+                "gap_reason": None,
+            })
+        else:
+            gaps_count += 1
+            chain.append({
+                "stage_index": 5,
+                "stage_name": "REPORTED_RESOLUTION",
+                "record_type": None,
+                "record_id": None,
+                "origin_badge": "UNRESOLVED_OR_PENDING",
+                "title": "Not Marked Resolved",
+                "description": f"Issue status is currently '{issue.status.value if hasattr(issue.status, 'value') else str(issue.status)}'.",
+                "timestamp": None,
+                "matching_method": None,
+                "confidence": 0.0,
+                "is_gap": True,
+                "gap_reason": "Responsible authority has not declared resolution.",
+            })
+
+        # Stage 6: RESOLUTION EVIDENCE
+        if all_evidences:
+            chain.append({
+                "stage_index": 6,
+                "stage_name": "RESOLUTION_EVIDENCE",
+                "record_type": "ResolutionEvidence",
+                "record_id": [e.id for e in all_evidences],
+                "origin_badge": "OFFICIAL_GOVERNMENT_RECORD" if all(e.evidence_type.value in ["WORK_ORDER", "COMPLETION_CERTIFICATE", "FIELD_INSPECTION_REPORT"] for e in all_evidences) else "INDEPENDENT_EVIDENCE",
+                "title": f"Empirical Resolution Evidence ({len(all_evidences)} Artifacts)",
+                "description": "; ".join(f"[{e.evidence_type.value}] {e.title}" for e in all_evidences[:3]),
+                "timestamp": all_evidences[-1].created_at.isoformat() if all_evidences[-1].created_at else None,
+                "matching_method": all_evidences[0].matching_method if hasattr(all_evidences[0], "matching_method") else "RECORD_ID_MATCH",
+                "confidence": float(all_evidences[0].confidence) if hasattr(all_evidences[0], "confidence") else 1.0,
+                "is_gap": False,
+                "gap_reason": None,
+                "evidences": [e.to_dict() for e in all_evidences],
+                "public_works": [w.to_dict() for w in works],
+            })
+        else:
+            gaps_count += 1
+            chain.append({
+                "stage_index": 6,
+                "stage_name": "RESOLUTION_EVIDENCE",
+                "record_type": None,
+                "record_id": None,
+                "origin_badge": "NO_EMPIRICAL_EVIDENCE",
+                "title": "No Empirical Evidence Documented",
+                "description": "No completion certificates, field inspection reports, or work orders logged to corroborate resolution.",
+                "timestamp": None,
+                "matching_method": None,
+                "confidence": 0.0,
+                "is_gap": True,
+                "gap_reason": "Zero empirical artifacts available to substantiate closure claims.",
+            })
+
+        # Stage 7: VERIFICATION STATUS & AUDIT
+        ver_status = issue.resolution_verification_status.value if hasattr(issue.resolution_verification_status, "value") else str(issue.resolution_verification_status)
+        assessment_val = issue.evidence_assessment.value if hasattr(issue.evidence_assessment, "value") else (str(issue.evidence_assessment) if issue.evidence_assessment else "pending_review")
+
+        if audits:
+            latest_audit = audits[-1]
+            chain.append({
+                "stage_index": 7,
+                "stage_name": "VERIFICATION_STATUS_AND_AUDIT",
+                "record_type": "CivicReviewAudit",
+                "record_id": latest_audit.id,
+                "origin_badge": "HUMAN_AUDITOR_REVIEW",
+                "title": f"Human Review Audit: {latest_audit.action}",
+                "description": f"Auditor ({latest_audit.reviewer_role}): {latest_audit.reason}",
+                "timestamp": latest_audit.created_at.isoformat() if latest_audit.created_at else None,
+                "matching_method": "ROLE_GOVERNED_HUMAN_AUDIT",
+                "confidence": 1.0,
+                "is_gap": False,
+                "gap_reason": None,
+                "verification_status": ver_status,
+                "evidence_assessment": assessment_val,
+                "audit_history": [a.to_dict() for a in audits],
+            })
+        elif ver_status == "VERIFIED":
+            chain.append({
+                "stage_index": 7,
+                "stage_name": "VERIFICATION_STATUS_AND_AUDIT",
+                "record_type": "SystemVerificationState",
+                "record_id": None,
+                "origin_badge": "AUTOMATED_SYSTEM_INFERENCE",
+                "title": "Independently Verified by Corroborating Evidence",
+                "description": "Corroborated by high-confidence empirical artifacts (work completion certificates, inspection records).",
+                "timestamp": None,
+                "matching_method": "MULTI_SOURCE_CORROBORATION",
+                "confidence": 0.95,
+                "is_gap": False,
+                "gap_reason": None,
+                "verification_status": ver_status,
+                "evidence_assessment": assessment_val,
+                "audit_history": [],
+            })
+        else:
+            gaps_count += 1
+            chain.append({
+                "stage_index": 7,
+                "stage_name": "VERIFICATION_STATUS_AND_AUDIT",
+                "record_type": "SystemVerificationState",
+                "record_id": None,
+                "origin_badge": "PENDING_REVIEW",
+                "title": f"Verification Status: {ver_status}",
+                "description": "Pending human audit review or corroborating evidence verification.",
+                "timestamp": None,
+                "matching_method": "PENDING_ASSESSMENT",
+                "confidence": 0.0,
+                "is_gap": True,
+                "gap_reason": "Not independently verified; pending auditor review or additional evidence.",
+                "verification_status": ver_status,
+                "evidence_assessment": assessment_val,
+                "audit_history": [],
+            })
+
+        completeness_score = round((7.0 - gaps_count) / 7.0, 2)
+
+        payload = {
+            "issue_id": issue.id,
+            "issue_code": issue.issue_code,
+            "issue_title": issue.title,
+            "reported_date": issue.reported_date.isoformat() if issue.reported_date else None,
+            "current_status": issue.status.value if hasattr(issue.status, "value") else str(issue.status),
+            "verification_status": ver_status,
+            "evidence_assessment": assessment_val,
+            "completeness_score": completeness_score,
+            "gaps_count": gaps_count,
+            "contradictions_detected": [e.to_dict() for e in contradicting_evidences],
+            "chain": chain,
+            "backward_navigation": {
+                "has_resolution_evidence": len(all_evidences) > 0,
+                "evidence_to_response_map": [{"evidence_id": e.id, "response_id": e.response_id} for e in all_evidences],
+                "response_to_issue_map": [{"response_id": r.id, "issue_id": issue.id} for r in responses],
+                "issue_to_grievance_map": [{"grievance_id": g.grievance_id, "source_doc_id": g.source_document_id} for g in issue.grievance_records],
+            },
+        }
+
+        return success_response(data=payload, message="Traceability timeline generated successfully.")
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# 16. GET /api/civic/issues/<issue_id>/provenance (Full Provenance Graph)
+# ---------------------------------------------------------------------------
+@civic_bp.route("/issues/<issue_id>/provenance", methods=["GET"])
+def get_civic_issue_provenance(issue_id: str):
+    """
+    Returns the complete node-edge provenance graph for a civic issue.
+    """
+    db: Session = SessionLocal()
+    try:
+        issue = None
+        if issue_id.isdigit():
+            issue = db.query(CivicIssue).filter(CivicIssue.id == int(issue_id)).first()
+        if not issue:
+            issue = db.query(CivicIssue).filter(CivicIssue.issue_code == issue_id).first()
+
+        if not issue:
+            return error_response(message=f"Civic issue '{issue_id}' not found.", status_code=404)
+
+        nodes = []
+        edges = []
+
+        # Central Issue Node
+        issue_node_id = f"ISSUE-{issue.id}"
+        nodes.append({
+            "id": issue_node_id,
+            "type": "CivicIssue",
+            "label": issue.issue_code,
+            "data": issue.to_dict(),
+        })
+
+        # Grievances
+        for g in issue.grievance_records:
+            g_node_id = f"GRIEVANCE-{g.id}"
+            nodes.append({
+                "id": g_node_id,
+                "type": "GrievanceRecord",
+                "label": g.grievance_id,
+                "data": g.to_dict(),
+            })
+            edges.append({
+                "source": g_node_id,
+                "target": issue_node_id,
+                "relationship": "NORMALIZED_INTO",
+                "matching_method": g.classification_method or "RULE_BASED",
+                "confidence": g.classification_confidence or 1.0,
+            })
+            if g.source_document:
+                doc_node_id = f"DOC-{g.source_document.id}"
+                if not any(n["id"] == doc_node_id for n in nodes):
+                    nodes.append({
+                        "id": doc_node_id,
+                        "type": "SourceDocument",
+                        "label": g.source_document.document_code,
+                        "data": g.source_document.to_dict(),
+                    })
+                edges.append({
+                    "source": doc_node_id,
+                    "target": g_node_id,
+                    "relationship": "EXTRACTED_FROM",
+                    "matching_method": "DOCUMENT_PARSING",
+                    "confidence": 1.0,
+                })
+
+        # Department
+        if issue.department:
+            dept_node_id = f"DEPT-{issue.department.id}"
+            nodes.append({
+                "id": dept_node_id,
+                "type": "CivicDepartment",
+                "label": issue.department.code,
+                "data": issue.department.to_dict(),
+            })
+            edges.append({
+                "source": issue_node_id,
+                "target": dept_node_id,
+                "relationship": "ASSIGNED_TO_DEPARTMENT",
+                "matching_method": "JURISDICTION_ROUTING",
+                "confidence": 1.0,
+            })
+
+        # Administrative Area
+        if issue.administrative_area:
+            area_node_id = f"AREA-{issue.administrative_area.id}"
+            nodes.append({
+                "id": area_node_id,
+                "type": "AdministrativeArea",
+                "label": issue.administrative_area.area_code,
+                "data": issue.administrative_area.to_dict(),
+            })
+            edges.append({
+                "source": issue_node_id,
+                "target": area_node_id,
+                "relationship": "LOCATED_IN",
+                "matching_method": "GEOGRAPHIC_BOUNDARY_MAPPING",
+                "confidence": 1.0,
+            })
+
+        # Responses & Evidences
+        for r in issue.responses:
+            r_node_id = f"RESP-{r.id}"
+            nodes.append({
+                "id": r_node_id,
+                "type": "ResponseRecord",
+                "label": r.response_code,
+                "data": r.to_dict(),
+            })
+            edges.append({
+                "source": r_node_id,
+                "target": issue_node_id,
+                "relationship": "OFFICIAL_ATR_FOR",
+                "matching_method": "PORTAL_RESPONSE_LOGGING",
+                "confidence": 1.0,
+            })
+            for e in r.evidences:
+                e_node_id = f"EVID-{e.id}"
+                nodes.append({
+                    "id": e_node_id,
+                    "type": "ResolutionEvidence",
+                    "label": f"EVID-{e.id}: {e.evidence_type.value}",
+                    "data": e.to_dict(),
+                })
+                edges.append({
+                    "source": e_node_id,
+                    "target": r_node_id,
+                    "relationship": "CORROBORATES_RESPONSE",
+                    "matching_method": e.matching_method or "RECORD_ID_MATCH",
+                    "confidence": e.confidence or 1.0,
+                })
+
+        # Public Works
+        for w in issue.public_works:
+            w_node_id = f"WORK-{w.id}"
+            nodes.append({
+                "id": w_node_id,
+                "type": "PublicWork",
+                "label": w.work_code,
+                "data": w.to_dict(),
+            })
+            edges.append({
+                "source": w_node_id,
+                "target": issue_node_id,
+                "relationship": "REMEDIATION_WORK_CONTRACT",
+                "matching_method": "TENDER_REFERENCE_MATCH",
+                "confidence": 1.0,
+            })
+
+        # Review Audits
+        for a in issue.review_audits:
+            a_node_id = f"AUDIT-{a.id}"
+            nodes.append({
+                "id": a_node_id,
+                "type": "CivicReviewAudit",
+                "label": f"AUDIT-{a.id}: {a.action}",
+                "data": a.to_dict(),
+            })
+            edges.append({
+                "source": a_node_id,
+                "target": issue_node_id,
+                "relationship": "HUMAN_AUDIT_ACTION",
+                "matching_method": "ROLE_GOVERNED_REVIEW",
+                "confidence": 1.0,
+            })
+
+        # Cross-Phase Links
+        for c in issue.cross_phase_links:
+            c_node_id = f"CPL-{c.link_id}"
+            nodes.append({
+                "id": c_node_id,
+                "type": "CivicCrossPhaseLink",
+                "label": c.relationship_nature,
+                "data": c.to_dict(),
+            })
+            edges.append({
+                "source": issue_node_id,
+                "target": c_node_id,
+                "relationship": "CROSS_PHASE_CONNECTION",
+                "matching_method": c.matching_method,
+                "confidence": c.confidence,
+            })
+
+        return success_response(
+            data={
+                "issue_id": issue.id,
+                "issue_code": issue.issue_code,
+                "node_count": len(nodes),
+                "edge_count": len(edges),
+                "nodes": nodes,
+                "edges": edges,
+            },
+            message="Provenance graph generated.",
+        )
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# 17. POST /api/civic/issues/<issue_id>/review (Role-Governed Review Workflow)
+# ---------------------------------------------------------------------------
+@civic_bp.route("/issues/<issue_id>/review", methods=["POST"])
+def submit_civic_issue_review(issue_id: str):
+    """
+    Submits a role-governed review audit action for a civic issue.
+    Enforces Step 4 & 7 verification governance.
+    Header Required: X-Reviewer-Role: SENIOR_CIVIC_AUDITOR | DISTRICT_AUDITOR | CIVIC_OMBUDSPERSON | ADMIN
+    """
+    db: Session = SessionLocal()
+    try:
+        reviewer_role = request.headers.get("X-Reviewer-Role", "").strip()
+        allowed_roles = {"SENIOR_CIVIC_AUDITOR", "DISTRICT_AUDITOR", "CIVIC_OMBUDSPERSON", "ADMIN"}
+
+        if not reviewer_role or reviewer_role not in allowed_roles:
+            return error_response(
+                message=f"Forbidden: Reviewer role '{reviewer_role}' not authorized to perform resolution audits. Required role: SENIOR_CIVIC_AUDITOR, DISTRICT_AUDITOR, CIVIC_OMBUDSPERSON, or ADMIN.",
+                status_code=403,
+            )
+
+        issue = None
+        if issue_id.isdigit():
+            issue = db.query(CivicIssue).filter(CivicIssue.id == int(issue_id)).first()
+        if not issue:
+            issue = db.query(CivicIssue).filter(CivicIssue.issue_code == issue_id).first()
+
+        if not issue:
+            return error_response(message=f"Civic issue '{issue_id}' not found.", status_code=404)
+
+        payload = request.get_json(silent=True) or {}
+        action = payload.get("action", "").strip().upper()
+        reason = payload.get("reason", "").strip()
+        new_assessment = payload.get("new_assessment")
+        evidence_ids = payload.get("evidence_ids", [])
+        reviewer_id = payload.get("reviewer_id") or f"AUDITOR-{uuid.uuid4().hex[:6].upper()}"
+
+        allowed_actions = {
+            "VERIFY_RESOLUTION",
+            "REOPEN_ISSUE",
+            "DISPUTE_RESOLUTION",
+            "REQUEST_EVIDENCE",
+            "UPDATE_ASSESSMENT",
+        }
+        if action not in allowed_actions:
+            return error_response(
+                message=f"Invalid review action '{action}'. Must be one of: {', '.join(sorted(allowed_actions))}.",
+                status_code=400,
+            )
+
+        if not reason or len(reason) < 5:
+            return error_response(
+                message="Review reason is required and must contain at least 5 characters documenting audit findings.",
+                status_code=400,
+            )
+
+        previous_status = issue.status.value if hasattr(issue.status, "value") else str(issue.status)
+        previous_assessment = (
+            issue.evidence_assessment.value
+            if hasattr(issue.evidence_assessment, "value")
+            else (str(issue.evidence_assessment) if issue.evidence_assessment else "pending_review")
+        )
+
+        target_assessment = new_assessment
+        # Apply deterministic state transitions
+        if action == "VERIFY_RESOLUTION":
+            issue.resolution_verification_status = ResolutionVerificationStatus.VERIFIED
+            issue.evidence_assessment = EvidenceAssessmentEnum.INDEPENDENTLY_VERIFIED_RESOLVED
+            issue.status = CivicIssueStatus.VERIFIED_RESOLVED
+            target_assessment = EvidenceAssessmentEnum.INDEPENDENTLY_VERIFIED_RESOLVED.value
+        elif action == "DISPUTE_RESOLUTION":
+            issue.resolution_verification_status = ResolutionVerificationStatus.CONTRADICTED
+            issue.evidence_assessment = EvidenceAssessmentEnum.RESOLUTION_EVIDENCE_CONFLICTING
+            issue.status = CivicIssueStatus.DISPUTED
+            target_assessment = EvidenceAssessmentEnum.RESOLUTION_EVIDENCE_CONFLICTING.value
+        elif action == "REOPEN_ISSUE":
+            issue.status = CivicIssueStatus.OPEN
+            issue.resolution_verification_status = ResolutionVerificationStatus.PENDING_VERIFICATION
+            issue.evidence_assessment = EvidenceAssessmentEnum.INSUFFICIENT_EVIDENCE
+            issue.repeat_count = (issue.repeat_count or 1) + 1
+            target_assessment = EvidenceAssessmentEnum.INSUFFICIENT_EVIDENCE.value
+        elif action == "REQUEST_EVIDENCE":
+            issue.evidence_assessment = EvidenceAssessmentEnum.RESOLUTION_EVIDENCE_INCOMPLETE
+            target_assessment = EvidenceAssessmentEnum.RESOLUTION_EVIDENCE_INCOMPLETE.value
+        elif action == "UPDATE_ASSESSMENT":
+            if new_assessment:
+                try:
+                    enum_val = EvidenceAssessmentEnum(new_assessment)
+                    issue.evidence_assessment = enum_val
+                    target_assessment = enum_val.value
+                except ValueError:
+                    return error_response(
+                        message=f"Invalid assessment '{new_assessment}'. Valid options: {[e.value for e in EvidenceAssessmentEnum]}",
+                        status_code=400,
+                    )
+
+        # Sanitize PII from reason (DPDPA 2023)
+        clean_reason = sanitize_pii(reason)
+
+        audit_entry = CivicReviewAudit(
+            civic_issue_id=issue.id,
+            reviewer_id=reviewer_id,
+            reviewer_role=reviewer_role,
+            previous_status=previous_status,
+            new_status=issue.status.value if hasattr(issue.status, "value") else str(issue.status),
+            previous_assessment=previous_assessment,
+            new_assessment=target_assessment or previous_assessment,
+            action=action,
+            reason=clean_reason,
+            evidence_ids=evidence_ids,
+            is_test_fixture=bool(payload.get("is_test_fixture", issue.is_test_fixture)),
+        )
+        db.add(audit_entry)
+
+        # Also append to IssueEvent audit trail
+        event = IssueEvent(
+            civic_issue_id=issue.id,
+            event_type="AUDITOR_REVIEW_ACTION",
+            actor_type=reviewer_role,
+            notes=f"Action: {action}. Assessment: {target_assessment}. Rationale: {clean_reason}",
+        )
+        db.add(event)
+
+        db.commit()
+        db.refresh(audit_entry)
+        db.refresh(issue)
+
+        return success_response(
+            data={
+                "audit": audit_entry.to_dict(),
+                "issue": issue.to_dict(),
+            },
+            message=f"Review audit action '{action}' recorded by {reviewer_role}.",
+            status_code=201,
+        )
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# 18. GET /api/civic/traceability/metrics (Traceability & Evidence Indicators)
+# ---------------------------------------------------------------------------
+@civic_bp.route("/traceability/metrics", methods=["GET"])
+def get_traceability_metrics():
+    """
+    Computes canonical Phase 8.11 evidence traceability and resolution indicators:
+    1. Evidence Coverage Rate: (Resolved issues with evidence / Total marked_resolved issues)
+    2. Independent Verification Rate: (Independently verified / Total marked_resolved issues)
+    3. Department Response Rate: (Issues with official ATR / Total issues)
+    4. Unverified Resolution Rate: (Marked resolved without verification / Total marked_resolved issues)
+    5. Conflicting Evidence Rate: (Issues with contradicting evidence / Issues with evidence)
+    6. Audit Trail Completeness Rate: (Issues with complete provenance / Total issues)
+
+    Safeguards:
+    - Zero issues handled cleanly (returns 0.0 without division by zero).
+    - Explicit distinction between reported status and verified outcome.
+    """
+    db: Session = SessionLocal()
+    try:
+        district = request.args.get("district")
+        department_code = request.args.get("department")
+
+        query = db.query(CivicIssue)
+        if district:
+            query = query.join(AdministrativeArea).filter(
+                or_(
+                    AdministrativeArea.name_en.ilike(f"%{district}%"),
+                    AdministrativeArea.area_code.ilike(f"%{district}%"),
+                )
+            )
+        if department_code:
+            query = query.join(CivicDepartment).filter(CivicDepartment.code == department_code)
+
+        all_issues = query.all()
+        total_issues = len(all_issues)
+
+        # If zero issues, return safe 0.0 values
+        if total_issues == 0:
+            return success_response(
+                data={
+                    "total_issues": 0,
+                    "marked_resolved_count": 0,
+                    "evidence_coverage_rate": 0.0,
+                    "evidence_coverage_percentage": 0.0,
+                    "independent_verification_rate": 0.0,
+                    "independent_verification_percentage": 0.0,
+                    "department_response_rate": 0.0,
+                    "department_response_percentage": 0.0,
+                    "unverified_resolution_rate": 0.0,
+                    "unverified_resolution_percentage": 0.0,
+                    "conflicting_evidence_rate": 0.0,
+                    "conflicting_evidence_percentage": 0.0,
+                    "audit_trail_completeness_rate": 0.0,
+                    "audit_trail_completeness_percentage": 0.0,
+                    "definitions": {
+                        "evidence_coverage_rate": "Proportion of marked-resolved issues backed by at least one empirical resolution evidence artifact.",
+                        "independent_verification_rate": "Proportion of marked-resolved issues independently verified by field audit or corroborating proof.",
+                        "department_response_rate": "Proportion of civic issues having an official departmental Action-Taken Report or acknowledgment.",
+                        "unverified_resolution_rate": "Proportion of marked-resolved issues lacking independent corroboration.",
+                        "conflicting_evidence_rate": "Proportion of evidence-backed issues where independent findings contradict the official closure claim.",
+                        "audit_trail_completeness_rate": "Proportion of issues with unbroken bidirectional audit logs from public petition to resolution audit.",
+                    },
+                    "methodological_caveats": [
+                        "Data sample contains zero matching issues for the specified filter criteria.",
+                        "Complaint volume does not equal true civic problem prevalence.",
+                    ],
+                },
+                message="Traceability metrics computed (empty sample).",
+            )
+
+        # 1. Marked resolved issues (denominator for resolution metrics)
+        resolved_issues = [
+            i for i in all_issues
+            if i.status in [CivicIssueStatus.RESOLVED, CivicIssueStatus.VERIFIED_RESOLVED]
+            or i.actual_resolution_date is not None
+            or any(r.reported_status == "marked_resolved" for r in i.responses)
+        ]
+        total_resolved = len(resolved_issues)
+
+        # 2. Issues with evidence
+        issues_with_evidence = [i for i in all_issues if any(len(r.evidences) > 0 for r in i.responses)]
+        resolved_with_evidence = [i for i in resolved_issues if any(len(r.evidences) > 0 for r in i.responses)]
+
+        # 3. Independently verified
+        verified_issues = [
+            i for i in resolved_issues
+            if i.resolution_verification_status == ResolutionVerificationStatus.VERIFIED
+            or i.evidence_assessment == EvidenceAssessmentEnum.INDEPENDENTLY_VERIFIED_RESOLVED
+            or any(a.action == "VERIFY_RESOLUTION" for a in i.review_audits)
+        ]
+
+        # 4. Department responses
+        issues_with_response = [i for i in all_issues if len(i.responses) > 0]
+
+        # 5. Conflicting evidence
+        conflicting_issues = [
+            i for i in issues_with_evidence
+            if i.resolution_verification_status == ResolutionVerificationStatus.CONTRADICTED
+            or i.evidence_assessment == EvidenceAssessmentEnum.RESOLUTION_EVIDENCE_CONFLICTING
+            or any(any(e.contradicts_resolution for e in r.evidences) for r in i.responses)
+        ]
+
+        # 6. Audit trail completeness (issues with grievance + department + response + audit or verified)
+        complete_audit_issues = [
+            i for i in all_issues
+            if len(i.grievance_records) > 0
+            and i.department_id is not None
+            and len(i.responses) > 0
+            and (len(i.review_audits) > 0 or i.resolution_verification_status == ResolutionVerificationStatus.VERIFIED)
+        ]
+
+        # Compute rates
+        ev_cov_rate = round(len(resolved_with_evidence) / total_resolved, 4) if total_resolved > 0 else 0.0
+        ind_ver_rate = round(len(verified_issues) / total_resolved, 4) if total_resolved > 0 else 0.0
+        dept_resp_rate = round(len(issues_with_response) / total_issues, 4) if total_issues > 0 else 0.0
+        unver_res_rate = round((total_resolved - len(verified_issues)) / total_resolved, 4) if total_resolved > 0 else 0.0
+        conflict_rate = round(len(conflicting_issues) / len(issues_with_evidence), 4) if len(issues_with_evidence) > 0 else 0.0
+        comp_rate = round(len(complete_audit_issues) / total_issues, 4) if total_issues > 0 else 0.0
+
+        metrics_payload = {
+            "sample_size": total_issues,
+            "total_issues": total_issues,
+            "total_marked_resolved": total_resolved,
+            "total_with_evidence": len(issues_with_evidence),
+            "evidence_coverage_rate": ev_cov_rate,
+            "evidence_coverage_percentage": round(ev_cov_rate * 100, 2),
+            "independent_verification_rate": ind_ver_rate,
+            "independent_verification_percentage": round(ind_ver_rate * 100, 2),
+            "department_response_rate": dept_resp_rate,
+            "department_response_percentage": round(dept_resp_rate * 100, 2),
+            "unverified_resolution_rate": unver_res_rate,
+            "unverified_resolution_percentage": round(unver_res_rate * 100, 2),
+            "conflicting_evidence_rate": conflict_rate,
+            "conflicting_evidence_percentage": round(conflict_rate * 100, 2),
+            "audit_trail_completeness_rate": comp_rate,
+            "audit_trail_completeness_percentage": round(comp_rate * 100, 2),
+            "counts": {
+                "resolved_with_evidence_count": len(resolved_with_evidence),
+                "independently_verified_count": len(verified_issues),
+                "with_official_response_count": len(issues_with_response),
+                "unverified_resolved_count": max(0, total_resolved - len(verified_issues)),
+                "conflicting_evidence_count": len(conflicting_issues),
+                "complete_audit_trail_count": len(complete_audit_issues),
+            },
+            "definitions": {
+                "evidence_coverage_rate": "Proportion of marked-resolved issues backed by at least one empirical resolution evidence artifact.",
+                "independent_verification_rate": "Proportion of marked-resolved issues independently verified by field audit or corroborating proof.",
+                "department_response_rate": "Proportion of civic issues having an official departmental Action-Taken Report or acknowledgment.",
+                "unverified_resolution_rate": "Proportion of marked-resolved issues lacking independent corroboration.",
+                "conflicting_evidence_rate": "Proportion of evidence-backed issues where independent findings contradict the official closure claim.",
+                "audit_trail_completeness_rate": "Proportion of issues with unbroken bidirectional audit logs from public petition to resolution audit.",
+            },
+            "methodological_caveats": [
+                "Complaint counts reflect portal access, digital literacy, and administrative reporting practices, not ground truth issue frequency.",
+                "A department status of 'marked_resolved' represents an administrative claim and must not be conflated with independently verified resolution.",
+                "Absence of evidence does not constitute evidence of non-resolution, but indicates missing verification data.",
+            ],
+        }
+
+        return success_response(data=metrics_payload, message="Traceability metrics computed successfully.")
+    finally:
+        db.close()
+

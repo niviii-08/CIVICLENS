@@ -961,6 +961,65 @@ class APIClient:
         except requests.exceptions.RequestException as e:
             return False, {"message": str(e)}
 
+    # -------------------------------------------------------------------------
+    # PHASE 8.11: EVIDENCE TRACEABILITY & RESOLUTION AUDIT TRAIL
+    # -------------------------------------------------------------------------
+    def get_civic_issue_timeline(self, issue_id: str) -> Tuple[bool, Any]:
+        """Unified 7-stage evidence traceability timeline with gaps & badges."""
+        try:
+            response = requests.get(f"{self.base_url}/api/civic/issues/{issue_id}/timeline", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_civic_issue_provenance(self, issue_id: str) -> Tuple[bool, Any]:
+        """Directed node-edge provenance graph for a civic issue."""
+        try:
+            response = requests.get(f"{self.base_url}/api/civic/issues/{issue_id}/provenance", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def submit_civic_issue_review(
+        self,
+        issue_id: str,
+        payload: Dict[str, Any],
+        reviewer_role: str = "SENIOR_CIVIC_AUDITOR",
+    ) -> Tuple[bool, Any]:
+        """Submits an auditor review decision (RBAC governed with X-Reviewer-Role)."""
+        headers = {"X-Reviewer-Role": reviewer_role}
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/civic/issues/{issue_id}/review",
+                json=payload,
+                headers=headers,
+                timeout=10,
+            )
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_civic_traceability_metrics(
+        self,
+        district: Optional[str] = None,
+        department: Optional[str] = None,
+    ) -> Tuple[bool, Any]:
+        """Calculates 6 canonical evidence coverage and verification rates."""
+        params = {}
+        if district:
+            params["district"] = district
+        if department:
+            params["department"] = department
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/civic/traceability/metrics",
+                params=params,
+                timeout=10,
+            )
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
     # =========================================================================
     # PHASE 9: UNIFIED CIVIC INTELLIGENCE AND EVIDENCE GRAPH
     # =========================================================================

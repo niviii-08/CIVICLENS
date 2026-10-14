@@ -79,3 +79,52 @@ def render_severity_badge(severity: str) -> str:
     color = SEVERITY_COLORS.get(severity, "#6c757d")
     text_color = "#000" if severity == "MEDIUM" else "#fff"
     return f"""<span style="background-color: {color}; color: {text_color}; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold;">{severity}</span>"""
+
+
+ORIGIN_COLORS = {
+    "OFFICIAL_GOVERNMENT_RECORD": "#0d6efd",   # Blue
+    "AUTOMATED_SYSTEM_INFERENCE": "#6f42c1",   # Purple
+    "HUMAN_AUDITOR_REVIEW": "#fd7e14",         # Orange
+    "INDEPENDENT_EVIDENCE": "#198754",         # Green
+    "NOT_AVAILABLE": "#dc3545",                # Red
+    "NO_OFFICIAL_RESPONSE": "#dc3545",         # Red
+    "NO_EMPIRICAL_EVIDENCE": "#dc3545",        # Red
+    "PENDING_REVIEW": "#6c757d",               # Gray
+    "UNRESOLVED_JURISDICTION": "#6c757d",      # Gray
+    "UNRESOLVED_OR_PENDING": "#6c757d",        # Gray
+}
+
+ORIGIN_ICONS = {
+    "OFFICIAL_GOVERNMENT_RECORD": "🏛️ Official Record",
+    "AUTOMATED_SYSTEM_INFERENCE": "🤖 Automated Inference",
+    "HUMAN_AUDITOR_REVIEW": "👤 Human Audit Review",
+    "INDEPENDENT_EVIDENCE": "🔍 Independent Evidence",
+    "NOT_AVAILABLE": "⚠️ Missing Record",
+    "NO_OFFICIAL_RESPONSE": "⚠️ Missing ATR",
+    "NO_EMPIRICAL_EVIDENCE": "⚠️ Zero Evidence",
+    "PENDING_REVIEW": "⏳ Pending Review",
+    "UNRESOLVED_JURISDICTION": "❓ Unresolved Jurisdiction",
+    "UNRESOLVED_OR_PENDING": "⏳ Pending Resolution",
+}
+
+
+def render_origin_badge(origin_type: str) -> str:
+    color = ORIGIN_COLORS.get(origin_type, "#6c757d")
+    label = ORIGIN_ICONS.get(origin_type, origin_type.replace("_", " ").title())
+    return f"""<span style="background-color: {color}; color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block;">{label}</span>"""
+
+
+def render_assessment_badge(assessment: str) -> str:
+    labels = {
+        "resolution_evidence_available": ("#198754", "Evidence Available"),
+        "resolution_evidence_incomplete": ("#ffc107", "Evidence Incomplete"),
+        "resolution_evidence_conflicting": ("#dc3545", "Conflicting Evidence"),
+        "resolution_not_independently_verified": ("#fd7e14", "Not Independently Verified"),
+        "independently_verified_resolved": ("#198754", "Independently Verified Resolved"),
+        "insufficient_evidence": ("#6c757d", "Insufficient Evidence"),
+        "pending_review": ("#0dcaf0", "Pending Review"),
+    }
+    color, text = labels.get(assessment, ("#6c757d", assessment.replace("_", " ").title()))
+    text_color = "#000" if color == "#ffc107" else "#fff"
+    return f"""<span style="background-color: {color}; color: {text_color}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block;">{text}</span>"""
+

@@ -88,6 +88,20 @@ from backend.models.representative import (
     ConflictingEvidenceRecord,
     AuditTrailEvent
 )
-
-
-
+from backend.models.civic_issue import (
+    CivicIssue,
+    GrievanceRecord,
+    IssueCategory,
+    CivicDepartment,
+    AdministrativeArea,
+    ServiceStandard,
+    SourceDocument,
+    ResponseRecord,
+    ResolutionEvidence,
+    PublicWork,
+    IssueEvent,
+    IssueMetric,
+    DataQualityIssue,
+    CivicCrossPhaseLink,
+    CivicReviewAudit
+)

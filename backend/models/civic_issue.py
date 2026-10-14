@@ -168,6 +168,19 @@ class ResolutionVerificationStatus(str, enum.Enum):
     INCONCLUSIVE = "INCONCLUSIVE"
 
 
+class EvidenceAssessmentEnum(str, enum.Enum):
+    """
+    Step 4 canonical evidence assessment taxonomy for resolution audit trails.
+    """
+    RESOLUTION_EVIDENCE_AVAILABLE = "resolution_evidence_available"
+    RESOLUTION_EVIDENCE_INCOMPLETE = "resolution_evidence_incomplete"
+    RESOLUTION_EVIDENCE_CONFLICTING = "resolution_evidence_conflicting"
+    RESOLUTION_NOT_INDEPENDENTLY_VERIFIED = "resolution_not_independently_verified"
+    INDEPENDENTLY_VERIFIED_RESOLVED = "independently_verified_resolved"
+    INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+    PENDING_REVIEW = "pending_review"
+
+
 class EvidenceType(str, enum.Enum):
     WORK_ORDER = "WORK_ORDER"
     COMPLETION_CERTIFICATE = "COMPLETION_CERTIFICATE"
@@ -422,6 +435,9 @@ class CivicIssue(Base):
     resolution_verification_status = Column(
         Enum(ResolutionVerificationStatus), default=ResolutionVerificationStatus.PENDING_VERIFICATION
     )
+    evidence_assessment = Column(
+        Enum(EvidenceAssessmentEnum), default=EvidenceAssessmentEnum.PENDING_REVIEW, nullable=True
+    )
     is_test_fixture = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -438,6 +454,7 @@ class CivicIssue(Base):
     metrics = relationship("IssueMetric", back_populates="civic_issue")
     quality_issues = relationship("DataQualityIssue", back_populates="civic_issue")
     cross_phase_links = relationship("CivicCrossPhaseLink", back_populates="civic_issue", cascade="all, delete-orphan")
+    review_audits = relationship("CivicReviewAudit", back_populates="civic_issue", cascade="all, delete-orphan")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -467,6 +484,11 @@ class CivicIssue(Base):
                 self.resolution_verification_status.value
                 if hasattr(self.resolution_verification_status, "value")
                 else str(self.resolution_verification_status)
+            ),
+            "evidence_assessment": (
+                self.evidence_assessment.value
+                if hasattr(self.evidence_assessment, "value")
+                else (str(self.evidence_assessment) if self.evidence_assessment else "pending_review")
             ),
             "is_test_fixture": self.is_test_fixture,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -604,6 +626,7 @@ class ResponseRecord(Base):
     review_notes = Column(Text, nullable=True)
     public_work_id = Column(Integer, ForeignKey("civic_public_works.id"), nullable=True)
     is_evidence_supported = Column(Boolean, default=False)
+    evidence_assessment = Column(String(100), nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -670,6 +693,7 @@ class ResponseRecord(Base):
             "action_type": self.action_type.value if hasattr(self.action_type, "value") else str(self.action_type),
             "reported_status": self.reported_status,
             "verification_status": self.verification_status.value if hasattr(self.verification_status, "value") else str(self.verification_status),
+            "evidence_assessment": self.evidence_assessment,
             "response_summary": self.response_summary or self.official_remark,
             "official_remark": self.official_remark or self.response_summary,
             "action_taken_date": self.action_taken_date.isoformat() if self.action_taken_date else None,
@@ -704,6 +728,9 @@ class ResolutionEvidence(Base):
     is_verified = Column(Boolean, default=False)
     verified_by = Column(String(150), nullable=True)
     verification_date = Column(DateTime, nullable=True)
+    confidence = Column(Float, default=1.0)
+    matching_method = Column(String(100), default="RECORD_ID_MATCH")
+    contradicts_resolution = Column(Boolean, default=False)
     is_test_fixture = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -723,6 +750,9 @@ class ResolutionEvidence(Base):
             "is_verified": self.is_verified,
             "verified_by": self.verified_by,
             "verification_date": self.verification_date.isoformat() if self.verification_date else None,
+            "confidence": self.confidence,
+            "matching_method": self.matching_method,
+            "contradicts_resolution": self.contradicts_resolution,
             "is_test_fixture": self.is_test_fixture,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
@@ -934,3 +964,50 @@ class CivicCrossPhaseLink(Base):
             "extra_metadata": self.extra_metadata or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+# ---------------------------------------------------------------------------
+# 15. CivicReviewAudit Entity
+# ---------------------------------------------------------------------------
+class CivicReviewAudit(Base):
+    """
+    Formal reviewer decision, assessment override, and audit trail record.
+    Implements role-governed verification workflow (e.g. SENIOR_CIVIC_AUDITOR).
+    Strictly preserves tamper-evident provenance and scrubbed notes (DPDPA 2023).
+    """
+    __tablename__ = "civic_review_audits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    civic_issue_id = Column(Integer, ForeignKey("civic_issues.id", ondelete="CASCADE"), nullable=False, index=True)
+    reviewer_id = Column(String(100), nullable=False)
+    reviewer_role = Column(String(100), nullable=False)  # e.g. "SENIOR_CIVIC_AUDITOR", "DISTRICT_AUDITOR"
+    previous_status = Column(String(50), nullable=True)
+    new_status = Column(String(50), nullable=False)
+    previous_assessment = Column(String(100), nullable=True)
+    new_assessment = Column(String(100), nullable=False)
+    action = Column(String(100), nullable=False)  # VERIFY_RESOLUTION, REOPEN_ISSUE, DISPUTE_RESOLUTION, REQUEST_EVIDENCE, UPDATE_ASSESSMENT
+    reason = Column(Text, nullable=False)
+    evidence_ids = Column(JSON, nullable=True)  # List of reviewed evidence IDs
+    is_test_fixture = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    # Relationships
+    civic_issue = relationship("CivicIssue", back_populates="review_audits")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "civic_issue_id": self.civic_issue_id,
+            "reviewer_id": self.reviewer_id,
+            "reviewer_role": self.reviewer_role,
+            "previous_status": self.previous_status,
+            "new_status": self.new_status,
+            "previous_assessment": self.previous_assessment,
+            "new_assessment": self.new_assessment,
+            "action": self.action,
+            "reason": sanitize_pii(self.reason),
+            "evidence_ids": self.evidence_ids or [],
+            "is_test_fixture": self.is_test_fixture,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
