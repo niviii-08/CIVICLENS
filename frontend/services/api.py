@@ -1294,7 +1294,256 @@ class APIClient:
         except requests.exceptions.RequestException as e:
             return False, {"message": str(e)}
 
+    # =========================================================================
+    # PHASE 10: POLICY EVALUATION & OUTCOME INTELLIGENCE
+    # =========================================================================
+
+    def search_policies(
+        self,
+        query: Optional[str] = None,
+        department: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[bool, Any]:
+        """Search canonical policies and evaluation registry entries."""
+        params = {"limit": limit, "offset": offset}
+        if query:
+            params["q"] = query
+        if department:
+            params["department"] = department
+        if status:
+            params["status"] = status
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/policies/search", params=params, timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_policy_details(self, policy_id: str) -> Tuple[bool, Any]:
+        """Retrieve policy evaluation details, objectives, and cross-phase relations."""
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/policies/{policy_id}", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_policy_plans(
+        self,
+        policy_id: Optional[str] = None,
+        evaluation_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[bool, Any]:
+        """List evaluation questions and plans."""
+        params = {"limit": limit, "offset": offset}
+        if policy_id:
+            params["policy_id"] = policy_id
+        if evaluation_type:
+            params["evaluation_type"] = evaluation_type
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/plans", params=params, timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_plan_details(self, plan_id: str) -> Tuple[bool, Any]:
+        """Retrieve single evaluation plan."""
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/plans/{plan_id}", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_policy_indicators(
+        self,
+        domain: Optional[str] = None,
+        indicator_type: Optional[str] = None,
+        scheme_id: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[bool, Any]:
+        """List canonical indicator definitions."""
+        params = {"limit": limit, "offset": offset}
+        if domain:
+            params["domain"] = domain
+        if indicator_type:
+            params["indicator_type"] = indicator_type
+        if scheme_id:
+            params["scheme_id"] = scheme_id
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/indicators", params=params, timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_indicator_details(self, indicator_id: str) -> Tuple[bool, Any]:
+        """Retrieve single indicator definition."""
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/indicators/{indicator_id}", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_indicator_observations(
+        self,
+        indicator_id: str,
+        stage: Optional[str] = None,
+        reference_period: Optional[str] = None,
+        geographic_unit_id: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[bool, Any]:
+        """List baseline, follow-up, and intermediate empirical observations."""
+        params = {"limit": limit, "offset": offset}
+        if stage:
+            params["stage"] = stage
+        if reference_period:
+            params["reference_period"] = reference_period
+        if geographic_unit_id:
+            params["geographic_unit_id"] = geographic_unit_id
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/policy-evaluation/indicators/{indicator_id}/observations",
+                params=params,
+                timeout=10,
+            )
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_policy_budget_analysis(self, policy_id: str, financial_year: str) -> Tuple[bool, Any]:
+        """Budget estimate vs revised vs actual execution analysis."""
+        params = {"financial_year": financial_year}
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/policy-evaluation/policies/{policy_id}/budget-analysis",
+                params=params,
+                timeout=10,
+            )
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_policy_output_analysis(self, policy_id: str) -> Tuple[bool, Any]:
+        """Planned vs completed physical implementation outputs."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/policy-evaluation/policies/{policy_id}/output-analysis",
+                timeout=10,
+            )
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def compare_indicator_outcomes(
+        self,
+        indicator_id: str,
+        baseline_period: Optional[str] = None,
+        followup_period: Optional[str] = None,
+        geographic_unit_id: Optional[str] = None,
+        allow_unit_conversion: bool = False,
+    ) -> Tuple[bool, Any]:
+        """Baseline vs follow-up outcome comparison with 9 mandatory fields."""
+        params = {}
+        if baseline_period:
+            params["baseline_period"] = baseline_period
+        if followup_period:
+            params["followup_period"] = followup_period
+        if geographic_unit_id:
+            params["geographic_unit_id"] = geographic_unit_id
+        if allow_unit_conversion:
+            params["allow_unit_conversion"] = "true"
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/policy-evaluation/indicators/{indicator_id}/compare",
+                params=params,
+                timeout=10,
+            )
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_policy_findings(
+        self,
+        policy_id: Optional[str] = None,
+        evaluation_id: Optional[str] = None,
+        finding_type: Optional[str] = None,
+        review_status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[bool, Any]:
+        """List synthesized evaluation findings."""
+        params = {"limit": limit, "offset": offset}
+        if policy_id:
+            params["policy_id"] = policy_id
+        if evaluation_id:
+            params["evaluation_id"] = evaluation_id
+        if finding_type:
+            params["finding_type"] = finding_type
+        if review_status:
+            params["review_status"] = review_status
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/findings", params=params, timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_finding_details(self, finding_id: str) -> Tuple[bool, Any]:
+        """Retrieve finding details with all 12 attributes."""
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/findings/{finding_id}", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_finding_evidence(self, finding_id: str) -> Tuple[bool, Any]:
+        """Retrieve supporting and contradicting evidence links for a finding."""
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/findings/{finding_id}/evidence", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_study_details(self, study_id: str) -> Tuple[bool, Any]:
+        """Retrieve study methodology and causal rigor grade."""
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/studies/{study_id}", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def get_policy_graph_connections(self, policy_id: str) -> Tuple[bool, Any]:
+        """Evidence graph explorer connecting cross-phase records with guardrails."""
+        try:
+            response = requests.get(f"{self.base_url}/api/policy-evaluation/policies/{policy_id}/graph-connections", timeout=10)
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
+    def review_policy_finding(
+        self,
+        finding_id: str,
+        review_status: str,
+        review_notes: str = "",
+        reviewer_role: str = "REVIEWER",
+    ) -> Tuple[bool, Any]:
+        """Review/verify finding status (RBAC guarded)."""
+        headers = {"X-Reviewer-Role": reviewer_role}
+        payload = {"review_status": review_status, "review_notes": review_notes}
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/policy-evaluation/findings/{finding_id}/review",
+                json=payload,
+                headers=headers,
+                timeout=10,
+            )
+            return self._handle_response(response)
+        except requests.exceptions.RequestException as e:
+            return False, {"message": str(e)}
+
 
 # Global instance for use across Streamlit pages
 api_client = APIClient()
+
 

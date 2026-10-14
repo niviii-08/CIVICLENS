@@ -65,3 +65,4 @@ ml/models/*
 !ml/models/.gitkeep
 ml/embeddings/*
 !ml/embeddings/.gitkeep
+scratch/

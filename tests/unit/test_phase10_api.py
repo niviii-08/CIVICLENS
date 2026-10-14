@@ -34,6 +34,7 @@ from backend.models.budget import (
     BudgetScheme,
     BudgetRecord,
     BudgetStage,
+    BudgetSourceDocument,
     HistoricalScheme,
 )
 from backend.models.manifesto import Manifesto
@@ -79,10 +80,9 @@ from backend.models.policy_evaluation import (
     IndicatorType,
     ObservationStage,
     ReportingFrequency,
-    GeographicLevel,
-    TargetType,
+    TargetProvenanceType,
     MissingDataStatus,
-    PolicyStatus,
+    PolicyEvaluationStatus,
 )
 
 
@@ -102,90 +102,80 @@ def api_test_db():
 @pytest.fixture
 def seed_policy_evaluation_dataset(api_test_db):
     """Seed comprehensive Phase 10 evaluation entities and cross-phase relations."""
-    # 1. Budget Department & Scheme (Phase 1)
+    # 1. Budget Department, Scheme & Source Doc (Phase 1)
     dept = BudgetDepartment(
+        name="Social Welfare and Women Empowerment Department",
         code="DEPT-SWW",
-        name_en="Social Welfare and Women Empowerment Department",
-        name_ta="சமூக நலம் மற்றும் மகளிர் உரிமைத் துறை",
     )
     api_test_db.add(dept)
     api_test_db.flush()
 
     scheme = BudgetScheme(
-        scheme_id=201,
-        department_code="DEPT-SWW",
-        scheme_code="SCH-PUDHUMAI-2022",
-        name_en="Moovalur Ramamirtham Ammaiyar Higher Education Assurance Scheme (Pudhumai Penn)",
-        name_ta="புதுமைப் பெண் திட்டம்",
+        department_id=dept.id,
+        name="Moovalur Ramamirtham Ammaiyar Higher Education Assurance Scheme (Pudhumai Penn)",
+        head_of_account="2235-02-103-SCH-PUDHUMAI",
     )
     api_test_db.add(scheme)
     api_test_db.flush()
 
-    # Budget records across 3 financial years (BE, RE, Actual)
+    source_doc = BudgetSourceDocument(
+        manifest_dataset_id="BUDGET-TN-2022-23",
+        title="Demand 45 - Social Welfare Budget Document",
+        official_source_url="https://budget.tn.gov.in/2022-23",
+        financial_year_coverage="2022-23",
+    )
+    api_test_db.add(source_doc)
+    api_test_db.flush()
+
+    # Budget records across financial years (BE, RE, Actual)
     b_records = [
         BudgetRecord(
-            scheme_id=scheme.scheme_id,
+            scheme_id=scheme.id,
+            source_document_id=source_doc.id,
             financial_year="2022-23",
-            stage=BudgetStage.BE,
-            amount_crores=698.0,
-            original_record_reference="Budget Document 2022-23 Demand 45",
+            budget_stage=BudgetStage.budget_estimate,
+            amount=698.0,
+            currency_unit="RUPEES_CRORE",
         ),
         BudgetRecord(
-            scheme_id=scheme.scheme_id,
+            scheme_id=scheme.id,
+            source_document_id=source_doc.id,
             financial_year="2022-23",
-            stage=BudgetStage.RE,
-            amount_crores=650.0,
-            original_record_reference="Revised Estimates 2022-23 Demand 45",
+            budget_stage=BudgetStage.revised_estimate,
+            amount=650.0,
+            currency_unit="RUPEES_CRORE",
         ),
         BudgetRecord(
-            scheme_id=scheme.scheme_id,
+            scheme_id=scheme.id,
+            source_document_id=source_doc.id,
             financial_year="2022-23",
-            stage=BudgetStage.ACTUAL,
-            amount_crores=612.4,
-            original_record_reference="Appropriation Accounts 2022-23",
-        ),
-        BudgetRecord(
-            scheme_id=scheme.scheme_id,
-            financial_year="2023-24",
-            stage=BudgetStage.BE,
-            amount_crores=1000.0,
-            original_record_reference="Budget Document 2023-24 Demand 45",
-        ),
-        BudgetRecord(
-            scheme_id=scheme.scheme_id,
-            financial_year="2023-24",
-            stage=BudgetStage.RE,
-            amount_crores=950.0,
-            original_record_reference="Revised Estimates 2023-24 Demand 45",
-        ),
-        BudgetRecord(
-            scheme_id=scheme.scheme_id,
-            financial_year="2023-24",
-            stage=BudgetStage.ACTUAL,
-            amount_crores=895.8,
-            original_record_reference="Appropriation Accounts 2023-24",
+            budget_stage=BudgetStage.actual_expenditure,
+            amount=612.4,
+            currency_unit="RUPEES_CRORE",
         ),
     ]
     api_test_db.add_all(b_records)
+    api_test_db.flush()
 
     # 2. Canonical Policy Registry Entry (Phase 10.3)
     policy = PolicyRegistryEntry(
         policy_id="POL-TN-PUDHUMAI-PENN",
+        budget_scheme_id=scheme.id,
         canonical_scheme_code="SCH-PUDHUMAI-2022",
         policy_name="Pudhumai Penn Higher Education Assurance Scheme",
         policy_name_ta="புதுமைப் பெண் திட்டம்",
-        responsible_department="Social Welfare and Women Empowerment",
+        responsible_department="Social Welfare and Women Empowerment Department",
         objectives_summary="Incentivize girl students from government schools to pursue higher education by providing ₹1,000 monthly financial assistance.",
         original_objective_wording="To enhance higher education enrolment ratio of girl students who studied classes 6 to 12 in government schools.",
         intended_beneficiaries="Girls from Tamil Nadu government schools (Classes 6-12) pursuing UG/diploma courses",
-        geographic_scope="TAMIL_NADU_STATE",
+        geographic_scope="STATEWIDE",
         start_date="2022-09-05",
-        status=PolicyStatus.ACTIVE,
-        stated_targets={
-            "annual_enrolment_target": 300000,
-            "disbursement_target_crores": 1000.0,
-        },
-        aliases_list=["Moovalur Ramamirtham Ammaiyar Higher Education Scheme", "Pudhumai Penn"],
+        evaluation_status=PolicyEvaluationStatus.EVALUATED,
+        stated_targets=[
+            {"metric": "annual_enrolment_target", "value": 300000},
+            {"metric": "disbursement_target_crores", "value": 1000.0},
+        ],
+        aliases=["Moovalur Ramamirtham Ammaiyar Higher Education Scheme", "Pudhumai Penn"],
         source_documents=["G.O. (Ms) No. 34 Social Welfare Dept dt 02.09.2022"],
         is_test_fixture=True,
     )
@@ -196,19 +186,23 @@ def seed_policy_evaluation_dataset(api_test_db):
     obj1 = PolicyObjective(
         objective_id="OBJ-PENN-01",
         policy_id=policy.policy_id,
-        objective_text="Increase girl student enrolment in collegiate education by at least 25%.",
-        priority_order=1,
-        is_primary=True,
+        title="Increase girl student enrolment in collegiate education",
+        description="Increase girl student enrolment in collegiate education by at least 25%.",
+        original_wording="To enhance higher education enrolment ratio of girl students who studied classes 6 to 12 in government schools.",
+        sector="Higher Education",
+        is_test_fixture=True,
     )
     api_test_db.add(obj1)
+    api_test_db.flush()
 
     # Beneficiary Group
     bg1 = BeneficiaryGroup(
         group_id="BEN-PENN-01",
-        policy_id=policy.policy_id,
-        group_name="Government school girl students (6th-12th standard)",
+        objective_id=obj1.objective_id,
+        name="Government school girl students (6th-12th standard)",
         eligibility_criteria="Studied continuous schooling from Class 6 to 12 in Tamil Nadu Government schools",
-        estimated_population=350000,
+        estimated_eligible_population=350000,
+        is_test_fixture=True,
     )
     api_test_db.add(bg1)
 
@@ -216,38 +210,44 @@ def seed_policy_evaluation_dataset(api_test_db):
     act1 = ImplementationActivity(
         activity_id="ACT-PENN-01",
         policy_id=policy.policy_id,
+        scheme_id="SCH-PUDHUMAI-2022",
         activity_name="Monthly Direct Benefit Transfer of ₹1,000 via Aadhaar-linked accounts",
-        responsible_agency="Department of Social Welfare & Women Empowerment",
+        activity_type="DBT_DISBURSEMENT",
         status="IN_PROGRESS",
-        target_output_count=300000,
-        actual_output_count=273000,
+        planned_output_quantity=300000.0,
+        completed_output_quantity=273000.0,
         output_unit="students",
-        output_reporting_period="2023-24",
+        financial_year="2023-24",
+        implementing_agency="Department of Social Welfare & Women Empowerment",
+        is_test_fixture=True,
     )
     act2 = ImplementationActivity(
         activity_id="ACT-PENN-02",
         policy_id=policy.policy_id,
+        scheme_id="SCH-PUDHUMAI-2022",
         activity_name="Special College Admission Registration Camps",
-        responsible_agency="Directorate of Collegiate Education",
+        activity_type="REGISTRATION",
         status="COMPLETED",
-        target_output_count=500,
-        actual_output_count=520,
+        planned_output_quantity=500.0,
+        completed_output_quantity=520.0,
         output_unit="camps",
-        output_reporting_period="2023-24",
+        financial_year="2023-24",
+        implementing_agency="Directorate of Collegiate Education",
+        is_test_fixture=True,
     )
     api_test_db.add_all([act1, act2])
 
     # 3. Policy Indicators & Observations (Phase 10.4)
     ind_enrol = PolicyIndicator(
         indicator_id="IND-GIRL-GER-COLLEGE",
-        policy_id=policy.policy_id,
+        objective_id=obj1.objective_id,
         indicator_name="Higher Education Gross Enrolment Ratio for Government School Girls",
         indicator_type=IndicatorType.OUTCOME,
         definition="Percentage of girl students passing Class 12 from government schools enrolling into accredited higher education institutions.",
         unit="PERCENT",
         source="Department of Higher Education Annual Statistics & AISHE Tamil Nadu Portal",
         reporting_frequency=ReportingFrequency.ANNUAL,
-        geographic_level=GeographicLevel.STATE,
+        geographic_level="STATE",
         baseline_period="2021-22",
         baseline_value=32.4,
         comparison_period="2023-24",
@@ -265,41 +265,38 @@ def seed_policy_evaluation_dataset(api_test_db):
     obs_base = IndicatorObservation(
         observation_id="OBS-GER-2021-22",
         indicator_id=ind_enrol.indicator_id,
-        reporting_period="2021-22",
-        geographic_level=GeographicLevel.STATE,
-        geographic_identifier="TN",
-        observed_value=32.4,
-        observation_type=ObservationType.BASELINE,
-        collection_date="2022-03-31",
-        data_source="Higher Education Statistical Handbook 2021-22",
-        is_official=True,
-        missing_data_flag=False,
+        reference_period="2021-22",
+        geographic_level="STATE",
+        geographic_unit_id="TN",
+        value=32.4,
+        stage=ObservationStage.BASELINE,
+        source_reference="Higher Education Statistical Handbook 2021-22",
+        missing_data_status=MissingDataStatus.COMPLETE,
+        is_test_fixture=True,
     )
     obs_follow = IndicatorObservation(
         observation_id="OBS-GER-2023-24",
         indicator_id=ind_enrol.indicator_id,
-        reporting_period="2023-24",
-        geographic_level=GeographicLevel.STATE,
-        geographic_identifier="TN",
-        observed_value=41.8,
-        observation_type=ObservationType.FOLLOW_UP,
-        collection_date="2024-03-31",
-        data_source="Higher Education Statistical Handbook 2023-24",
-        is_official=True,
-        missing_data_flag=False,
+        reference_period="2023-24",
+        geographic_level="STATE",
+        geographic_unit_id="TN",
+        value=41.8,
+        stage=ObservationStage.FOLLOW_UP,
+        source_reference="Higher Education Statistical Handbook 2023-24",
+        missing_data_status=MissingDataStatus.COMPLETE,
+        is_test_fixture=True,
     )
     obs_missing = IndicatorObservation(
         observation_id="OBS-GER-2020-21-MISSING",
         indicator_id=ind_enrol.indicator_id,
-        reporting_period="2020-21",
-        geographic_level=GeographicLevel.STATE,
-        geographic_identifier="TN",
-        observed_value=None,  # Intentionally None: missing data must NOT be treated as zero
-        observation_type=ObservationType.BASELINE,
-        collection_date="2021-03-31",
-        data_source="AISHE TN Report (Census disruption)",
-        is_official=False,
-        missing_data_flag=True,
+        reference_period="2020-21",
+        geographic_level="STATE",
+        geographic_unit_id="TN",
+        value=None,  # Missing data must NOT be treated as zero
+        stage=ObservationStage.BASELINE,
+        source_reference="AISHE TN Report (Census disruption)",
+        missing_data_status=MissingDataStatus.NOT_PUBLISHED_BY_SOURCE,
+        is_test_fixture=True,
     )
     api_test_db.add_all([obs_base, obs_follow, obs_missing])
 
@@ -307,14 +304,18 @@ def seed_policy_evaluation_dataset(api_test_db):
     plan = PolicyEvaluationPlan(
         plan_id="PLAN-PUDHUMAI-01",
         policy_id=policy.policy_id,
+        objective_id=obj1.objective_id,
+        indicator_id=ind_enrol.indicator_id,
         evaluation_question="Has the Pudhumai Penn monthly financial incentive increased collegiate enrolment among eligible government-school girl students?",
-        objective_assessed="Increase girl student enrolment in collegiate education",
+        evaluation_type=EvaluationType.EVIDENCE_BASED_OUTCOME,
+        objective_being_assessed="Increase girl student enrolment in collegiate education",
         indicator_definition="Higher education enrolment ratio of government school alumnae",
+        unit="PERCENT",
         baseline_period="2021-22",
         comparison_period="2023-24",
         target_value=40.0,
         actual_value=41.8,
-        target_type=TargetType.OFFICIALLY_STATED,
+        target_provenance=TargetProvenanceType.OFFICIALLY_STATED,
         data_source="Directorate of Collegiate Education & Social Welfare Records",
         calculation_method="Pre-Post Cohort Comparison across 38 Tamil Nadu districts",
         geographic_level="STATE",
@@ -326,17 +327,13 @@ def seed_policy_evaluation_dataset(api_test_db):
     # 5. Evaluation Study & Findings (Phase 10.7)
     study = EvaluationStudy(
         study_id="STUDY-PUDHUMAI-2024-01",
-        policy_id=policy.policy_id,
-        study_title="Independent Impact Scrutiny: Two-Year Enrolment Trends under Pudhumai Penn",
-        evaluation_type=EvaluationType.PRE_POST_WITH_COMPARISON,
-        causal_rigor_grade=CausalRigorGrade.OBSERVATIONAL_DESCRIPTIVE,
-        methodology_description="Empirical administrative cohort audit tracking 2021-22 vs 2023-24 enrolment registries.",
-        target_population_covered="Government school girl students (Classes 6-12)",
-        comparison_group_design="Comparison against non-qualifying aided school female cohorts",
-        threats_to_validity="Concurrent welfare interventions and post-COVID economic normalizations",
-        commissioned_by="State Planning Commission Technical Review Cell",
+        scheme_id="SCH-PUDHUMAI-2022",
+        title="Independent Impact Scrutiny: Two-Year Enrolment Trends under Pudhumai Penn",
+        evaluation_type=EvaluationType.BEFORE_AND_AFTER_DESCRIPTIVE,
+        causal_rigor_grade=CausalRigorGrade.GRADE_D_DESCRIPTIVE_CORRELATIONAL,
+        conducting_agency="State Planning Commission Technical Review Cell",
         publication_date="2024-06-30",
-        is_peer_reviewed=True,
+        methodology_description="Empirical administrative cohort audit tracking 2021-22 vs 2023-24 enrolment registries.",
         is_test_fixture=True,
     )
     api_test_db.add(study)
@@ -346,13 +343,13 @@ def seed_policy_evaluation_dataset(api_test_db):
         finding_id="FIND-PENN-2024-01",
         study_id=study.study_id,
         policy_id=policy.policy_id,
+        indicator_id=ind_enrol.indicator_id,
         evaluation_question="Has collegiate enrolment increased among eligible girl students?",
         finding_type=FindingType.OUTCOME_CHANGE_OBSERVED,
-        finding_statement="Collegiate enrolment among eligible government school girls increased from 32.4% in 2021-22 to 41.8% in 2023-24, representing an absolute gain of 9.4 percentage points.",
-        evidence_strength=ConfidenceLevel.HIGH,
-        review_status=FindingReviewStatus.VERIFIED,
-        limitations="Observational descriptive association; counterfactual causal attribution is constrained by concurrent public transport concessions.",
-        deterministic_metrics={
+        finding_text="Collegiate enrolment among eligible government school girls increased from 32.4% in 2021-22 to 41.8% in 2023-24, representing an absolute gain of 9.4 percentage points.",
+        statement_origin="DETERMINISTIC_CALCULATION",
+        evidence_references=["DOC-AISHE-TN-2024", "DOC-CAG-REPORT-2024-PA"],
+        indicator_values_used={
             "baseline_value": 32.4,
             "follow_up_value": 41.8,
             "absolute_change": 9.4,
@@ -360,31 +357,34 @@ def seed_policy_evaluation_dataset(api_test_db):
             "baseline_period": "2021-22",
             "followup_period": "2023-24",
         },
+        calculation_method="Deterministic baseline vs follow-up comparison",
+        confidence_level=ConfidenceLevel.HIGH,
+        quantified_effect=9.4,
+        review_status=FindingReviewStatus.VERIFIED,
+        limitations=["Observational descriptive association; counterfactual causal attribution is constrained by concurrent public transport concessions."],
         is_test_fixture=True,
     )
     api_test_db.add(finding1)
     api_test_db.flush()
 
-    # Evidence links (Supporting and Contradicting/Contextual)
+    # Evidence links (Supporting and Contradicting)
     ev_sup = FindingEvidenceLink(
         link_id="LINK-PENN-SUP-01",
         finding_id=finding1.finding_id,
         source_document_id="DOC-AISHE-TN-2024",
-        source_title="All India Survey on Higher Education — Tamil Nadu Report 2023-24",
-        extracted_text="Enrolment of girls from state government schools into degree programs increased by 29% between 2021-22 and 2023-24.",
-        stance=EvidenceStance.SUPPORTING,
-        source_document_url="https://aishe.gov.in/reports/tn/2024.pdf",
-        confidence_weight=0.95,
+        quotation_excerpt="Enrolment of girls from state government schools into degree programs increased by 29% between 2021-22 and 2023-24.",
+        stance=EvidenceStance.SUPPORTS,
+        source_credibility_tier="TIER_1_STATUTORY",
+        is_test_fixture=True,
     )
     ev_con = FindingEvidenceLink(
         link_id="LINK-PENN-CON-01",
         finding_id=finding1.finding_id,
         source_document_id="DOC-CAG-REPORT-2024-PA",
-        source_title="CAG Performance Audit on Social Welfare Schemes 2023-24",
-        extracted_text="Audit observed 27,000 intended beneficiaries experienced 2 to 4 month direct-benefit-transfer disbursement delays due to Aadhaar-bank account seeding mismatches.",
-        stance=EvidenceStance.CONTRADICTING,
-        source_document_url="https://cag.gov.in/tn/audit-reports/2024-pa-03.pdf",
-        confidence_weight=0.90,
+        quotation_excerpt="Audit observed 27,000 intended beneficiaries experienced 2 to 4 month direct-benefit-transfer disbursement delays due to Aadhaar-bank account seeding mismatches.",
+        stance=EvidenceStance.CONTRADICTS,
+        source_credibility_tier="TIER_1_STATUTORY",
+        is_test_fixture=True,
     )
     api_test_db.add_all([ev_sup, ev_con])
 
@@ -435,7 +435,6 @@ def seed_policy_evaluation_dataset(api_test_db):
     )
     api_test_db.add(issue)
 
-    # Constituency required for ConstituencyWork FK
     const = Constituency(
         constituency_id="AC-025",
         official_name="Thousand Lights",
@@ -502,10 +501,10 @@ def seed_policy_evaluation_dataset(api_test_db):
         edge_id="EDGE:POL-PUDHUMAI:SCH-2022",
         source_node_id=node_pol.node_id,
         target_node_id=node_scheme.node_id,
-        relationship_type=GraphRelationshipType.IMPLEMENTS_SCHEME,
+        relationship_type=GraphRelationshipType.IMPLEMENTS,
         evidence_reference="G.O. (Ms) No. 34 aligns budget code with policy initiative",
         source_document_id="DOC-GO-MS-34-2022",
-        matching_method=MatchingMethod.CANONICAL_ID,
+        matching_method=MatchingMethod.DETERMINISTIC_ID,
         confidence_score=1.0,
         review_status=GraphReviewStatus.VERIFIED,
         is_test_fixture=True,
@@ -514,10 +513,10 @@ def seed_policy_evaluation_dataset(api_test_db):
         edge_id="EDGE:POL-PUDHUMAI:REP-701",
         source_node_id=node_pol.node_id,
         target_node_id=node_rep.node_id,
-        relationship_type=GraphRelationshipType.REPRESENTS_CONSTITUENCY,
+        relationship_type=GraphRelationshipType.REPRESENTS,
         evidence_reference="Constituency-level facilitation camp conducted in Thousand Lights",
         source_document_id="DOC-DEPT-PRESS-2023",
-        matching_method=MatchingMethod.GEOGRAPHIC_INTERSECTION,
+        matching_method=MatchingMethod.DIRECT_DOCUMENTARY,
         confidence_score=0.85,
         review_status=GraphReviewStatus.VERIFIED,
         is_test_fixture=True,
@@ -551,14 +550,14 @@ def test_client(api_test_db, monkeypatch):
 def test_search_policies_with_filters_and_pagination(test_client, seed_policy_evaluation_dataset):
     """Validates Operation 1: Search policies by query, department, status, and pagination."""
     # Text query match
-    res = test_client.get("/api/policy-evaluation/policies/search?q=Pudhumai&page=1&per_page=10")
+    res = test_client.get("/api/policy-evaluation/policies/search?q=Pudhumai&limit=10&offset=0")
     assert res.status_code == 200
     data = res.get_json()["data"]
     assert data["total"] == 1
-    assert data["items"][0]["policy_id"] == "POL-TN-PUDHUMAI-PENN"
+    assert data["policies"][0]["policy_id"] == "POL-TN-PUDHUMAI-PENN"
 
     # Department filter match
-    res_dept = test_client.get("/api/policy-evaluation/policies?department=Social Welfare&page=1&per_page=10")
+    res_dept = test_client.get("/api/policy-evaluation/policies?department=Social Welfare&limit=10&offset=0")
     assert res_dept.status_code == 200
     assert res_dept.get_json()["data"]["total"] == 1
 
@@ -594,10 +593,10 @@ def test_get_evaluation_plans(test_client, seed_policy_evaluation_dataset):
     """Validates Operation 3: List and retrieve evaluation plans."""
     res = test_client.get("/api/policy-evaluation/plans?policy_id=POL-TN-PUDHUMAI-PENN")
     assert res.status_code == 200
-    plans = res.get_json()["data"]["items"]
+    plans = res.get_json()["data"]["plans"]
     assert len(plans) == 1
     assert plans[0]["plan_id"] == "PLAN-PUDHUMAI-01"
-    assert plans[0]["target_type"] == "OFFICIALLY_STATED"
+    assert plans[0]["target_provenance"] == "OFFICIALLY_STATED"
 
     # Single plan retrieval
     res_single = test_client.get("/api/policy-evaluation/plans/PLAN-PUDHUMAI-01")
@@ -608,9 +607,9 @@ def test_get_evaluation_plans(test_client, seed_policy_evaluation_dataset):
 def test_get_indicator_definitions_and_observations(test_client, seed_policy_evaluation_dataset):
     """Validates Operations 4 & 5: Indicator definitions & observations preserving None."""
     # List indicators
-    res_ind = test_client.get("/api/policy-evaluation/indicators?policy_id=POL-TN-PUDHUMAI-PENN")
+    res_ind = test_client.get("/api/policy-evaluation/indicators")
     assert res_ind.status_code == 200
-    inds = res_ind.get_json()["data"]["items"]
+    inds = res_ind.get_json()["data"]["indicators"]
     assert len(inds) == 1
     assert inds[0]["indicator_id"] == "IND-GIRL-GER-COLLEGE"
 
@@ -625,12 +624,12 @@ def test_get_indicator_definitions_and_observations(test_client, seed_policy_eva
     # Observations listing — verify missing value is preserved as None (not coerced to zero)
     res_obs = test_client.get("/api/policy-evaluation/indicators/IND-GIRL-GER-COLLEGE/observations")
     assert res_obs.status_code == 200
-    obs_list = res_obs.get_json()["data"]["items"]
+    obs_list = res_obs.get_json()["data"]["observations"]
     assert len(obs_list) == 3
 
     missing_obs = [o for o in obs_list if o["observation_id"] == "OBS-GER-2020-21-MISSING"][0]
-    assert missing_obs["observed_value"] is None
-    assert missing_obs["missing_data_flag"] is True
+    assert missing_obs["value"] is None
+    assert missing_obs["missing_data_status"] == "NOT_PUBLISHED_BY_SOURCE"
 
 
 # ===========================================================================
@@ -638,22 +637,20 @@ def test_get_indicator_definitions_and_observations(test_client, seed_policy_eva
 # ===========================================================================
 def test_policy_budget_execution_analysis(test_client, seed_policy_evaluation_dataset):
     """Validates Operation 6: Multi-year budget execution analysis with epistemic warning."""
-    res = test_client.get("/api/policy-evaluation/policies/POL-TN-PUDHUMAI-PENN/budget-analysis")
+    res = test_client.get("/api/policy-evaluation/policies/POL-TN-PUDHUMAI-PENN/budget-analysis?financial_year=2022-23")
     assert res.status_code == 200
     data = res.get_json()["data"]
 
     assert data["policy_id"] == "POL-TN-PUDHUMAI-PENN"
-    assert len(data["financial_years"]) == 2
-
-    # Check 2022-23 execution
-    fy22 = [fy for fy in data["financial_years"] if fy["financial_year"] == "2022-23"][0]
-    assert fy22["budget_estimate_crores"] == 698.0
-    assert fy22["revised_estimate_crores"] == 650.0
-    assert fy22["actual_expenditure_crores"] == 612.4
-    assert fy22["actual_vs_revised_percent"] == 94.22
+    assert data["financial_year"] == "2022-23"
+    assert data["budget_estimate_cr"] == 698.0
+    assert data["revised_estimate_cr"] == 650.0
+    assert data["actual_expenditure_cr"] == 612.4
+    assert data["revised_absorption_rate_pct"] == 94.22
 
     # Verify explicit non-political warning
-    assert "Underspending alone is not proof of policy failure" in data["epistemic_warning"]
+    assert "underspending alone" in data["epistemic_interpretation_guardrail"].lower()
+    assert data["can_infer_policy_success_or_failure_from_spending_alone"] is False
 
 
 def test_policy_output_analytics(test_client, seed_policy_evaluation_dataset):
@@ -667,9 +664,9 @@ def test_policy_output_analytics(test_client, seed_policy_evaluation_dataset):
     assert len(activities) == 2
 
     dbt_act = [a for a in activities if a["activity_id"] == "ACT-PENN-01"][0]
-    assert dbt_act["target_output"] == 300000
-    assert dbt_act["actual_output"] == 273000
-    assert dbt_act["achievement_rate_percent"] == 91.0
+    assert dbt_act["planned_output_quantity"] == 300000.0
+    assert dbt_act["completed_output_quantity"] == 273000.0
+    assert dbt_act["output_completion_ratio_pct"] == 91.0
 
 
 # ===========================================================================
@@ -684,15 +681,17 @@ def test_indicator_outcome_comparison(test_client, seed_policy_evaluation_datase
     assert res.status_code == 200
     comp = res.get_json()["data"]
 
-    assert comp["indicator_id"] == "IND-GIRL-GER-COLLEGE"
+    assert comp["indicator_definition"]["indicator_id"] == "IND-GIRL-GER-COLLEGE"
     assert comp["baseline_value"] == 32.4
-    assert comp["follow_up_value"] == 41.8
+    assert comp["followup_value"] == 41.8
     assert comp["absolute_change"] == 9.4
     assert comp["percentage_change"] == 29.01
-    assert comp["time_period"] == "2021-22 to 2023-24"
-    assert comp["geographic_scope"] == "STATE"
-    assert "causal_inference_disclaimer" in comp
-    assert "does not prove causal attribution" in comp["causal_inference_disclaimer"]
+    assert comp["time_period"]["baseline_period"] == "2021-22"
+    assert comp["time_period"]["followup_period"] == "2023-24"
+    assert comp["geographic_scope"]["geographic_level"] == "STATE"
+    assert "epistemic_label" in comp
+    assert comp["causal_claim_permitted"] is False
+    assert "association" in comp["epistemic_label"].lower() or "descriptive" in comp["epistemic_label"].lower()
 
 
 # ===========================================================================
@@ -702,13 +701,13 @@ def test_get_findings_and_evidence_links(test_client, seed_policy_evaluation_dat
     """Validates Operations 9 & 10: Evaluation findings and evidence links (supporting + counter)."""
     res = test_client.get("/api/policy-evaluation/findings?policy_id=POL-TN-PUDHUMAI-PENN")
     assert res.status_code == 200
-    findings = res.get_json()["data"]["items"]
+    findings = res.get_json()["data"]["findings"]
     assert len(findings) == 1
 
     f = findings[0]
     assert f["finding_id"] == "FIND-PENN-2024-01"
     assert f["finding_type"] == "OUTCOME_CHANGE_OBSERVED"
-    assert f["deterministic_metrics"]["absolute_change"] == 9.4
+    assert f["quantified_effect"] == 9.4
 
     # Single finding
     res_single = test_client.get("/api/policy-evaluation/findings/FIND-PENN-2024-01")
@@ -734,9 +733,9 @@ def test_get_study_details(test_client, seed_policy_evaluation_dataset):
     study = res.get_json()["data"]
 
     assert study["study_id"] == "STUDY-PUDHUMAI-2024-01"
-    assert study["evaluation_type"] == "PRE_POST_WITH_COMPARISON"
-    assert study["causal_rigor_grade"] == "OBSERVATIONAL_DESCRIPTIVE"
-    assert study["is_peer_reviewed"] is True
+    assert study["evaluation_type"] == "BEFORE_AND_AFTER_DESCRIPTIVE"
+    assert study["causal_rigor_grade"] == "GRADE_D_DESCRIPTIVE_CORRELATIONAL"
+    assert study["conducting_agency"] == "State Planning Commission Technical Review Cell"
 
 
 # ===========================================================================
@@ -772,16 +771,16 @@ def test_finding_review_authorization(test_client, seed_policy_evaluation_datase
     # 1. Missing authorization header -> 403 Forbidden
     res_no_auth = test_client.post(
         "/api/policy-evaluation/findings/FIND-PENN-2024-01/review",
-        json={"review_status": "PEER_REVIEWED", "notes": "Peer review conducted by evaluation cell"},
+        json={"review_status": "VERIFIED", "review_notes": "Peer review conducted by evaluation cell"},
     )
     assert res_no_auth.status_code == 403
-    assert "Authorization required" in res_no_auth.get_json()["message"]
+    assert "Unauthorized" in res_no_auth.get_json()["message"]
 
     # 2. Invalid role -> 403 Forbidden
     res_bad_role = test_client.post(
         "/api/policy-evaluation/findings/FIND-PENN-2024-01/review",
         headers={"X-Reviewer-Role": "CITIZEN_GUEST"},
-        json={"review_status": "PEER_REVIEWED"},
+        json={"review_status": "VERIFIED"},
     )
     assert res_bad_role.status_code == 403
 
@@ -789,7 +788,7 @@ def test_finding_review_authorization(test_client, seed_policy_evaluation_datase
     res_ok = test_client.post(
         "/api/policy-evaluation/findings/FIND-PENN-2024-01/review",
         headers={"X-Reviewer-Role": "REVIEWER"},
-        json={"review_status": "PEER_REVIEWED", "notes": "Verified against state datasets"},
+        json={"review_status": "VERIFIED", "review_notes": "Verified against state datasets"},
     )
     assert res_ok.status_code == 200
-    assert res_ok.get_json()["data"]["review_status"] == "PEER_REVIEWED"
+    assert res_ok.get_json()["data"]["review_status"] == "VERIFIED"
