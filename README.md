@@ -26,30 +26,30 @@ Public governance and budgetary records are typically distributed across fragmen
 
 ---
 
-## 2. System Architecture & Major Phases
+## 2. System Architecture & Intelligence Modules
 
-CIVICLENS TN is composed of 10 interconnected, specialized intelligence phases:
+CIVICLENS TN is organized into 10 modular, interconnected intelligence components:
 
 ```mermaid
 flowchart TD
-    subgraph Data Acquisition & Ledger
+    subgraph Data Acquisition & Provenance
         RAW[Raw Official Documents: Demands, Manifestos, ECI Filings, G.O.s] --> ACQ[Acquisition & SHA-256 Provenance Ledger]
         ACQ --> DB[(Unified Civic Database SQLite / SQLAlchemy)]
     end
 
-    subgraph Core Intelligence Engines (Phases 1 - 8)
-        DB --> P1[Phase 1 & 2: Budget Intelligence & Historical Schemes]
-        DB --> P3[Phase 3: Manifesto Commitments & Promise Tracker]
-        DB --> P4[Phase 4: Tamil & English Media Framing Engine]
-        DB --> P5[Phase 5: Campaign Finance & Electoral Trusts]
-        DB --> P6[Phase 6: MLA Legislative & Constituency Activity]
-        DB --> P7[Phase 7: Auditable Proposition Claim Verification]
-        DB --> P8[Phase 8: Civic Grievances & SLA Breach Engine]
+    subgraph Core Intelligence Engines
+        DB --> P1[Budget Intelligence & Historical Schemes]
+        DB --> P3[Manifesto Commitments & Promise Tracker]
+        DB --> P4[Tamil & English Media Framing Engine]
+        DB --> P5[Campaign Finance & Electoral Trusts]
+        DB --> P6[MLA Legislative & Constituency Activity]
+        DB --> P7[Auditable Claim Verification Engine]
+        DB --> P8[Civic Grievances & SLA Breach Monitor]
     end
 
-    subgraph Synthesis & Evaluation (Phases 9 - 10)
-        P1 & P3 & P4 & P5 & P6 & P7 & P8 --> P9[Phase 9: Multi-Hop Civic Evidence Graph]
-        P9 --> P10[Phase 10: Policy Outcome & Impact Evaluation]
+    subgraph Synthesis & Evaluation
+        P1 & P3 & P4 & P5 & P6 & P7 & P8 --> P9[Multi-Hop Civic Evidence Graph]
+        P9 --> P10[Policy Outcome & Impact Evaluation]
     end
 
     subgraph Presentation & Consumption
@@ -59,17 +59,17 @@ flowchart TD
     end
 ```
 
-### Phase Breakdown
-1. **Phase 1: Budget Execution & Intelligence:** Ingests Demands for Grants (BE, RE, AE) from the GoTN Finance Department. Classifies expenditure into functional sectors using unsupervised clustering.
-2. **Phase 2: Historical Scheme Normalization:** Maps historical lineages and administrative renaming of flagship welfare initiatives across decades.
-3. **Phase 3: Political Manifesto & Promise Tracking:** Tracks 1,074 promises from election manifestos (DMK, AIADMK 2021) linked to budget line items and G.O.s.
-4. **Phase 4: Tamil & English Media Framing:** Bilingual sentiment, entity mentions, and publisher framing analysis adhering to neutral coverage indices.
-5. **Phase 5: Political Funding Transparency:** Ingests ECI Form 24A disclosures, Electoral Trust donations, and corporate contributions with PII masking.
-6. **Phase 6: Representative & Constituency Activity:** Tracks legislative questions, constituency development fund (MLACDS) spending, and local public works delivery.
-7. **Phase 7: Auditable Political Claim Verification:** Decomposes complex political rhetoric into atomic propositions and verifies against primary sources.
-8. **Phase 8: Citizen Grievance & SLA Intelligence:** Classifies civic complaints across 14 standardized domains with automated DPDPA 2023 PII scrubbing.
-9. **Phase 9: Unified Civic Evidence Graph:** Connects entities across all phases into an explainable, bidirectional knowledge graph with 9-factor evidence scoring.
-10. **Phase 10: Policy Outcome & Impact Evaluation:** Tracks real-world policy outcomes against published baselines and targets with non-causal epistemic guardrails.
+### Module Breakdown
+1. **Budget Execution & Intelligence:** Ingests Demands for Grants (BE, RE, AE) from the GoTN Finance Department. Classifies expenditure into functional sectors using unsupervised clustering.
+2. **Historical Scheme Normalization:** Maps historical lineages and administrative renaming of flagship welfare initiatives across decades.
+3. **Political Manifesto & Promise Tracking:** Tracks 1,074 promises from election manifestos (DMK, AIADMK 2021) linked to budget line items and Government Orders.
+4. **Tamil & English Media Framing:** Bilingual sentiment, entity mentions, and publisher framing analysis adhering to neutral coverage indices.
+5. **Political Funding Transparency:** Ingests ECI Form 24A disclosures, Electoral Trust donations, and corporate contributions with PII masking.
+6. **Representative & Constituency Activity:** Tracks legislative questions, constituency development fund (MLACDS) spending, and local public works delivery.
+7. **Auditable Political Claim Verification:** Decomposes complex political statements into atomic propositions and verifies against primary sources.
+8. **Citizen Grievance & SLA Intelligence:** Classifies civic complaints across 14 standardized domains with automated DPDPA 2023 PII scrubbing.
+9. **Unified Civic Evidence Graph:** Connects entities across modules into an explainable, bidirectional knowledge graph with 9-factor evidence scoring.
+10. **Policy Outcome & Impact Evaluation:** Tracks real-world policy outcomes against published baselines and targets with non-causal epistemic guardrails.
 
 ---
 
@@ -145,18 +145,29 @@ python scripts/ingest_phase10_real_data.py
 
 ## 6. Startup Commands
 
-### Start the REST API Backend
+### Option A: One-Click Launch (Backend + Next.js Frontend)
+Double-click `run_all.bat` or execute in PowerShell:
 ```powershell
-.\venv\Scripts\python.exe -m flask --app backend/api/app.py run --port 5000
+.\run_all.bat
+```
+
+### Option B: Manual Startup
+
+**1. Start the Flask REST API Backend (Port 5000):**
+```powershell
+python -m flask --app backend/api/app.py run --port 5000
 ```
 Backend runs at `http://127.0.0.1:5000/`. Verify health at `http://127.0.0.1:5000/health`.
 
-### Start the Citizen Dashboard Frontend
+**2. Start the Modern Next.js Dashboard Frontend (Port 3000):**
 In a separate terminal:
 ```powershell
-.\venv\Scripts\streamlit.exe run frontend/app.py
+cd frontend
+npm run dev
 ```
-Streamlit will launch in your browser at `http://localhost:8501/`.
+Open your browser at `http://localhost:3000/`. Next.js automatically proxies all `/api/*` requests to the Flask API.
+
+*(Legacy Streamlit explorer is archived in `frontend_legacy/`)*
 
 ---
 
