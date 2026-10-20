@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader';
 import { MetricCard } from '../../components/MetricCard';
+import { StatusBadge } from '../../components/StatusBadge';
+import { SimpleFilterBar, FilterGroup } from '../../components/SimpleFilterBar';
 
 interface SchemeCard {
   id: string;
@@ -113,25 +115,128 @@ const canonicalSchemes: SchemeCard[] = [
 ];
 
 export default function SchemesPage() {
-  const [selectedGroup, setSelectedGroup] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedGroup, setSelectedGroup] = useState<string>('ALL');
+  const [selectedDept, setSelectedDept] = useState<string>('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
-  const filteredSchemes = canonicalSchemes.filter((scheme) => {
-    if (selectedGroup !== 'ALL' && scheme.beneficiaryGroup !== selectedGroup) {
-      return false;
+  // Load URL search parameters on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const q = sp.get('q');
+      const grp = sp.get('group');
+      const dept = sp.get('dept');
+      const st = sp.get('status');
+      if (q) setSearchQuery(q);
+      if (grp) setSelectedGroup(grp);
+      if (dept) setSelectedDept(dept);
+      if (st) setSelectedStatus(st);
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        scheme.name.toLowerCase().includes(q) ||
-        scheme.name_ta.includes(q) ||
-        scheme.department.toLowerCase().includes(q) ||
-        scheme.eligibility.toLowerCase().includes(q) ||
-        scheme.benefit.toLowerCase().includes(q)
-      );
+  }, []);
+
+  // Sync state to URL
+  const updateUrl = (q: string, grp: string, dept: string, st: string) => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (q) url.searchParams.set('q', q); else url.searchParams.delete('q');
+    if (grp && grp !== 'ALL') url.searchParams.set('group', grp); else url.searchParams.delete('group');
+    if (dept && dept !== 'ALL') url.searchParams.set('dept', dept); else url.searchParams.delete('dept');
+    if (st && st !== 'ALL') url.searchParams.set('status', st); else url.searchParams.delete('status');
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  const departments = useMemo(() => {
+    return Array.from(new Set(canonicalSchemes.map((s) => s.department))).sort();
+  }, []);
+
+  const statuses = useMemo(() => {
+    return Array.from(new Set(canonicalSchemes.map((s) => s.status))).sort();
+  }, []);
+
+  const handleSearchChange = (q: string) => {
+    setSearchQuery(q);
+    updateUrl(q, selectedGroup, selectedDept, selectedStatus);
+  };
+
+  const handleFilterChange = (groupId: string, val: string) => {
+    let newGrp = selectedGroup;
+    let newDept = selectedDept;
+    let newSt = selectedStatus;
+
+    if (groupId === 'group') {
+      newGrp = val;
+      setSelectedGroup(val);
+    } else if (groupId === 'department') {
+      newDept = val;
+      setSelectedDept(val);
+    } else if (groupId === 'status') {
+      newSt = val;
+      setSelectedStatus(val);
     }
-    return true;
-  });
+
+    updateUrl(searchQuery, newGrp, newDept, newSt);
+  };
+
+  const handleClearAll = () => {
+    setSearchQuery('');
+    setSelectedGroup('ALL');
+    setSelectedDept('ALL');
+    setSelectedStatus('ALL');
+    updateUrl('', 'ALL', 'ALL', 'ALL');
+  };
+
+  const filteredSchemes = useMemo(() => {
+    return canonicalSchemes.filter((scheme) => {
+      if (selectedGroup !== 'ALL' && scheme.beneficiaryGroup !== selectedGroup) {
+        return false;
+      }
+      if (selectedDept !== 'ALL' && scheme.department !== selectedDept) {
+        return false;
+      }
+      if (selectedStatus !== 'ALL' && scheme.status !== selectedStatus) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          scheme.name.toLowerCase().includes(q) ||
+          scheme.name_ta.includes(q) ||
+          scheme.department.toLowerCase().includes(q) ||
+          scheme.eligibility.toLowerCase().includes(q) ||
+          scheme.benefit.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [searchQuery, selectedGroup, selectedDept, selectedStatus]);
+
+  const filterGroups: FilterGroup[] = [
+    {
+      id: 'group',
+      label: 'Target Group',
+      value: selectedGroup,
+      options: [
+        { label: 'Women', value: 'Women' },
+        { label: 'Students', value: 'Students' },
+        { label: 'Farmers', value: 'Farmers' },
+        { label: 'General Citizens', value: 'General' }
+      ]
+    },
+    {
+      id: 'department',
+      label: 'Department',
+      value: selectedDept,
+      options: departments.map((d) => ({ label: d, value: d }))
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      value: selectedStatus,
+      isAdvanced: true,
+      options: statuses.map((s) => ({ label: s, value: s }))
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -168,112 +273,113 @@ export default function SchemesPage() {
         />
       </div>
 
-      {/* Search and Beneficiary Filter */}
-      <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search schemes by name in English or தமிழ் (e.g. மகளிர், breakfast, புதுமைப் பெண்)..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            {['ALL', 'Women', 'Students', 'Farmers', 'General'].map((group) => (
-              <button
-                key={group}
-                onClick={() => setSelectedGroup(group)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  selectedGroup === group
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
-                }`}
-              >
-                {group === 'ALL' ? 'All Citizens' : group}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Simplified Filter Bar */}
+      <SimpleFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="Search schemes by name in English or தமிழ் (e.g. மகளிர், breakfast, புதுமைப் பெண்)..."
+        filterGroups={filterGroups}
+        onFilterChange={handleFilterChange}
+        onClearAll={handleClearAll}
+        totalResults={canonicalSchemes.length}
+        filteredResults={filteredSchemes.length}
+        resultNoun="welfare schemes"
+      />
 
       {/* Schemes Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredSchemes.map((scheme) => (
-          <div
-            key={scheme.id}
-            className="rounded-2xl bg-slate-900/80 border border-slate-800 p-6 flex flex-col justify-between hover:border-slate-700 transition-all shadow-lg space-y-4"
+      {filteredSchemes.length === 0 ? (
+        <div className="p-12 text-center text-slate-400 text-xs bg-slate-900/40 rounded-2xl border border-slate-800 space-y-2">
+          <p className="font-semibold text-slate-300">No welfare schemes match the selected filters.</p>
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="text-blue-400 hover:text-blue-300 font-semibold underline"
           >
-            <div className="space-y-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <span className="text-[10px] font-mono text-blue-400 font-bold block mb-1">
-                    #{scheme.id} • {scheme.department}
-                  </span>
-                  <h3 className="font-bold text-base text-white leading-snug">
-                    {scheme.name}
-                  </h3>
-                  <div className="text-xs font-medium text-amber-200/90 mt-0.5 font-sans">
-                    {scheme.name_ta}
+            Reset all filters
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredSchemes.map((scheme) => (
+            <div
+              key={scheme.id}
+              className="rounded-2xl bg-slate-900/80 border border-slate-800 p-6 flex flex-col justify-between hover:border-slate-700 transition-all shadow-lg space-y-4"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-400 block mb-1">
+                      {scheme.department}
+                    </span>
+                    <h3 className="font-bold text-base text-white leading-snug">
+                      {scheme.name}
+                    </h3>
+                    <div className="text-xs font-medium text-amber-200/90 mt-0.5 font-sans">
+                      {scheme.name_ta}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                      {scheme.beneficiaryGroup}
+                    </span>
+                    <StatusBadge status={scheme.status} isStatutoryVerified={true} />
                   </div>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
-                  {scheme.beneficiaryGroup}
-                </span>
+
+                {/* Benefit Box */}
+                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                    Citizen Benefit:
+                  </span>
+                  <p className="text-slate-200 leading-relaxed font-medium">
+                    {scheme.benefit}
+                  </p>
+                </div>
+
+                {/* Eligibility */}
+                <div className="text-xs text-slate-400 leading-relaxed">
+                  <strong className="text-slate-300">Who is eligible: </strong>
+                  {scheme.eligibility}
+                </div>
               </div>
 
-              {/* Benefit Box */}
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
-                  Citizen Benefit:
-                </span>
-                <p className="text-slate-200 leading-relaxed font-medium">
-                  {scheme.benefit}
-                </p>
-              </div>
+              {/* Bottom Metadata */}
+              <div className="pt-3 border-t border-slate-800/80 space-y-3">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-slate-400">
+                    Budget Disbursed: <strong className="text-white font-bold">₹{scheme.annualAllocationCr.toLocaleString()} Cr</strong>
+                  </span>
+                  <span className="text-slate-400">
+                    Reach: <strong className="text-emerald-400 font-bold">{scheme.beneficiaryCount}</strong>
+                  </span>
+                </div>
 
-              {/* Eligibility */}
-              <div className="text-xs text-slate-400 leading-relaxed">
-                <strong className="text-slate-300">Who is eligible: </strong>
-                {scheme.eligibility}
-              </div>
-            </div>
-
-            {/* Bottom Metadata */}
-            <div className="pt-3 border-t border-slate-800/80 space-y-3">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">Budget Spent: <strong className="text-white font-bold">₹{scheme.annualAllocationCr.toLocaleString()} Cr</strong></span>
-                <span className="text-slate-400">Reach: <strong className="text-emerald-400 font-bold">{scheme.beneficiaryCount}</strong></span>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] pt-1">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                  <span>{scheme.provenanceGO}</span>
-                </span>
-                <div className="flex items-center gap-3">
-                  <Link
-                    href={`/claims?q=${encodeURIComponent(scheme.name)}`}
-                    className="text-slate-400 hover:text-slate-200 inline-flex items-center gap-1 font-medium text-[11px]"
-                  >
-                    <span>Verify</span>
-                  </Link>
-                  <Link
-                    href={`/schemes/${scheme.id}`}
-                    className="text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 font-semibold text-xs"
-                  >
-                    <span>View Record</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
+                <div className="flex items-center justify-between text-[11px] pt-1">
+                  <span className="text-slate-400 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                    <span>{scheme.provenanceGO}</span>
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/claims?q=${encodeURIComponent(scheme.name)}`}
+                      className="text-slate-400 hover:text-slate-200 inline-flex items-center gap-1 font-medium text-[11px]"
+                    >
+                      <span>Verify claims</span>
+                    </Link>
+                    <Link
+                      href={`/schemes/${scheme.id}`}
+                      className="text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 font-semibold text-xs bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/20 transition-all"
+                    >
+                      <span>View Details</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
