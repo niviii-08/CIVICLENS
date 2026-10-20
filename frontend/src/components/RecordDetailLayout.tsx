@@ -18,6 +18,7 @@ import {
   Clock,
   ArrowLeft,
   ArrowRight,
+  Link2,
   Info,
   Layers,
   Lock,
@@ -114,6 +115,11 @@ export const RecordDetailLayout: React.FC<RecordDetailLayoutProps> = ({
       </div>
     );
   }
+
+  // Phase 11.9: Compute connection type counts
+  const directCount = record.related_records.filter(r => r.connection_type === 'direct_identifier').length;
+  const evidenceCount = record.related_records.filter(r => r.connection_type === 'evidence_relationship').length;
+  const inferredCount = record.related_records.filter(r => r.connection_type === 'inferred_relationship' || r.is_inferred).length;
 
   // 4. Render Citizen Record Page
   return (
@@ -627,55 +633,147 @@ export const RecordDetailLayout: React.FC<RecordDetailLayoutProps> = ({
         </div>
       </section>
 
-      {/* SECTION 6: Connected Related Records (Step 9) */}
-      {record.related_records.length > 0 && (
-        <section aria-labelledby="related-records-heading" className="space-y-4 pt-4 border-t border-slate-800">
-          <div className="flex items-center justify-between">
+      {/* SECTION 6: Connected Related Records (Phase 11.9 Cross-Phase Integration) */}
+      <section aria-labelledby="related-records-heading" className="space-y-4 pt-6 border-t border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
             <h2 id="related-records-heading" className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <ArrowRight className="w-4 h-4 text-blue-400" />
               <span>Connected Public Records</span>
             </h2>
-            <span className="text-xs text-slate-400">Cross-phase civic linkages</span>
+            <p className="text-xs text-slate-400">Cross-phase civic linkages and evidence pathways</p>
           </div>
+          {record.related_records.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              {directCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20 font-medium">
+                  Direct ({directCount})
+                </span>
+              )}
+              {evidenceCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-medium">
+                  Evidence ({evidenceCount})
+                </span>
+              )}
+              {inferredCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium">
+                  Inferred ({inferredCount})
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
+        {record.related_records.length === 0 ? (
+          <CivicStateNotice
+            state="no_records_available"
+            title="No Connected Public Records Currently Available"
+            description="No cross-phase records (such as schemes, promises, civic grievances, or policy evaluations) are currently linked to this record in the verified knowledge base. CivicLens TN maintains strict evidence integrity and does not infer connections without verified statutory or audit linkage."
+          />
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {record.related_records.map((rel) => (
-              <div
-                key={`${rel.type}-${rel.id}`}
-                className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 flex flex-col justify-between space-y-3 hover:border-slate-700 transition-all shadow-md group"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                      {rel.type_label}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-500">#{rel.id}</span>
+            {record.related_records.map((rel) => {
+              const isDirect = rel.connection_type === 'direct_identifier';
+              const isEvidence = rel.connection_type === 'evidence_relationship';
+              const isInferred = rel.connection_type === 'inferred_relationship' || rel.is_inferred;
+
+              return (
+                <div
+                  key={`${rel.type}-${rel.id}`}
+                  className={`p-5 rounded-2xl bg-slate-900/70 border flex flex-col justify-between space-y-3 transition-all shadow-md group ${
+                    isInferred
+                      ? 'border-amber-500/30 hover:border-amber-500/50 bg-amber-950/10'
+                      : isEvidence
+                      ? 'border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-950/10'
+                      : 'border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="space-y-2.5">
+                    {/* Header tags */}
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                        {rel.type_label}
+                      </span>
+
+                      {/* Connection Type Badge */}
+                      {isDirect && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/30">
+                          <Link2 className="w-2.5 h-2.5" />
+                          <span>Direct Link</span>
+                        </span>
+                      )}
+                      {isEvidence && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                          <ShieldCheck className="w-2.5 h-2.5" />
+                          <span>Evidence Link</span>
+                        </span>
+                      )}
+                      {isInferred && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          <span>Inferred Match</span>
+                        </span>
+                      )}
+
+                      <span className="text-[10px] font-mono text-slate-500">#{rel.id}</span>
+                    </div>
+
+                    <h3 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-snug">
+                      {rel.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      <strong className="text-slate-400">Why related: </strong>
+                      {rel.relationship_reason}
+                    </p>
+
+                    {/* Method & Confidence Metadata */}
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-400 font-mono">
+                      {rel.matching_method && (
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">
+                          Method: {rel.matching_method}
+                        </span>
+                      )}
+                      {rel.confidence_score !== undefined && (
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">
+                          Confidence: {Math.round(rel.confidence_score * 100)}%
+                        </span>
+                      )}
+                      {rel.provenance_source && (
+                        <span className="truncate max-w-[200px]" title={rel.provenance_source}>
+                          Src: {rel.provenance_source}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Inferred Epistemic Caveat Box */}
+                    {isInferred && (
+                      <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-500/30 text-[11px] text-amber-200/90 flex items-start gap-2">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                        <span>
+                          {rel.epistemic_caveat ||
+                            'Automated Candidate: This connection was suggested by algorithmic analysis and has not been verified by a statutory government document or audit.'}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  <h3 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-snug">
-                    {rel.title}
-                  </h3>
-
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    <strong className="text-slate-400">Why related: </strong>
-                    {rel.relationship_reason}
-                  </p>
+                  <div className="pt-2.5 border-t border-slate-800/80">
+                    <Link
+                      href={rel.href}
+                      aria-label={`Open connected ${rel.type_label} record: ${rel.title}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none rounded transition-colors"
+                    >
+                      <span>Open connected record</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 </div>
-
-                <div className="pt-2 border-t border-slate-800/80">
-                  <Link
-                    href={rel.href}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
-                  >
-                    <span>Open connected record</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 };

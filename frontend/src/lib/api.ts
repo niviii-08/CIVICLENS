@@ -10,7 +10,8 @@ import {
   UnifiedSearchResponse,
   DetailedCivicRecord,
   EvidenceDossier,
-  EvidenceItem
+  EvidenceItem,
+  RelatedRecord
 } from './types';
 
 const API_BASE = '/api';
@@ -831,28 +832,61 @@ export async function fetchSchemeDetail(id: string): Promise<DetailedCivicRecord
       ],
       related_records: [
         {
-          id: 'PRM-DMK-2021-001',
-          type: 'promise',
-          type_label: 'Manifesto Promise',
-          title: '₹1,000 monthly rights entitlement for women heads of households',
-          relationship_reason: 'Statutory welfare scheme fulfilling DMK 2021 Assembly Manifesto Promise #14',
-          href: '/promises/PRM-DMK-2021-001'
-        },
-        {
           id: 'POL-TN-KMUT',
           type: 'policy',
           type_label: 'Policy Evaluation',
           title: 'KMUT Socio-Economic Impact and Discretionary Expenditure Study',
-          relationship_reason: 'Independent evaluation by Tamil Nadu State Planning Commission',
-          href: '/policy-evaluation/POL-TN-KMUT'
+          connection_type: 'direct_identifier',
+          connection_label: 'Directly Linked by Identifier',
+          relationship_reason: 'Statutory policy outcome evaluation conducted by the Tamil Nadu State Planning Commission under Scheme Code SCH-SW-KMUT.',
+          matching_method: 'CANONICAL_SCHEME_CODE',
+          confidence_score: 1.0,
+          is_inferred: false,
+          href: '/policy-evaluation/POL-TN-KMUT',
+          provenance_source: 'State Planning Commission Evaluation Registry'
+        },
+        {
+          id: 'PRM-DMK-2021-001',
+          type: 'promise',
+          type_label: 'Manifesto Promise',
+          title: '₹1,000 monthly rights entitlement for women heads of households',
+          connection_type: 'direct_identifier',
+          connection_label: 'Directly Linked by Identifier',
+          relationship_reason: 'Welfare scheme enacted via G.O. Ms No. 41 to implement DMK 2021 Assembly Manifesto Promise #14.',
+          matching_method: 'DETERMINISTIC_ID',
+          confidence_score: 1.0,
+          is_inferred: false,
+          href: '/promises/PRM-DMK-2021-001',
+          provenance_source: 'Tamil Nadu Legislative Assembly Gazette Vol. 41'
         },
         {
           id: 'CLM-TN-2024-001',
           type: 'claim',
-          type_label: 'Audited Claim',
+          type_label: 'Public Claim',
           title: 'Verification of 1.15+ Crore beneficiary count assertion',
-          relationship_reason: 'Audited fact-check confirming official disbursal numbers',
-          href: '/claims/CLM-TN-2024-001'
+          connection_type: 'evidence_relationship',
+          connection_label: 'Documented Evidence Link',
+          relationship_reason: 'Audited fact-check verifying the official 1.16 Crore active direct benefit transfer (DBT) credit volume.',
+          matching_method: 'AUDITED_FACTCHECK_CITATION',
+          confidence_score: 0.98,
+          is_inferred: false,
+          href: '/claims/CLM-TN-2024-001',
+          provenance_source: 'Finance Department Treasury Disbursal Ledger'
+        },
+        {
+          id: 'SCH-HE-PUDHUMAI',
+          type: 'scheme',
+          type_label: 'Government Scheme',
+          title: 'Pudhumai Penn Scheme (Higher Education Assurance)',
+          connection_type: 'inferred_relationship',
+          connection_label: 'Automated / Inferred Match',
+          relationship_reason: 'Complementary direct benefit transfer program administered by the Social Welfare and Women Empowerment Department.',
+          matching_method: 'NLP_THEMATIC_SIMILARITY',
+          confidence_score: 0.78,
+          is_inferred: true,
+          epistemic_caveat: 'Suggested by automated thematic analysis; not an official statutory link.',
+          href: '/schemes/SCH-HE-PUDHUMAI',
+          provenance_source: 'Cross-Sector Thematic Clustering Pipeline'
         }
       ],
       methodology_explanation: 'Verification matches primary government order G.O. Ms 41 with Demand No. 41 treasury disbursements and State Planning Commission sampling datasets.',
@@ -1998,4 +2032,30 @@ export function generateFallbackDossier(recordType: string, recordId: string): E
       non_causal_rule: 'Correlation does not imply policy causation.'
     }
   };
+}
+
+/**
+ * Cross-Phase Integration: Fetches verified and candidate related records
+ * for any civic entity from /api/integration/related/:type/:id.
+ */
+export async function fetchRelatedRecords(
+  recordType: string,
+  recordId: string,
+  includeInferred: boolean = true
+): Promise<RelatedRecord[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/integration/related/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}?include_inferred=${includeInferred}`,
+      { cache: 'no-store' }
+    );
+    if (res.ok) {
+      const json = await res.json();
+      if (json.status === 'success' && json.data?.related_records) {
+        return json.data.related_records;
+      }
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch related records for ${recordType}/${recordId}:`, err);
+  }
+  return [];
 }

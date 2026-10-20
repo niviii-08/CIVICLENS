@@ -129,13 +129,22 @@ export interface SourceDocument {
   notes?: string;
 }
 
+export type ConnectionType = 'direct_identifier' | 'evidence_relationship' | 'inferred_relationship';
+
 export interface RelatedRecord {
   id: string;
-  type: 'scheme' | 'promise' | 'representative' | 'claim' | 'civic' | 'policy' | 'budget' | 'evidence';
+  type: 'scheme' | 'promise' | 'representative' | 'claim' | 'civic' | 'policy' | 'budget' | 'evidence' | 'news' | 'funding';
   type_label: string;
   title: string;
   relationship_reason: string;
   href: string;
+  connection_type?: ConnectionType;
+  connection_label?: string;
+  matching_method?: string;
+  confidence_score?: number;
+  is_inferred?: boolean;
+  epistemic_caveat?: string;
+  provenance_source?: string;
 }
 
 export interface DetailedFinancials {
