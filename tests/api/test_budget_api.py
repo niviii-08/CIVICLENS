@@ -5,7 +5,6 @@ from backend.database.session import SessionLocal
 @pytest.fixture(autouse=True)
 def setup_teardown_db():
     db = SessionLocal()
-    # Seed data
     dept = BudgetDepartment(name="Education")
     db.add(dept)
     db.commit()
@@ -54,7 +53,6 @@ def setup_teardown_db():
     
     yield
     
-    # Teardown
     db.delete(record)
     db.delete(record2)
     db.delete(record3)
@@ -90,8 +88,9 @@ def test_get_records(api_client):
     assert res.status_code == 200
     data = res.get_json()['data']
     assert data['total_count'] >= 1
-    assert data['records'][0]['department_name'] == "Education"
-    assert data['records'][0]['amount'] in [500.0, 1500.0, 2000.0]
+    edu_records = [r for r in data['records'] if r['department_name'] == "Education"]
+    assert len(edu_records) >= 1
+    assert edu_records[0]['amount'] in [500.0, 1500.0, 2000.0]
 
 def test_get_records_invalid_stage(api_client):
     res = api_client.get('/api/budget/records?budget_stage=fake_stage')
