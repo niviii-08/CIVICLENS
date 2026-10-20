@@ -13,6 +13,7 @@ from backend.api.entities import entities_bp
 from backend.api.graph import graph_bp
 from backend.api.policy_evaluation import policy_evaluation_bp
 from backend.api.search import search_bp
+from backend.api.evidence import evidence_bp
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -36,6 +37,7 @@ api_bp.register_blueprint(entities_bp)
 api_bp.register_blueprint(graph_bp)
 api_bp.register_blueprint(policy_evaluation_bp)
 api_bp.register_blueprint(search_bp)
+api_bp.register_blueprint(evidence_bp, url_prefix='/evidence')
 
 namespaces = []
 

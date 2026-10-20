@@ -162,6 +162,7 @@ export interface DetailedCivicRecord {
   geographic_scope?: string;
   target_group?: string;
   evidence_summary: string;
+  evidence_dossier?: EvidenceDossier;
   financials?: DetailedFinancials;
   sources: SourceDocument[];
   related_records: RelatedRecord[];
@@ -195,3 +196,62 @@ export interface DetailedCivicRecord {
   };
 }
 
+
+export type EvidenceState =
+  | 'EVIDENCE_AVAILABLE'
+  | 'EVIDENCE_CONFLICTS'
+  | 'INSUFFICIENT_EVIDENCE'
+  | 'SOURCE_UNAVAILABLE'
+  | 'ASSESSMENT_NOT_PERFORMED';
+
+export type EvidenceRelationshipType =
+  | 'supports'
+  | 'partially_supports'
+  | 'contradicts'
+  | 'contextualizes'
+  | 'responds_to'
+  | 'reports_on';
+
+export interface EvidenceItem {
+  id: string;
+  title: string;
+  issuing_org: string;
+  publication_date?: string;
+  reporting_period?: string;
+  source_tier:
+    | 'TIER_1_STATUTORY'
+    | 'TIER_2_OFFICIAL_AGENCY'
+    | 'TIER_3_ACCREDITED_FACTCHECK'
+    | 'TIER_4_SECONDARY_CIVIC'
+    | 'TIER_5_UNVERIFIED'
+    | string;
+  is_official: boolean;
+  relationship: string;
+  relationship_type: EvidenceRelationshipType | string;
+  excerpt?: string;
+  page_number?: string | number;
+  available: boolean;
+  url?: string;
+  offline_reason?: string;
+  safe_alternative?: string;
+  checksum?: string;
+}
+
+export interface EvidenceDossier {
+  record_id: string;
+  record_type: string;
+  statement_explained: string;
+  plain_summary: string;
+  evidence_state: EvidenceState;
+  evidence_state_label: string;
+  graph_node_id?: string;
+  limitations?: string[];
+  supporting_evidence: EvidenceItem[];
+  conflicting_evidence: EvidenceItem[];
+  contextual_evidence: EvidenceItem[];
+  epistemic_principles?: {
+    evidence_strength_rule: string;
+    absence_rule: string;
+    non_causal_rule?: string;
+  };
+}

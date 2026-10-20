@@ -27,6 +27,7 @@ import {
 import { DetailedCivicRecord } from '../lib/types';
 import { Breadcrumb } from './Breadcrumb';
 import { StatusBadge } from './StatusBadge';
+import { EvidencePanel } from './EvidencePanel';
 
 interface RecordDetailLayoutProps {
   record: DetailedCivicRecord | null;
@@ -532,87 +533,14 @@ export const RecordDetailLayout: React.FC<RecordDetailLayoutProps> = ({
         </div>
       </section>
 
-      {/* SECTION 4: Where the information came from (Step 6: Sources & Evidence) */}
+      {/* SECTION 4: Where the information came from (Phase 11.6: Evidence and Source Explorer) */}
       <section aria-labelledby="sources-heading" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 id="sources-heading" className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-400" />
-            <span>Sources and Evidence</span>
-          </h2>
-          <span className="text-xs text-slate-400">Primary gazettes & official disclosures</span>
-        </div>
-
-        {record.sources.length === 0 ? (
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 flex items-center gap-2">
-            <Info className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Primary source document is pending official publication by the issuing government department.</span>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {record.sources.map((src) => (
-              <div
-                key={src.id}
-                className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-700 transition-all shadow-md"
-              >
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                        src.is_official
-                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                          : 'bg-slate-800 text-slate-300 border-slate-700'
-                      }`}
-                    >
-                      {src.source_type}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Issuing Entity: <strong className="text-slate-200">{src.issuing_org}</strong>
-                    </span>
-                    {src.publication_date && (
-                      <span className="text-[11px] text-slate-400">
-                        • {src.publication_date}
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="text-sm font-bold text-white leading-snug">
-                    {src.title}
-                  </h3>
-
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                    <span>
-                      Relationship to finding: <span className="text-blue-400 font-mono font-medium">{src.relationship}</span>
-                    </span>
-                    {src.page_number && (
-                      <span>• Page: <span className="font-mono">{src.page_number}</span></span>
-                    )}
-                    {src.notes && (
-                      <span className="text-slate-400 italic">• {src.notes}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="shrink-0 flex items-center">
-                  {src.available && src.url ? (
-                    <a
-                      href={src.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 transition-colors"
-                    >
-                      <span>View Gazette</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  ) : (
-                    <span className="text-xs text-slate-500 italic">
-                      Physical archive (Not available online)
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <EvidencePanel
+          dossier={record.evidence_dossier}
+          recordId={record.id}
+          recordType={record.category_key}
+          title="Sources and Evidence Explorer"
+        />
       </section>
 
       {/* SECTION 5: Additional technical details (Step 7: Progressive Disclosure) */}
