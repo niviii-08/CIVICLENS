@@ -39,10 +39,12 @@ export const Navbar: React.FC = () => {
       {/* Right Controls */}
       <div className="flex items-center gap-4">
         {/* Backend API Status Pill */}
-        <div
+        <button
+          type="button"
           onClick={checkStatus}
+          aria-label="Re-check API connection status"
           title="Click to re-check API connection"
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border cursor-pointer select-none transition-all ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border cursor-pointer select-none transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none ${
             backendStatus.online
               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
               : 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
@@ -62,7 +64,7 @@ export const Navbar: React.FC = () => {
             {backendStatus.online ? 'Flask API Online (Port 5000)' : 'Flask Offline (Resilient Fallback Mode)'}
           </span>
           <RefreshCw className={`w-3 h-3 ml-1 ${checking ? 'animate-spin' : 'opacity-60'}`} />
-        </div>
+        </button>
 
         {/* Database Status */}
         <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300">

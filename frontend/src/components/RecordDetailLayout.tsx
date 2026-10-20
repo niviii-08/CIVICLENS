@@ -28,6 +28,7 @@ import { DetailedCivicRecord } from '../lib/types';
 import { Breadcrumb } from './Breadcrumb';
 import { StatusBadge } from './StatusBadge';
 import { EvidencePanel } from './EvidencePanel';
+import { CivicStateNotice } from './CivicStateNotice';
 
 interface RecordDetailLayoutProps {
   record: DetailedCivicRecord | null;
@@ -51,76 +52,49 @@ export const RecordDetailLayout: React.FC<RecordDetailLayoutProps> = ({
   const [showTechnical, setShowTechnical] = useState(false);
   const [showLimitations, setShowLimitations] = useState(false);
 
-  // 1. Loading State
+  // 1. Standardized Loading State (Phase 11.8)
   if (loading) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto py-8">
-        <div className="flex items-center gap-2 text-xs text-slate-500 animate-pulse">
-          <div className="w-16 h-3 bg-slate-800 rounded"></div>
-          <span>/</span>
-          <div className="w-24 h-3 bg-slate-800 rounded"></div>
-        </div>
-        <div className="p-16 rounded-3xl bg-slate-900/40 border border-slate-800 text-center space-y-4">
-          <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-300 font-medium text-sm">
-            Retrieving verified civic record and documentary evidence...
-          </p>
-          <span className="text-xs text-slate-500 block">
-            Querying official Tamil Nadu gazettes, budget demands, and audit ledgers.
-          </span>
-        </div>
+      <div className="space-y-6 max-w-4xl mx-auto py-12">
+        <Breadcrumb
+          items={[
+            { label: parentLabel, href: parentRoute },
+            { label: 'Loading Details...' },
+          ]}
+        />
+        <CivicStateNotice
+          state="loading"
+          title={`Retrieving ${parentLabel} Record...`}
+          description="Fetching verified state gazettes, budget books, and departmental outcome data from the public database."
+        />
       </div>
     );
   }
 
-  // 2. Error State (Request Failed)
+  // 2. Standardized Failure Recovery State (Phase 11.8)
   if (error) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto py-10">
         <Breadcrumb
           items={[
             { label: parentLabel, href: parentRoute },
-            { label: 'Record Error' },
+            { label: 'Unable to Retrieve Record' },
           ]}
         />
-        <div className="p-8 rounded-3xl bg-rose-500/10 border border-rose-500/20 text-rose-300 space-y-4 shadow-xl">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 text-rose-400 shrink-0 mt-0.5" />
-            <div className="space-y-2">
-              <h2 className="text-lg font-bold text-white">Unable to Load Record</h2>
-              <p className="text-sm text-rose-200/90 leading-relaxed">
-                {error}
-              </p>
-              <p className="text-xs text-rose-300/70">
-                The public information service encountered an error communicating with the record repository.
-              </p>
-            </div>
-          </div>
-          <div className="pt-3 border-t border-rose-500/20 flex flex-wrap items-center gap-3">
-            {onRetry && (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-md transition-all"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Retry Request</span>
-              </button>
-            )}
-            <Link
-              href={parentRoute}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to {parentLabel}</span>
-            </Link>
-          </div>
-        </div>
+        <CivicStateNotice
+          state="failed_api_request"
+          title="Unable to Retrieve Public Record"
+          description="The civic database encountered a connectivity interruption while fetching this record. Your navigation pathway and query context are preserved."
+          technicalError={error}
+          onRetry={onRetry}
+          actionHref={parentRoute}
+          actionLabel={`Back to ${parentLabel}`}
+        />
       </div>
     );
   }
 
-  // 3. Record Does Not Exist (404 State)
+  // 3. Record Does Not Exist (404 Catalog State - Phase 11.8)
   if (!record) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto py-10">
@@ -130,32 +104,13 @@ export const RecordDetailLayout: React.FC<RecordDetailLayoutProps> = ({
             { label: 'Record Not Found' },
           ]}
         />
-        <div className="p-10 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-5 shadow-2xl">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-400">
-            <Search className="w-6 h-6" />
-          </div>
-          <div className="space-y-2 max-w-md mx-auto">
-            <h2 className="text-xl font-bold text-white">Record Not Found</h2>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              The requested public record identifier was not found in the verified state database or catalog of canonical welfare commitments.
-            </p>
-          </div>
-          <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={parentRoute}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/20 transition-all"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Browse {parentLabel}</span>
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold transition-colors"
-            >
-              <span>Return to Home</span>
-            </Link>
-          </div>
-        </div>
+        <CivicStateNotice
+          state="no_records_available"
+          title="Public Record Not Found"
+          description="The requested public record identifier was not found in the verified database of published welfare schemes and assembly records."
+          actionHref={parentRoute}
+          actionLabel={`Browse ${parentLabel}`}
+        />
       </div>
     );
   }

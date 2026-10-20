@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { fetchUnifiedSearch } from '../lib/api';
 import { UnifiedSearchResult, UnifiedSearchResponse } from '../lib/types';
+import { CivicStateNotice } from './CivicStateNotice';
 
 export interface UnifiedSearchProps {
   initialQuery?: string;
@@ -224,32 +225,20 @@ export const UnifiedSearch: React.FC<UnifiedSearchProps> = ({
           </div>
 
           {searchError ? (
-            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-              <div>
-                <strong className="block font-semibold">Search Unavailable</strong>
-                <span>{searchError}</span>
-              </div>
-            </div>
+            <CivicStateNotice
+              state="failed_api_request"
+              title="Search Service Interrupted"
+              description={searchError}
+              onRetry={() => executeSearch(activeQuery, category)}
+            />
           ) : results.length === 0 ? (
-            <div className="text-center py-10 px-4 rounded-3xl bg-slate-900/40 border border-slate-800 space-y-3">
-              <p className="text-slate-300 font-medium text-sm sm:text-base">
-                No matching public records found for &ldquo;{activeQuery}&rdquo; {category !== 'all' ? `in category "${category}"` : ''}
-              </p>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Try searching for a welfare scheme (e.g. &ldquo;breakfast&rdquo;, &ldquo;magalir&rdquo;, &ldquo;bus&rdquo;), an election promise, or an MLA name.
-              </p>
-              {category !== 'all' && (
-                <button
-                  type="button"
-                  onClick={() => handleCategoryChange('all')}
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:underline font-semibold pt-1"
-                >
-                  <span>Search across all categories instead</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              )}
-            </div>
+            <CivicStateNotice
+              state="no_matching_results"
+              title="No Matching Public Records Found"
+              description={`No public records matched "${activeQuery}" ${category !== 'all' ? `in category "${category}"` : 'across public categories'}. Try broader terms like "breakfast", "magalir", or "water".`}
+              queryOrFilter={activeQuery}
+              onClearFilters={category !== 'all' ? () => handleCategoryChange('all') : undefined}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {results.map((item) => (
@@ -301,7 +290,8 @@ export const UnifiedSearch: React.FC<UnifiedSearchProps> = ({
                     <Link
                       href={item.route}
                       onClick={() => onNavigate && onNavigate()}
-                      className="inline-flex items-center gap-1 font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                      aria-label={`Open record details for ${item.title}`}
+                      className="inline-flex items-center gap-1 font-semibold text-blue-400 hover:text-blue-300 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg px-2 py-1"
                     >
                       <span>Open record</span>
                       <ArrowRight className="w-3.5 h-3.5" />

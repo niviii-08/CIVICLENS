@@ -18,6 +18,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { MetricCard } from '../../components/MetricCard';
 import { PageHeader } from '../../components/PageHeader';
 import { SimpleFilterBar, FilterGroup } from '../../components/SimpleFilterBar';
+import { CivicStateNotice } from '../../components/CivicStateNotice';
 
 export default function CivicPage() {
   const [grievances, setGrievances] = useState<CivicGrievance[]>([]);
@@ -215,21 +216,18 @@ export default function CivicPage() {
 
       {/* Grievance Cards List */}
       {loading ? (
-        <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading municipal grievance audits...</span>
-        </div>
+        <CivicStateNotice
+          state="loading"
+          title="Loading Civic Grievance Audits..."
+          description="Auditing citizen complaints against statutory Citizen's Charter redressal deadlines."
+        />
       ) : filtered.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 text-xs bg-slate-900/40 rounded-2xl border border-slate-800 space-y-2">
-          <p className="font-semibold text-slate-300">No civic issues match your filter criteria.</p>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="text-blue-400 hover:text-blue-300 font-semibold underline"
-          >
-            Reset all filters
-          </button>
-        </div>
+        <CivicStateNotice
+          state="no_matching_results"
+          title="No Civic Grievances Found"
+          description="No civic complaints match the selected district or SLA resolution criteria."
+          onClearFilters={handleClearAll}
+        />
       ) : (
         <div className="space-y-4">
           {filtered.map((g) => {

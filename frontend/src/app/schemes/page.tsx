@@ -18,6 +18,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { MetricCard } from '../../components/MetricCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SimpleFilterBar, FilterGroup } from '../../components/SimpleFilterBar';
+import { CivicStateNotice } from '../../components/CivicStateNotice';
 
 interface SchemeCard {
   id: string;
@@ -288,16 +289,12 @@ export default function SchemesPage() {
 
       {/* Schemes Grid */}
       {filteredSchemes.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 text-xs bg-slate-900/40 rounded-2xl border border-slate-800 space-y-2">
-          <p className="font-semibold text-slate-300">No welfare schemes match the selected filters.</p>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="text-blue-400 hover:text-blue-300 font-semibold underline"
-          >
-            Reset all filters
-          </button>
-        </div>
+        <CivicStateNotice
+          state="no_matching_results"
+          title="No Welfare Schemes Found"
+          description="No government welfare schemes matched the selected filters. Try choosing 'All Target Groups' or resetting filters."
+          onClearFilters={handleClearAll}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredSchemes.map((scheme) => (

@@ -29,6 +29,7 @@ import {
   EvidenceState
 } from '../lib/types';
 import { fetchRecordEvidence } from '../lib/api';
+import { CivicStateNotice } from './CivicStateNotice';
 
 interface EvidencePanelProps {
   dossier?: EvidenceDossier | null;
@@ -79,25 +80,21 @@ export function EvidencePanel({
 
   if (loading) {
     return (
-      <div className="p-8 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4 animate-pulse">
-        <div className="h-5 w-48 bg-slate-800 rounded-md" />
-        <div className="h-12 w-full bg-slate-950/80 rounded-2xl" />
-        <div className="h-32 w-full bg-slate-950/50 rounded-2xl" />
-      </div>
+      <CivicStateNotice
+        state="loading"
+        title="Compiling Documentary Evidence Trail..."
+        description="Traversing verified government orders, gazette notifications, and state audit books."
+      />
     );
   }
 
   if (!dossier) {
     return (
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 flex items-center gap-3">
-        <Info className="w-5 h-5 text-amber-400 shrink-0" />
-        <div>
-          <strong className="text-white block font-semibold mb-0.5">Evidence Pending Official Collation</strong>
-          <p>
-            Primary gazette notifications and official citations for this record are scheduled for routine statutory reconciliation.
-          </p>
-        </div>
-      </div>
+      <CivicStateNotice
+        state="missing_source_document"
+        title="Evidence Pending Official Collation"
+        description="Primary gazette notifications and official citations for this record are scheduled for routine statutory reconciliation by the issuing department."
+      />
     );
   }
 
@@ -189,7 +186,8 @@ export function EvidencePanel({
           <button
             type="button"
             onClick={() => setShowPrinciples(!showPrinciples)}
-            className="w-full px-4 py-3 text-left flex items-center justify-between gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+            aria-expanded={showPrinciples}
+            className="w-full px-4 py-3 text-left flex items-center justify-between gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
           >
             <div className="flex items-center gap-2">
               <Scale className="w-4 h-4 text-amber-400" />
@@ -444,7 +442,9 @@ function DocumentEvidenceCard({
             <button
               type="button"
               onClick={onToggleOffline}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/20 text-xs font-semibold transition-colors"
+              aria-expanded={isExpandedOffline}
+              aria-label="How to access this physical or offline record"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/20 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-amber-500 focus:outline-none"
             >
               <span>How to Access Offline</span>
               {isExpandedOffline ? (

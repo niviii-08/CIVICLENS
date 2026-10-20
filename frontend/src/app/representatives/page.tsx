@@ -8,6 +8,7 @@ import { fetchRepresentatives } from '../../lib/api';
 import { MetricCard } from '../../components/MetricCard';
 import { PageHeader } from '../../components/PageHeader';
 import { SimpleFilterBar, FilterGroup } from '../../components/SimpleFilterBar';
+import { CivicStateNotice } from '../../components/CivicStateNotice';
 
 export default function RepresentativesPage() {
   const [reps, setReps] = useState<Representative[]>([]);
@@ -150,21 +151,18 @@ export default function RepresentativesPage() {
 
       {/* Grid of MLA cards */}
       {loading ? (
-        <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading representative records...</span>
-        </div>
+        <CivicStateNotice
+          state="loading"
+          title="Loading MLA Assembly Records..."
+          description="Retrieving assembly attendance, constituency questions, and MLACDS fund allocations."
+        />
       ) : filtered.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 text-xs bg-slate-900/40 rounded-2xl border border-slate-800 space-y-2">
-          <p className="font-semibold text-slate-300">No representatives match your filter criteria.</p>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="text-blue-400 hover:text-blue-300 font-semibold underline"
-          >
-            Reset all filters
-          </button>
-        </div>
+        <CivicStateNotice
+          state="no_matching_results"
+          title="No Representatives Match Your Filters"
+          description="No elected MLAs match the chosen party or attendance filters."
+          onClearFilters={handleClearAll}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((rep) => {

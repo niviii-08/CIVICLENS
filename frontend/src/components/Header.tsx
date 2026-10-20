@@ -226,10 +226,12 @@ export const Header: React.FC = () => {
             </button>
 
             {/* Backend Status Dot */}
-            <div
+            <button
+              type="button"
               onClick={checkStatus}
+              aria-label={`Flask Backend: ${backendStatus.online ? 'Online' : 'Offline'}. Click to test connection.`}
               title={`Flask Backend: ${backendStatus.online ? 'Online' : 'Offline'}. Click to test.`}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-400 cursor-pointer select-none hover:border-slate-700"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-400 cursor-pointer select-none hover:border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
             >
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -240,7 +242,7 @@ export const Header: React.FC = () => {
                 {backendStatus.online ? 'API Online' : 'API Offline'}
               </span>
               <RefreshCw className={`w-2.5 h-2.5 ${checking ? 'animate-spin' : 'opacity-40'}`} />
-            </div>
+            </button>
 
             {/* Mobile Hamburger Toggle */}
             <button

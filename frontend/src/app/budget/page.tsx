@@ -16,6 +16,7 @@ import { fetchBudgetRecords } from '../../lib/api';
 import { MetricCard } from '../../components/MetricCard';
 import { PageHeader } from '../../components/PageHeader';
 import { SimpleFilterBar, FilterGroup } from '../../components/SimpleFilterBar';
+import { CivicStateNotice } from '../../components/CivicStateNotice';
 
 export default function BudgetPage() {
   const [records, setRecords] = useState<BudgetRecord[]>([]);
@@ -204,21 +205,18 @@ export default function BudgetPage() {
 
       {/* Records Table */}
       {loading ? (
-        <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading state budget demands...</span>
-        </div>
+        <CivicStateNotice
+          state="loading"
+          title="Loading Budget Demands for Grants..."
+          description="Compiling planned allocations (BE), revised estimates (RE), and audited disbursements (AE)."
+        />
       ) : filteredRecords.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 text-xs bg-slate-900/40 rounded-2xl border border-slate-800 space-y-2">
-          <p className="font-semibold text-slate-300">No budget lines match the selected filters.</p>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="text-blue-400 hover:text-blue-300 font-semibold underline"
-          >
-            Reset all filters
-          </button>
-        </div>
+        <CivicStateNotice
+          state="no_matching_results"
+          title="No Budget Appropriations Match Filters"
+          description="No budget lines matched the selected department or utilization band criteria."
+          onClearFilters={handleClearAll}
+        />
       ) : (
         <div className="rounded-2xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl">
           <div className="overflow-x-auto">

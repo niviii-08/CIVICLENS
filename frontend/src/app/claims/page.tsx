@@ -19,6 +19,7 @@ import { fetchClaims } from '../../lib/api';
 import { StatusBadge } from '../../components/StatusBadge';
 import { PageHeader } from '../../components/PageHeader';
 import { SimpleFilterBar, FilterGroup } from '../../components/SimpleFilterBar';
+import { CivicStateNotice } from '../../components/CivicStateNotice';
 
 export default function ClaimsPage() {
   const [claims, setClaims] = useState<ClaimVerification[]>([]);
@@ -158,21 +159,18 @@ export default function ClaimsPage() {
 
       {/* Claims List */}
       {loading ? (
-        <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading fact-check dossiers...</span>
-        </div>
+        <CivicStateNotice
+          state="loading"
+          title="Loading Public Claim Fact-Checks..."
+          description="Verifying claims against state assembly debates, budget documents, and Government Orders."
+        />
       ) : filteredClaims.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 text-xs bg-slate-900/40 rounded-2xl border border-slate-800 space-y-2">
-          <p className="font-semibold text-slate-300">No public claims match the selected filters.</p>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="text-blue-400 hover:text-blue-300 font-semibold underline"
-          >
-            Reset all filters
-          </button>
-        </div>
+        <CivicStateNotice
+          state="no_matching_results"
+          title="No Matching Claims Found"
+          description="No fact-checked political claims matched the selected verdict or speaker criteria."
+          onClearFilters={handleClearAll}
+        />
       ) : (
         <div className="space-y-4">
           {filteredClaims.map((claim) => (

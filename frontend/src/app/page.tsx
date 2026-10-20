@@ -218,9 +218,10 @@ export default function HomePage() {
                   </span>
                   <Link
                     href={rec.href}
-                    className="text-blue-400 hover:text-blue-300 font-semibold inline-flex items-center gap-1"
+                    aria-label={`View public record details for ${rec.title}`}
+                    className="text-blue-400 hover:text-blue-300 font-semibold inline-flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1.5 py-0.5"
                   >
-                    <span>View</span>
+                    <span>View record</span>
                     <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>

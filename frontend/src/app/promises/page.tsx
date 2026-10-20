@@ -21,6 +21,7 @@ import { fetchPromises } from '../../lib/api';
 import { StatusBadge } from '../../components/StatusBadge';
 import { PageHeader } from '../../components/PageHeader';
 import { SimpleFilterBar, FilterGroup } from '../../components/SimpleFilterBar';
+import { CivicStateNotice } from '../../components/CivicStateNotice';
 
 export default function PromisesPage() {
   const [promises, setPromises] = useState<PoliticalPromise[]>([]);
@@ -223,21 +224,18 @@ export default function PromisesPage() {
 
       {/* Promises List */}
       {loading ? (
-        <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading official manifesto commitments...</span>
-        </div>
+        <CivicStateNotice
+          state="loading"
+          title="Loading Manifesto Commitments..."
+          description="Retrieving audited political promises and delivery records across Tamil Nadu assembly manifestos."
+        />
       ) : filteredPromises.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 text-xs bg-slate-900/40 rounded-2xl border border-slate-800 space-y-2">
-          <p className="font-semibold text-slate-300">No promises match your filter criteria.</p>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="text-blue-400 hover:text-blue-300 font-semibold underline"
-          >
-            Reset all filters
-          </button>
-        </div>
+        <CivicStateNotice
+          state="no_matching_results"
+          title="No Matching Manifesto Promises"
+          description="No election promises matched the selected party, status, or sector filters. Use 'Reset all filters' to browse all commitments."
+          onClearFilters={handleClearAll}
+        />
       ) : (
         <div className="space-y-3">
           {filteredPromises.map((p) => {
