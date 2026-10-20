@@ -9,17 +9,17 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-
-# revision identifiers, used by Alembic.
 revision: str = 'phase5_funding_schema'
 down_revision: Union[str, Sequence[str], None] = '7ccfdea60b7f'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 def upgrade() -> None:
     """Upgrade database schema for Phase 5."""
-    op.create_table(
+    conn = op.get_bind()
+    existing_tables = set(sa.inspect(conn).get_table_names())
+    if 'financial_documents' not in existing_tables:
+        op.create_table(
         'financial_documents',
         sa.Column('document_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('source_id', sa.String(), nullable=False),
@@ -35,7 +35,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True)
     )
 
-    op.create_table(
+    if 'donors' not in existing_tables:
+        op.create_table(
         'donors',
         sa.Column('donor_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('legal_name', sa.String(), nullable=False),
@@ -47,7 +48,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True)
     )
 
-    op.create_table(
+    if 'electoral_trusts' not in existing_tables:
+        op.create_table(
         'electoral_trusts',
         sa.Column('trust_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('trust_name', sa.String(), nullable=False),
@@ -57,7 +59,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True)
     )
 
-    op.create_table(
+    if 'contributions' not in existing_tables:
+        op.create_table(
         'contributions',
         sa.Column('contribution_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('document_id', sa.String(), sa.ForeignKey('financial_documents.document_id', ondelete='CASCADE'), nullable=False),
@@ -81,7 +84,8 @@ def upgrade() -> None:
         sa.UniqueConstraint('document_id', 'page_number', 'table_number', 'contribution_id', name='uq_contribution_provenance')
     )
 
-    op.create_table(
+    if 'party_financial_statements' not in existing_tables:
+        op.create_table(
         'party_financial_statements',
         sa.Column('statement_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('party_id', sa.String(), sa.ForeignKey('political_parties.party_id', ondelete='CASCADE'), nullable=False),
@@ -99,7 +103,8 @@ def upgrade() -> None:
         sa.UniqueConstraint('party_id', 'financial_year', name='uq_party_financial_statement')
     )
 
-    op.create_table(
+    if 'election_expenditures' not in existing_tables:
+        op.create_table(
         'election_expenditures',
         sa.Column('expenditure_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('party_id', sa.String(), sa.ForeignKey('political_parties.party_id', ondelete='CASCADE'), nullable=False),
@@ -112,7 +117,8 @@ def upgrade() -> None:
         sa.UniqueConstraint('party_id', 'election_name', name='uq_party_election_expenditure')
     )
 
-    op.create_table(
+    if 'financial_metrics' not in existing_tables:
+        op.create_table(
         'financial_metrics',
         sa.Column('metric_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('party_id', sa.String(), sa.ForeignKey('political_parties.party_id', ondelete='CASCADE'), nullable=False),
@@ -128,7 +134,8 @@ def upgrade() -> None:
         sa.UniqueConstraint('party_id', 'financial_year', name='uq_party_financial_metric')
     )
 
-    op.create_table(
+    if 'funding_validation_issues' not in existing_tables:
+        op.create_table(
         'funding_validation_issues',
         sa.Column('issue_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('rule_code', sa.String(), nullable=False),
@@ -143,14 +150,23 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True)
     )
 
-
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_table('funding_validation_issues')
-    op.drop_table('financial_metrics')
-    op.drop_table('election_expenditures')
-    op.drop_table('party_financial_statements')
-    op.drop_table('contributions')
-    op.drop_table('electoral_trusts')
-    op.drop_table('donors')
-    op.drop_table('financial_documents')
+    conn = op.get_bind()
+    downgrade_existing_tables = set(sa.inspect(conn).get_table_names())
+    if 'funding_validation_issues' in downgrade_existing_tables:
+        op.drop_table('funding_validation_issues')
+    if 'financial_metrics' in downgrade_existing_tables:
+        op.drop_table('financial_metrics')
+    if 'election_expenditures' in downgrade_existing_tables:
+        op.drop_table('election_expenditures')
+    if 'party_financial_statements' in downgrade_existing_tables:
+        op.drop_table('party_financial_statements')
+    if 'contributions' in downgrade_existing_tables:
+        op.drop_table('contributions')
+    if 'electoral_trusts' in downgrade_existing_tables:
+        op.drop_table('electoral_trusts')
+    if 'donors' in downgrade_existing_tables:
+        op.drop_table('donors')
+    if 'financial_documents' in downgrade_existing_tables:
+        op.drop_table('financial_documents')

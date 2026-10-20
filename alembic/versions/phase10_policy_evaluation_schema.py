@@ -9,17 +9,17 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-
-# revision identifiers, used by Alembic.
 revision: str = 'phase10_policy_evaluation_schema'
 down_revision: Union[str, Sequence[str], None] = 'phase5_funding_schema'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 def upgrade() -> None:
     """Upgrade database schema for Phase 10 Policy Registry & Outcome Evaluation."""
-    op.create_table(
+    conn = op.get_bind()
+    existing_tables = set(sa.inspect(conn).get_table_names())
+    if 'policy_registry' not in existing_tables:
+        op.create_table(
         'policy_registry',
         sa.Column('policy_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('budget_scheme_id', sa.Integer(), sa.ForeignKey('budget_schemes.id', ondelete='SET NULL'), nullable=True),
@@ -50,7 +50,8 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'policy_objectives' not in existing_tables:
+        op.create_table(
         'policy_objectives',
         sa.Column('objective_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('policy_id', sa.String(), sa.ForeignKey('policy_registry.policy_id', ondelete='SET NULL'), nullable=True),
@@ -71,7 +72,8 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'beneficiary_groups' not in existing_tables:
+        op.create_table(
         'beneficiary_groups',
         sa.Column('group_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('objective_id', sa.String(), sa.ForeignKey('policy_objectives.objective_id', ondelete='CASCADE'), nullable=False),
@@ -86,7 +88,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'implementation_activities' not in existing_tables:
+        op.create_table(
         'implementation_activities',
         sa.Column('activity_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('policy_id', sa.String(), sa.ForeignKey('policy_registry.policy_id', ondelete='SET NULL'), nullable=True),
@@ -114,7 +117,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'policy_indicators' not in existing_tables:
+        op.create_table(
         'policy_indicators',
         sa.Column('indicator_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('objective_id', sa.String(), sa.ForeignKey('policy_objectives.objective_id', ondelete='CASCADE'), nullable=False),
@@ -146,7 +150,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'indicator_observations' not in existing_tables:
+        op.create_table(
         'indicator_observations',
         sa.Column('observation_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('indicator_id', sa.String(), sa.ForeignKey('policy_indicators.indicator_id', ondelete='CASCADE'), nullable=False),
@@ -170,7 +175,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'policy_evaluation_plans' not in existing_tables:
+        op.create_table(
         'policy_evaluation_plans',
         sa.Column('plan_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('policy_id', sa.String(), sa.ForeignKey('policy_registry.policy_id', ondelete='CASCADE'), nullable=False),
@@ -202,7 +208,8 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'evaluation_studies' not in existing_tables:
+        op.create_table(
         'evaluation_studies',
         sa.Column('study_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('scheme_id', sa.String(), nullable=False),
@@ -221,7 +228,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'evaluation_findings' not in existing_tables:
+        op.create_table(
         'evaluation_findings',
         sa.Column('finding_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('study_id', sa.String(), sa.ForeignKey('evaluation_studies.study_id', ondelete='CASCADE'), nullable=False),
@@ -246,7 +254,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'finding_evidence_links' not in existing_tables:
+        op.create_table(
         'finding_evidence_links',
         sa.Column('link_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('finding_id', sa.String(), sa.ForeignKey('evaluation_findings.finding_id', ondelete='CASCADE'), nullable=False),
@@ -263,7 +272,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
-    op.create_table(
+    if 'evaluation_limitations' not in existing_tables:
+        op.create_table(
         'evaluation_limitations',
         sa.Column('limitation_id', sa.String(), nullable=False, primary_key=True),
         sa.Column('study_id', sa.String(), sa.ForeignKey('evaluation_studies.study_id', ondelete='CASCADE'), nullable=False),
@@ -275,17 +285,29 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
-
 def downgrade() -> None:
     """Downgrade database schema for Phase 10."""
-    op.drop_table('evaluation_limitations')
-    op.drop_table('finding_evidence_links')
-    op.drop_table('evaluation_findings')
-    op.drop_table('evaluation_studies')
-    op.drop_table('policy_evaluation_plans')
-    op.drop_table('indicator_observations')
-    op.drop_table('policy_indicators')
-    op.drop_table('implementation_activities')
-    op.drop_table('beneficiary_groups')
-    op.drop_table('policy_objectives')
-    op.drop_table('policy_registry')
+    conn = op.get_bind()
+    downgrade_existing_tables = set(sa.inspect(conn).get_table_names())
+    if 'evaluation_limitations' in downgrade_existing_tables:
+        op.drop_table('evaluation_limitations')
+    if 'finding_evidence_links' in downgrade_existing_tables:
+        op.drop_table('finding_evidence_links')
+    if 'evaluation_findings' in downgrade_existing_tables:
+        op.drop_table('evaluation_findings')
+    if 'evaluation_studies' in downgrade_existing_tables:
+        op.drop_table('evaluation_studies')
+    if 'policy_evaluation_plans' in downgrade_existing_tables:
+        op.drop_table('policy_evaluation_plans')
+    if 'indicator_observations' in downgrade_existing_tables:
+        op.drop_table('indicator_observations')
+    if 'policy_indicators' in downgrade_existing_tables:
+        op.drop_table('policy_indicators')
+    if 'implementation_activities' in downgrade_existing_tables:
+        op.drop_table('implementation_activities')
+    if 'beneficiary_groups' in downgrade_existing_tables:
+        op.drop_table('beneficiary_groups')
+    if 'policy_objectives' in downgrade_existing_tables:
+        op.drop_table('policy_objectives')
+    if 'policy_registry' in downgrade_existing_tables:
+        op.drop_table('policy_registry')

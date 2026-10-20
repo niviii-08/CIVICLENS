@@ -1,8 +1,4 @@
-# This file imports the Base class and all models.
-# By importing this file, Alembic (or create_all) can discover all models.
-
-from backend.database.base_class import Base  # noqa
-# Import specific models here so Alembic can discover them
+from backend.database.base_class import Base
 from backend.models.common import (
     Source, 
     DataSource, 
@@ -44,7 +40,6 @@ from backend.models.news import (
     PoliticalPerson,
     GovernmentDepartment,
     PoliticalEntity,
-
     PoliticalEvent,
     Topic,
     ArticleEntity,
@@ -104,4 +99,45 @@ from backend.models.civic_issue import (
     DataQualityIssue,
     CivicCrossPhaseLink,
     CivicReviewAudit
+)
+from backend.models.claim import (
+    Claim,
+    ClaimVersion,
+    AtomicClaim,
+    ClaimSubject,
+    ClaimSource,
+    EvidenceDocument,
+    EvidencePassage,
+    ClaimEvidenceRelationship,
+    VerificationRun,
+    VerificationResult,
+    VerificationHistory,
+    ReviewRecord,
+    ClaimCrossPhaseLink
+)
+from backend.models.graph import (
+    CivicGraphNode,
+    CivicEvidenceEdge,
+    CandidateRelationshipProposal,
+    CivicEdgeAuditRecord,
+    CivicConflictRecord
+)
+from backend.models.entity_registry import (
+    CanonicalEntity,
+    EntityAlias,
+    EntityAuditRecord,
+    DuplicateCandidateReview
+)
+from backend.models.policy_evaluation import (
+    PolicyRegistryEntry,
+    PolicyObjective,
+    PolicyEvaluationPlan,
+    PolicyIndicator,
+    IndicatorObservation,
+    EvaluationStudy,
+    EvaluationFinding,
+    FindingEvidenceLink,
+    EvaluationLimitation,
+    ImplementationActivity,
+    BeneficiaryGroup
 )

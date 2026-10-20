@@ -5,9 +5,13 @@ from backend.database.session import SessionLocal
 @pytest.fixture(autouse=True)
 def setup_teardown_db():
     db = SessionLocal()
-    dept = BudgetDepartment(name="Education")
-    db.add(dept)
-    db.commit()
+    dept = db.query(BudgetDepartment).filter_by(name="Education").first()
+    created_dept = False
+    if not dept:
+        dept = BudgetDepartment(name="Education")
+        db.add(dept)
+        db.commit()
+        created_dept = True
     
     scheme = BudgetScheme(name="Scholarships", department_id=dept.id)
     scheme2 = BudgetScheme(name="Infrastructure", department_id=dept.id)
@@ -56,13 +60,11 @@ def setup_teardown_db():
     db.delete(record)
     db.delete(record2)
     db.delete(record3)
-    db.delete(doc)
     db.delete(scheme)
     db.delete(scheme2)
     db.delete(scheme3)
-    db.delete(dept)
+    db.delete(doc)
     db.commit()
-    db.close()
     db.close()
 
 def test_get_years(api_client):
