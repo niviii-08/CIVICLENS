@@ -19,8 +19,25 @@ from backend.api.integration import integration_bp
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 @api_bp.route('/health', methods=['GET'])
-def api_health():
-    return success_response(data={"status": "healthy"}, message="Application is running")
+@api_bp.route('/health/live', methods=['GET'])
+def api_health_live():
+    return success_response(data={"status": "healthy", "check": "liveness"}, message="Application is running")
+
+@api_bp.route('/health/ready', methods=['GET'])
+def api_health_ready():
+    from backend.database.session import SessionLocal
+    from sqlalchemy import text
+    import logging
+    logger = logging.getLogger("civiclens.api")
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+        return success_response(data={"status": "ready", "database": "connected"}, message="Service is ready to handle traffic")
+    except Exception as e:
+        logger.error(f"API readiness check failed: {e}", exc_info=True)
+        return error_response(message="Service unavailable: database connection check failed", status_code=503)
+    finally:
+        db.close()
 
 def not_implemented():
     return error_response(message="Module not implemented yet.", status_code=501)

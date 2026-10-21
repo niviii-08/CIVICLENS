@@ -79,8 +79,8 @@ def check_database_migrations() -> bool:
 def run_test_suites() -> bool:
     suites = [
         (
-            [sys.executable, "-m", "pytest", "tests/unit/test_config.py", "tests/unit/test_security_hardening.py", "tests/unit/test_database_integrity.py", "-v"],
-            "Security Hardening & Database Integrity Tests"
+            [sys.executable, "-m", "pytest", "tests/unit/test_config.py", "tests/unit/test_security_hardening.py", "tests/unit/test_database_integrity.py", "tests/unit/test_logging_monitoring.py", "-v"],
+            "Security, Database Integrity & Logging/Monitoring Tests"
         ),
         (
             [sys.executable, "-m", "pytest", "tests/ml/", "-v"],
