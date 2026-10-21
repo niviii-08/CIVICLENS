@@ -14,7 +14,7 @@ from typing import Optional, Dict, Any, List
 
 from flask import Blueprint, request
 
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 
 from backend.api.responses import success_response, error_response
 
@@ -1302,27 +1302,22 @@ def get_claim_stats():
 
         total_claims = db.query(Claim).count()
 
-        by_category = {}
+        # Batch counts across categories (eliminates N+1)
+        cat_counts = dict(
+            db.query(Claim.claim_category, func.count(Claim.claim_id))
+            .group_by(Claim.claim_category)
+            .all()
+        )
+        by_category = {cat.value: cat_counts.get(cat, cat_counts.get(cat.value, 0)) for cat in ClaimCategory}
 
-        for cat in ClaimCategory:
-
-            count = db.query(Claim).filter(Claim.claim_category == cat).count()
-
-            by_category[cat.value] = count
-
-        by_verdict = {}
-
-        for v in VerificationVerdict:
-
-            count = db.query(VerificationResult).filter(
-
-                VerificationResult.verdict == v,
-
-                VerificationResult.is_current == True
-
-            ).count()
-
-            by_verdict[v.value] = count
+        # Batch counts across verdicts (eliminates N+1)
+        verdict_counts = dict(
+            db.query(VerificationResult.verdict, func.count(VerificationResult.result_id))
+            .filter(VerificationResult.is_current == True)
+            .group_by(VerificationResult.verdict)
+            .all()
+        )
+        by_verdict = {v.value: verdict_counts.get(v, verdict_counts.get(v.value, 0)) for v in VerificationVerdict}
 
         return success_response(
 

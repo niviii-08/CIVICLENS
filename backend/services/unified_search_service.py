@@ -18,6 +18,9 @@ Never generates synthetic records or concatenates raw SQL.
 
 from typing import Dict, Any, List, Optional
 import re
+import time
+import threading
+from collections import OrderedDict
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
@@ -383,6 +386,71 @@ def calculate_relevance_score(query: str, title: str, description: str, metadata
     return 0
 
 
+class SearchCache:
+    """
+    Thread-safe, bounded in-memory cache for search query results with TTL.
+    Prevents redundant multi-table scans on repeated citizen searches.
+    """
+    def __init__(self, max_size: int = 512, ttl_seconds: float = 60.0):
+        self.max_size = max_size
+        self.ttl_seconds = ttl_seconds
+        self._cache: OrderedDict = OrderedDict()
+        self._lock = threading.Lock()
+        self.hits = 0
+        self.misses = 0
+
+    def get(self, key: tuple) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            if key not in self._cache:
+                self.misses += 1
+                return None
+            ts, val = self._cache[key]
+            if time.time() - ts > self.ttl_seconds:
+                del self._cache[key]
+                self.misses += 1
+                return None
+            self._cache.move_to_end(key)
+            self.hits += 1
+            return val
+
+    def set(self, key: tuple, val: Dict[str, Any]) -> None:
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+            self._cache[key] = (time.time(), val)
+            while len(self._cache) > self.max_size:
+                self._cache.popitem(last=False)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._cache.clear()
+            self.hits = 0
+            self.misses = 0
+
+    def stats(self) -> Dict[str, Any]:
+        with self._lock:
+            return {
+                "size": len(self._cache),
+                "hits": self.hits,
+                "misses": self.misses,
+                "max_size": self.max_size,
+                "ttl_seconds": self.ttl_seconds,
+            }
+
+
+_search_cache = SearchCache()
+
+
+def clear_search_cache() -> None:
+    """Clears all entries in the search result cache."""
+    _search_cache.clear()
+
+
+def get_search_cache_stats() -> Dict[str, Any]:
+    """Returns metrics on search cache hits, misses, and size."""
+    return _search_cache.stats()
+
+
 def search_unified(
     db: Session,
     query: str,
@@ -404,6 +472,10 @@ def search_unified(
             "categories": {cat: 0 for cat in CATEGORY_CONFIG.keys()}
         }
 
+    cache_key = (q.lower(), (category or "all").lower().strip(), page, limit)
+    cached_result = _search_cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
     pattern = f"%{q}%"
     selected_category = category.lower().strip() if category else "all"
     if selected_category not in CATEGORY_CONFIG and selected_category != "all":
@@ -828,7 +900,7 @@ def search_unified(
 
     paginated_items = filtered_items[start_idx:end_idx]
 
-    return {
+    res = {
         "query": q,
         "selected_category": selected_category,
         "total": total_count,
@@ -837,3 +909,5 @@ def search_unified(
         "categories": category_counts,
         "items": paginated_items
     }
+    _search_cache.set(cache_key, res)
+    return res

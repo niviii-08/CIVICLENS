@@ -16,6 +16,7 @@ import uuid
 
 from datetime import datetime, timezone
 
+from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, request
@@ -604,20 +605,23 @@ def get_issue_categories():
 
         categories = db.query(IssueCategory).order_by(IssueCategory.name_en).all()
 
+        # Batch query counts and service standards to resolve N+1 bottleneck
+        counts_by_cat = dict(
+            db.query(CivicIssue.category_id, func.count(CivicIssue.id))
+            .group_by(CivicIssue.category_id)
+            .all()
+        )
+
+        all_standards = db.query(ServiceStandard).all()
+        standards_by_cat = defaultdict(list)
+        for s in all_standards:
+            standards_by_cat[s.category_id].append(s.to_dict())
+
         results = []
-
         for cat in categories:
-
             cat_dict = cat.to_dict()
-
-            issue_count = db.query(func.count(CivicIssue.id)).filter(CivicIssue.category_id == cat.id).scalar() or 0
-
-            cat_dict["active_issues_count"] = issue_count
-
-            standards = db.query(ServiceStandard).filter(ServiceStandard.category_id == cat.id).all()
-
-            cat_dict["service_standards"] = [s.to_dict() for s in standards]
-
+            cat_dict["active_issues_count"] = counts_by_cat.get(cat.id, 0)
+            cat_dict["service_standards"] = standards_by_cat.get(cat.id, [])
             results.append(cat_dict)
 
         return success_response(data={"categories": results}, message="Civic issue categories retrieved.")
@@ -678,16 +682,17 @@ def get_administrative_areas():
 
         areas = query.order_by(AdministrativeArea.name_en).all()
 
+        # Batch query issue counts across all administrative areas to resolve N+1 bottleneck
+        counts_by_area = dict(
+            db.query(CivicIssue.administrative_area_id, func.count(CivicIssue.id))
+            .group_by(CivicIssue.administrative_area_id)
+            .all()
+        )
+
         results = []
-
         for area in areas:
-
             area_dict = area.to_dict()
-
-            issue_count = db.query(func.count(CivicIssue.id)).filter(CivicIssue.administrative_area_id == area.id).scalar() or 0
-
-            area_dict["active_issues_count"] = issue_count
-
+            area_dict["active_issues_count"] = counts_by_area.get(area.id, 0)
             results.append(area_dict)
 
         return success_response(data={"areas": results}, message="Administrative areas retrieved.")
@@ -714,16 +719,17 @@ def get_civic_departments():
 
         departments = db.query(CivicDepartment).order_by(CivicDepartment.name_en).all()
 
+        # Batch query assigned issues across all departments to resolve N+1 bottleneck
+        counts_by_dept = dict(
+            db.query(CivicIssue.department_id, func.count(CivicIssue.id))
+            .group_by(CivicIssue.department_id)
+            .all()
+        )
+
         results = []
-
         for dept in departments:
-
             dept_dict = dept.to_dict()
-
-            issue_count = db.query(func.count(CivicIssue.id)).filter(CivicIssue.department_id == dept.id).scalar() or 0
-
-            dept_dict["total_assigned_issues"] = issue_count
-
+            dept_dict["total_assigned_issues"] = counts_by_dept.get(dept.id, 0)
             results.append(dept_dict)
 
         return success_response(data={"departments": results}, message="Civic departments retrieved.")
@@ -982,7 +988,7 @@ def get_recurring_clusters():
 
         engine = CivicAnalyticsEngine(default_source="VALIDATED_CIVIC_RECORDS")
 
-        issues = db.query(CivicIssue).all()
+        issues = db.query(CivicIssue).order_by(CivicIssue.id.desc()).limit(5000).all()
 
         clusters_metric = engine.calculate_recurring_clusters(issues, period="ALL_TIME")
 
@@ -1036,7 +1042,7 @@ def get_civic_trend_analytics():
 
         pop_map = {a.area_code: a.population for a in areas if a.population}
 
-        issues = db.query(CivicIssue).all()
+        issues = db.query(CivicIssue).order_by(CivicIssue.id.desc()).limit(5000).all()
 
         engine = CivicAnalyticsEngine(default_source=data_source)
 
