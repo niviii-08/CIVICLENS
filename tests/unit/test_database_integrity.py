@@ -124,3 +124,27 @@ def test_database_backup_and_checksum_verification():
 
         checksum = calculate_sha256(backup_file)
         assert len(checksum) == 64
+
+
+def test_database_restore_dry_run_and_execution():
+    """Verifies that restore_database validates backup integrity and restores safely."""
+    from scripts.backup_database import restore_database
+    with tempfile.TemporaryDirectory() as tmpdir:
+        backup_file = backup_database(
+            source_path="data/processed/civiclens.db",
+            backup_dir=tmpdir,
+            verify=True
+        )
+        target_restore = os.path.join(tmpdir, "restored_civiclens.db")
+
+        # Test dry-run
+        dry_run_success = restore_database(backup_file, target_restore, dry_run=True)
+        assert dry_run_success is True
+        assert not os.path.exists(target_restore)
+
+        # Test actual restore
+        restore_success = restore_database(backup_file, target_restore, dry_run=False)
+        assert restore_success is True
+        assert os.path.exists(target_restore)
+        assert os.path.getsize(target_restore) == os.path.getsize(backup_file)
+
