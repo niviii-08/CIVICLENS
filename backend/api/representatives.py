@@ -1,17 +1,9 @@
 """
-Phase 6 — Public Representative, Constituency & Performance API Blueprint.
+Public representative and constituency performance REST API router.
 
-Provides RESTful endpoints for:
-1. Representative search & filtering (by type, party, constituency, term).
-2. Representative detailed profile.
-3. Constituency lookup & profiles.
-4. Legislative activity breakdown (questions, debates, attendance).
-5. Constituency works tracking (MPLADS / MLACDS status, expenditure, attribution).
-6. Development indicator trends & baseline trajectories.
-7. Political promise cross-references & evidence stages.
-8. Performance metrics & within-cohort comparative analysis.
-9. Data completeness index & audit provenance.
-10. Source documents and data quality review.
+Provides endpoints for representative search, legislative activity metrics
+(questions, debates, attendance), constituency public works (MLACDS/MPLADS),
+development indicators, and audit provenance.
 """
 
 import logging
@@ -50,14 +42,9 @@ logger = logging.getLogger("civiclens.api.representatives")
 
 representatives_bp = Blueprint("representatives", __name__, url_prefix="/representatives")
 
-
 def _get_db():
     return SessionLocal()
 
-
-# ---------------------------------------------------------------------------
-# 1. REPRESENTATIVE EXPLORER & SEARCH
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/", methods=["GET"])
 @representatives_bp.route("/search", methods=["GET"])
 def search_representatives():
@@ -98,9 +85,7 @@ def search_representatives():
 
         results = []
         for rep in representatives:
-            # Resolve party name
             party_name = rep.party.party_name if rep.party else rep.party_id
-            # Resolve constituency name
             const_name = rep.constituency.official_name if rep.constituency else None
 
             results.append({
@@ -125,10 +110,6 @@ def search_representatives():
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 2. REPRESENTATIVE PROFILE
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/<representative_id>", methods=["GET"])
 def get_representative_profile(representative_id: str):
     """
@@ -139,11 +120,15 @@ def get_representative_profile(representative_id: str):
     try:
         rep = db.query(Representative).filter(Representative.representative_id == representative_id).first()
         if not rep:
+            for r in db.query(Representative).all():
+                if r.aliases and (representative_id in r.aliases or representative_id.lower() in [a.lower() for a in r.aliases]):
+                    rep = r
+                    break
+        if not rep:
             return error_response(f"Representative '{representative_id}' not found.", status_code=404)
 
-        # Retrieve historical terms
         terms = db.query(RepresentativeTerm).filter(
-            RepresentativeTerm.representative_id == representative_id
+            RepresentativeTerm.representative_id == rep.representative_id
         ).all()
 
         terms_data = [
@@ -192,10 +177,6 @@ def get_representative_profile(representative_id: str):
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 3. CONSTITUENCY LOOKUP & PROFILE
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/constituencies", methods=["GET"])
 def list_constituencies():
     """
@@ -234,7 +215,6 @@ def list_constituencies():
     finally:
         db.close()
 
-
 @representatives_bp.route("/constituencies/<constituency_id>", methods=["GET"])
 def get_constituency_profile(constituency_id: str):
     """
@@ -247,7 +227,6 @@ def get_constituency_profile(constituency_id: str):
         if not c:
             return error_response(f"Constituency '{constituency_id}' not found.", status_code=404)
 
-        # Current representative
         current_rep = db.query(Representative).filter(
             Representative.constituency_id == constituency_id,
             Representative.term_end.is_(None)
@@ -263,7 +242,6 @@ def get_constituency_profile(constituency_id: str):
                 "representative_type": current_rep.representative_type
             }
 
-        # Geographic mappings
         mappings = db.query(ConstituencyGeographicMapping).filter(
             ConstituencyGeographicMapping.constituency_id == constituency_id
         ).all()
@@ -296,10 +274,6 @@ def get_constituency_profile(constituency_id: str):
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 4. LEGISLATIVE ACTIVITY
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/<representative_id>/legislative", methods=["GET"])
 def get_representative_legislative_activity(representative_id: str):
     """
@@ -346,10 +320,6 @@ def get_representative_legislative_activity(representative_id: str):
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 5. CONSTITUENCY WORKS TRACKER
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/works", methods=["GET"])
 def get_constituency_works():
     """
@@ -420,10 +390,6 @@ def get_constituency_works():
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 6. DEVELOPMENT INDICATOR TRENDS
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/indicators", methods=["GET"])
 def get_development_indicators():
     """
@@ -483,10 +449,6 @@ def get_development_indicators():
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 7. PROMISE AND EVIDENCE TRACKER
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/<representative_id>/promises", methods=["GET"])
 def get_representative_promises(representative_id: str):
     """
@@ -531,10 +493,6 @@ def get_representative_promises(representative_id: str):
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 8. COMPARATIVE ANALYSIS & COMPOSITE SCORE
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/compare", methods=["POST"])
 def compare_representatives():
     """
@@ -570,7 +528,6 @@ def compare_representatives():
     finally:
         db.close()
 
-
 @representatives_bp.route("/<representative_id>/composite", methods=["GET"])
 def get_transparent_composite(representative_id: str):
     """
@@ -600,10 +557,6 @@ def get_transparent_composite(representative_id: str):
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 9. DATA COMPLETENESS & PROVENANCE
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/<representative_id>/completeness", methods=["GET"])
 def get_data_completeness(representative_id: str):
     """
@@ -628,10 +581,6 @@ def get_data_completeness(representative_id: str):
     finally:
         db.close()
 
-
-# ---------------------------------------------------------------------------
-# 10. EVIDENCE TRACEABILITY & AUDIT TRAIL ENDPOINTS (PHASE 6.11)
-# ---------------------------------------------------------------------------
 @representatives_bp.route("/sources", methods=["GET"])
 def list_source_documents():
     """List canonical source documents with metadata and SHA-256 checksums."""
@@ -668,7 +617,6 @@ def list_source_documents():
     finally:
         db.close()
 
-
 @representatives_bp.route("/sources/<document_id>", methods=["GET"])
 def get_source_document_detail(document_id: str):
     """Get detailed metadata for a single source document."""
@@ -702,7 +650,6 @@ def get_source_document_detail(document_id: str):
     finally:
         db.close()
 
-
 @representatives_bp.route("/evidence", methods=["GET"])
 def get_evidence_for_entity():
     """Retrieve supporting evidence, citations, and excerpts for a given fact/entity."""
@@ -729,7 +676,6 @@ def get_evidence_for_entity():
     finally:
         db.close()
 
-
 @representatives_bp.route("/metrics/<metric_id>/lineage", methods=["GET"])
 def get_metric_lineage_drilldown(metric_id: str):
     """Retrieve exact mathematical formula, input record IDs, and voucher drill-down for a derived metric."""
@@ -748,7 +694,6 @@ def get_metric_lineage_drilldown(metric_id: str):
     finally:
         db.close()
 
-
 @representatives_bp.route("/conflicts", methods=["GET"])
 def list_conflicting_evidence():
     """Retrieve preserved divergent or conflicting evidence records."""
@@ -764,7 +709,6 @@ def list_conflicting_evidence():
         return error_response(f"Internal server error: {str(e)}", status_code=500)
     finally:
         db.close()
-
 
 @representatives_bp.route("/audit-trail", methods=["GET"])
 def list_audit_trail_events():

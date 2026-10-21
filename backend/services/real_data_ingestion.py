@@ -39,6 +39,7 @@ from backend.models.representative import (
 from backend.models.news import PoliticalParty
 from backend.models.common import Source, Document, ProcessingStatus
 from backend.services.performance_metrics import PerformanceMetricsEngine
+from backend.ingestion.civic_reference_ingestor import CivicReferenceIngestor
 
 def compute_sha256(filepath: str) -> str:
     with open(filepath, "rb") as f:
@@ -102,6 +103,11 @@ def run_phase6_integration():
         db.merge(p)
     db.commit()
     print(f"  -> {len(parties_data)} Political parties verified.")
+
+    print("\n[Step 2.5] Ingesting Authoritative Reference Data (234 ACs, 38 Districts, Corporations, Terms)...")
+    civic_ref = CivicReferenceIngestor(db=db)
+    ref_stats = civic_ref.ingest_all()
+    print(f"  -> Reference Ingestion: {ref_stats['constituencies']['total_constituencies']} Constituencies, {ref_stats['administrative_areas']['total_administrative_areas']} Admin Areas, {ref_stats['representatives_and_terms']['terms']} Terms.")
 
     print("\n[Step 3] Importing Canonical Tamil Nadu Parliamentary Constituencies...")
     tn_39_pcs = [
