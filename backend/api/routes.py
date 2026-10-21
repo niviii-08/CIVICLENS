@@ -16,6 +16,7 @@ from backend.api.search import search_bp
 from backend.api.evidence import evidence_bp
 from backend.api.integration import integration_bp
 from backend.api.timelines import timelines_bp
+from backend.api.local_insights import local_insights_bp
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -59,6 +60,7 @@ api_bp.register_blueprint(search_bp)
 api_bp.register_blueprint(evidence_bp, url_prefix='/evidence')
 api_bp.register_blueprint(integration_bp)
 api_bp.register_blueprint(timelines_bp)
+api_bp.register_blueprint(local_insights_bp)
 
 namespaces = []
 
