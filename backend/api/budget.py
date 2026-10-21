@@ -7,6 +7,7 @@ from backend.schemas.budget import BudgetRecordResponse, PaginatedResponse, Depa
 from dataclasses import asdict
 
 from backend.repositories.budget import budget_repo
+from backend.services.scheme_budget_impact_service import SchemeBudgetImpactService
 
 budget_bp = Blueprint('budget', __name__, url_prefix='/budget')
 
@@ -61,7 +62,7 @@ def get_records():
         dept_id = request.args.get('department_id', type=int)
         scheme_id = request.args.get('scheme_id', type=int)
         stage_str = request.args.get('budget_stage')
-        
+
         stage = None
         if stage_str:
             try:
@@ -76,7 +77,7 @@ def get_records():
                 financial_year=year, department_id=dept_id,
                 scheme_id=scheme_id, budget_stage=stage
             )
-            
+
             data = [asdict(BudgetRecordResponse.from_model(r)) for r in records]
             response = asdict(PaginatedResponse(records=data, total_count=total, skip=skip, limit=limit))
             return success_response(data=response)
@@ -91,7 +92,7 @@ def summarize_year():
     stage_str = request.args.get('budget_stage')
     if not stage_str:
         return error_response("budget_stage is required for summation.", status_code=400)
-    
+
     try:
         stage = BudgetStage(stage_str)
     except ValueError:
@@ -114,7 +115,7 @@ def summarize_department():
     year = request.args.get('financial_year')
     if not stage_str or not year:
         return error_response("budget_stage and financial_year are required.", status_code=400)
-    
+
     try:
         stage = BudgetStage(stage_str)
     except ValueError:
@@ -136,10 +137,10 @@ def summarize_scheme():
     stage_str = request.args.get('budget_stage')
     year = request.args.get('financial_year')
     dept_id = request.args.get('department_id', type=int)
-    
+
     if not stage_str or not year:
         return error_response("budget_stage and financial_year are required.", status_code=400)
-    
+
     try:
         stage = BudgetStage(stage_str)
     except ValueError:
@@ -161,10 +162,10 @@ def get_trend():
     stage_str = request.args.get('budget_stage')
     dept_id = request.args.get('department_id', type=int)
     scheme_id = request.args.get('scheme_id', type=int)
-    
+
     if not stage_str:
         return error_response("budget_stage is required for trend analysis.", status_code=400)
-    
+
     try:
         stage = BudgetStage(stage_str)
     except ValueError:
@@ -186,10 +187,10 @@ def get_scheme_trends():
     """Calculates year-wise totals and trends grouped by scheme."""
     stage_str = request.args.get('budget_stage')
     dept_id = request.args.get('department_id', type=int)
-    
+
     if not stage_str:
         return error_response("budget_stage is required for trend analysis.", status_code=400)
-    
+
     try:
         stage = BudgetStage(stage_str)
     except ValueError:
@@ -203,5 +204,25 @@ def get_scheme_trends():
         )
         trends = budget_service.calculate_scheme_trends(records)
         return success_response(data=trends)
+    finally:
+        db.close()
+
+
+@budget_bp.route('/schemes/<scheme_id>/impact-analysis', methods=['GET'])
+def get_budget_scheme_impact_analysis(scheme_id: str):
+    """
+    Phase 13.3: Scheme and Budget Impact Analysis.
+    Returns multi-year financial inputs (BE, RE, AE), verified beneficiaries,
+    reported outputs, measured outcomes, and epistemic guardrails.
+    """
+    db = SessionLocal()
+    try:
+        service = SchemeBudgetImpactService(db)
+        result = service.analyze_scheme_impact(scheme_id)
+        return success_response(data=result)
+    except ValueError as ve:
+        return error_response(str(ve), status_code=404)
+    except Exception as e:
+        return error_response(f"Failed to analyze budget scheme impact: {str(e)}", status_code=500)
     finally:
         db.close()

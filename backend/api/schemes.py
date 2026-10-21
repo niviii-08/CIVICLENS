@@ -12,6 +12,10 @@ from backend.models.budget import (
     BudgetSourceDocument,
 )
 from backend.api.responses import success_response, error_response
+from backend.services.scheme_budget_impact_service import (
+    SchemeBudgetImpactService,
+    IncompatibleMetricComparisonError,
+)
 
 schemes_bp = Blueprint('schemes', __name__, url_prefix='/schemes')
 
@@ -120,6 +124,24 @@ def get_scheme(scheme_id: int):
             "target_beneficiaries": scheme.target_beneficiaries,
             "is_uncertain_match": bool(scheme.is_uncertain_match)
         })
+
+
+@schemes_bp.route('/<scheme_id>/impact-analysis', methods=['GET'])
+def get_scheme_impact_analysis(scheme_id: str):
+    """
+    Phase 13.3 Scheme and Budget Impact Analysis Endpoint.
+    Returns multi-year financial inputs (BE, RE, AE), verified beneficiaries,
+    reported outputs, measured outcomes, and epistemic guardrails.
+    """
+    with _get_db_session() as db:
+        try:
+            service = SchemeBudgetImpactService(db)
+            result = service.analyze_scheme_impact(scheme_id)
+            return success_response(result)
+        except ValueError as ve:
+            return error_response(str(ve), status_code=404)
+        except Exception as e:
+            return error_response(f"Failed to analyze scheme impact: {str(e)}", status_code=500)
 
 
 @schemes_bp.route('/<int:scheme_id>/history', methods=['GET'])
@@ -248,11 +270,38 @@ def semantic_text_search():
         return error_response(f"Semantic search failed: {str(e)}", status_code=500)
 
 
+@schemes_bp.route('/compare-impact', methods=['GET'])
+def compare_schemes_impact_endpoint():
+    ids_param = request.args.get('ids')
+    fy = request.args.get('financial_year') or request.args.get('fy')
+    if not ids_param:
+        return error_response("Query parameter 'ids' is required (comma-separated).", status_code=400)
+
+    ids = [i.strip() for i in ids_param.split(',') if i.strip()]
+    if len(ids) < 2:
+        return error_response("At least two scheme IDs or codes are required for comparison.", status_code=400)
+
+    with _get_db_session() as db:
+        try:
+            service = SchemeBudgetImpactService(db)
+            result = service.compare_schemes_impact(ids, financial_year=fy)
+            return success_response(result)
+        except IncompatibleMetricComparisonError as ie:
+            return error_response(str(ie), status_code=400)
+        except Exception as e:
+            return error_response(f"Impact comparison failed: {str(e)}", status_code=500)
+
+
 @schemes_bp.route('/compare', methods=['GET'])
 def compare_schemes():
     ids_param = request.args.get('ids')
     if not ids_param:
         return error_response("Query parameter 'ids' is required (comma-separated).", status_code=400)
+
+    # Support mode=impact delegate
+    mode = request.args.get('mode') or request.args.get('type')
+    if mode == 'impact':
+        return compare_schemes_impact_endpoint()
 
     try:
         scheme_ids = [int(i.strip()) for i in ids_param.split(',') if i.strip().isdigit()]
