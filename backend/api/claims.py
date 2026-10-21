@@ -1284,6 +1284,31 @@ def get_claim_verification(claim_id: str):
 
         db.close()
 
+@claims_bp.route("/<string:claim_id>/assessment", methods=["GET"])
+def get_claim_assessment(claim_id: str):
+    """
+    Get citizen-friendly, evidence-based claim assessment dossier (Phase 13.4).
+    Strictly separates original claim wording from platform evidentiary assessment.
+    Standardizes on the 5-tier citizen taxonomy, highlights supporting, contradicting,
+    and contextual passages, and surfaces uncertainty/conflict reasons.
+    """
+    from backend.services.claim_assessment_service import ClaimAssessmentService
+    db = SessionLocal()
+    try:
+        service = ClaimAssessmentService(db=db)
+        dossier = service.get_claim_assessment_dossier(claim_id)
+        return success_response(
+            data=dossier,
+            message=f"Claim assessment dossier for '{claim_id}' retrieved successfully"
+        )
+    except ValueError as ve:
+        return error_response(str(ve), status_code=404)
+    except Exception as e:
+        return error_response(f"Failed to compile claim assessment: {str(e)}", status_code=500)
+    finally:
+        db.close()
+
+
 @claims_bp.route("/stats", methods=["GET"])
 
 def get_claim_stats():

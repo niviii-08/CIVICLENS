@@ -53,8 +53,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Prepopulate standard test evidence documents and passages
-    # 1. Statutory Support Document
     doc_supp = EvidenceDocument(
         document_id="EDOC-VERIF-GO-2023",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -75,7 +73,6 @@ def db_session():
         numerical_values={"amount_crores": 7000.0, "monthly_stipend": 1000.0, "year": 2023}
     )
 
-    # 2. Statutory Contradiction Document (CAG Audit)
     doc_contra = EvidenceDocument(
         document_id="EDOC-VERIF-CAG-2024",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -96,7 +93,6 @@ def db_session():
         numerical_values={"rejected_lakhs": 35.0, "year": 2024}
     )
 
-    # 3. Outdated Baseline Document
     doc_old = EvidenceDocument(
         document_id="EDOC-VERIF-OLD-2018",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -140,9 +136,6 @@ def api_client(db_session):
     Base.metadata.drop_all(bind=engine)
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Supported by Available Evidence
-# ---------------------------------------------------------------------------
 def test_1_supported_by_available_evidence(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -162,7 +155,6 @@ def test_1_supported_by_available_evidence(db_session):
     db_session.add_all([claim, ac])
     db_session.commit()
 
-    # Link supporting relationship
     rel = ClaimEvidenceRelationship(
         relationship_id="CER-VERIF-SUPP-01",
         claim_id=claim.claim_id,
@@ -186,9 +178,6 @@ def test_1_supported_by_available_evidence(db_session):
     assert res.source_diversity["total_relevant_passages"] >= 1
 
 
-# ---------------------------------------------------------------------------
-# Test 2: Contradicted by Available Evidence
-# ---------------------------------------------------------------------------
 def test_2_contradicted_by_available_evidence(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -227,9 +216,6 @@ def test_2_contradicted_by_available_evidence(db_session):
     assert "CONTRADICTED" in res.explanation
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Partially Supported (Multi-Part Claim)
-# ---------------------------------------------------------------------------
 def test_3_partially_supported_multi_part_claim(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -254,7 +240,6 @@ def test_3_partially_supported_multi_part_claim(db_session):
     db_session.add_all([claim, ac1, ac2])
     db_session.commit()
 
-    # ac1 is supported; ac2 has no records (unresolved)
     rel1 = ClaimEvidenceRelationship(
         relationship_id="CER-VERIF-PART-01",
         claim_id=claim.claim_id,
@@ -274,9 +259,6 @@ def test_3_partially_supported_multi_part_claim(db_session):
     assert "UNRESOLVED" in res.explanation
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Missing Important Context
-# ---------------------------------------------------------------------------
 def test_4_missing_important_context(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -296,7 +278,6 @@ def test_4_missing_important_context(db_session):
     db_session.add_all([claim, ac])
     db_session.commit()
 
-    # Only outdated 2018 record found
     rel_old = ClaimEvidenceRelationship(
         relationship_id="CER-VERIF-OLD-01",
         claim_id=claim.claim_id,
@@ -315,9 +296,6 @@ def test_4_missing_important_context(db_session):
     assert "omits important" in res.explanation.lower()
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Insufficient Evidence Handling
-# ---------------------------------------------------------------------------
 def test_5_insufficient_evidence_when_evidence_is_missing(db_session):
     """
     Enforces core epistemic principle:
@@ -341,9 +319,6 @@ def test_5_insufficient_evidence_when_evidence_is_missing(db_session):
     assert "Absence of evidence is not proof that the statement is false" in res.explanation
 
 
-# ---------------------------------------------------------------------------
-# Test 6: Disputed Evidence
-# ---------------------------------------------------------------------------
 def test_6_disputed_evidence(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -361,7 +336,6 @@ def test_6_disputed_evidence(db_session):
     db_session.add_all([claim, ac])
     db_session.commit()
 
-    # Link both official support and official CAG contradiction
     rel_supp = ClaimEvidenceRelationship(
         relationship_id="CER-VERIF-DISP-SUPP",
         claim_id=claim.claim_id,
@@ -389,9 +363,6 @@ def test_6_disputed_evidence(db_session):
     assert "conflict between available authoritative sources" in res.explanation.lower()
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Unverifiable for Slogans and Subjective Opinions
-# ---------------------------------------------------------------------------
 def test_7_unverifiable_for_slogans_and_subjective_opinions(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -411,9 +382,6 @@ def test_7_unverifiable_for_slogans_and_subjective_opinions(db_session):
     assert "slogan, opinion, or non-verifiable value judgment" in res.explanation
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Pending Review and Uncertainty Exposure
-# ---------------------------------------------------------------------------
 def test_8_pending_review_and_uncertainty_handling(db_session):
     claim = Claim(
         claim_id="CLM-VERIF-PEND-01",
@@ -440,9 +408,6 @@ def test_8_pending_review_and_uncertainty_handling(db_session):
     assert result.uncertainty_indicator == 0.60
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Human Review Workflow — Accept Assessment
-# ---------------------------------------------------------------------------
 def test_9_human_review_workflow_accept_assessment(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -455,7 +420,6 @@ def test_9_human_review_workflow_accept_assessment(db_session):
     db_session.add(claim)
     db_session.commit()
 
-    # Link evidence and run verify
     rel = ClaimEvidenceRelationship(
         relationship_id="CER-REV-ACC-01",
         claim_id=claim.claim_id,
@@ -469,7 +433,6 @@ def test_9_human_review_workflow_accept_assessment(db_session):
 
     engine.verify_claim(claim_id=claim.claim_id)
 
-    # Human reviewer accepts assessment
     res = engine.accept_assessment(
         claim_id=claim.claim_id,
         reviewer_id="ANALYST-CH-01",
@@ -479,22 +442,17 @@ def test_9_human_review_workflow_accept_assessment(db_session):
     assert res.review_status == ReviewStatus.ACCEPTED
     assert claim.review_status == ReviewStatus.ACCEPTED
 
-    # Verify review record logged
     reviews = list(claim.reviews)
     assert len(reviews) >= 1
     assert reviews[0].reviewer_id == "ANALYST-CH-01"
     assert reviews[0].action == ReviewAction.ACCEPT_ASSESSMENT.value
     assert reviews[0].override_applied is False
 
-    # Verify history audit logged
     histories = list(claim.verification_history)
-    assert len(histories) >= 2  # initial + accept
+    assert len(histories) >= 2
     assert "accepted automated assessment" in histories[-1].change_reason
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Human Review Workflow — Revise Outcome (Preserves Automated Baseline)
-# ---------------------------------------------------------------------------
 def test_10_human_review_workflow_revise_outcome_preserves_baseline(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -507,7 +465,6 @@ def test_10_human_review_workflow_revise_outcome_preserves_baseline(db_session):
     db_session.add(claim)
     db_session.commit()
 
-    # Link supporting evidence
     rel = ClaimEvidenceRelationship(
         relationship_id="CER-REV-OVR-01",
         claim_id=claim.claim_id,
@@ -519,11 +476,9 @@ def test_10_human_review_workflow_revise_outcome_preserves_baseline(db_session):
     db_session.add(rel)
     db_session.commit()
 
-    # Initial automated verification
     res_auto = engine.verify_claim(claim_id=claim.claim_id)
     assert res_auto.outcome == VerificationOutcome.SUPPORTED_BY_AVAILABLE_EVIDENCE
 
-    # Reviewer overrides outcome with justification
     res_revised = engine.revise_outcome(
         claim_id=claim.claim_id,
         reviewer_id="EDITOR-IN-CHIEF-01",
@@ -532,12 +487,10 @@ def test_10_human_review_workflow_revise_outcome_preserves_baseline(db_session):
         review_notes="Field audit reported delays in hilly tribal belts."
     )
 
-    # Core requirement: Current outcome is revised, BUT automated baseline is permanently preserved!
     assert res_revised.outcome == VerificationOutcome.PARTIALLY_SUPPORTED
     assert res_revised.automated_outcome == VerificationOutcome.SUPPORTED_BY_AVAILABLE_EVIDENCE
     assert res_revised.review_status == ReviewStatus.OVERRIDDEN
 
-    # Check review record
     rev_record = claim.reviews[-1]
     assert rev_record.override_applied is True
     assert rev_record.original_outcome == "supported_by_available_evidence"
@@ -545,9 +498,6 @@ def test_10_human_review_workflow_revise_outcome_preserves_baseline(db_session):
     assert "field audit reported delays" in rev_record.review_notes.lower()
 
 
-# ---------------------------------------------------------------------------
-# Test 11: Human Review Workflow — Decomposition and Evidence Adjustments
-# ---------------------------------------------------------------------------
 def test_11_human_review_workflow_decomposition_and_evidence_adjustments(db_session):
     engine = ClaimVerificationEngine(db=db_session)
 
@@ -560,7 +510,6 @@ def test_11_human_review_workflow_decomposition_and_evidence_adjustments(db_sess
     db_session.add(claim)
     db_session.commit()
 
-    # 1. Correct decomposition
     corrected_atomics = [
         {"atomic_claim_text": "Sub-claim 1: Fund allocation", "numeric_value": 7000.0},
         {"atomic_claim_text": "Sub-claim 2: Physical delivery", "numeric_value": 1.15}
@@ -573,7 +522,6 @@ def test_11_human_review_workflow_decomposition_and_evidence_adjustments(db_sess
     )
     assert len(claim.atomic_claims) == 2
 
-    # 2. Add evidence manually
     res2 = engine.add_evidence(
         claim_id=claim.claim_id,
         reviewer_id="EXPERT-DEC-01",
@@ -593,7 +541,6 @@ def test_11_human_review_workflow_decomposition_and_evidence_adjustments(db_sess
     )
     assert res2.outcome == VerificationOutcome.SUPPORTED_BY_AVAILABLE_EVIDENCE
 
-    # 3. Mark evidence irrelevant
     res3 = engine.mark_evidence_irrelevant(
         claim_id=claim.claim_id,
         reviewer_id="EXPERT-DEC-01",
@@ -603,13 +550,9 @@ def test_11_human_review_workflow_decomposition_and_evidence_adjustments(db_sess
     assert res3 is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 12: REST API Endpoints Integration (/verify, /review, /verification)
-# ---------------------------------------------------------------------------
 def test_12_rest_api_verify_review_and_verification_endpoints(api_client):
     claim_id = "CLM-API-VERIF-01"
 
-    # 1. Ingest claim
     ingest_resp = api_client.post("/api/claims/ingest", json={
         "claim_id": claim_id,
         "original_text": "Tamil Nadu budget allocated Rs 13,720 crore for Kalaignar Magalir Urimai Thittam.",
@@ -619,7 +562,6 @@ def test_12_rest_api_verify_review_and_verification_endpoints(api_client):
     })
     assert ingest_resp.status_code == 200
 
-    # 2. Add evidence document and link relationship
     from backend.database.session import SessionLocal
     db = SessionLocal()
     try:
@@ -649,7 +591,6 @@ def test_12_rest_api_verify_review_and_verification_endpoints(api_client):
     finally:
         db.close()
 
-    # 3. POST /api/claims/<claim_id>/verify
     verify_resp = api_client.post(f"/api/claims/{claim_id}/verify", json={})
     assert verify_resp.status_code == 200
     v_data = verify_resp.get_json()["data"]
@@ -657,9 +598,9 @@ def test_12_rest_api_verify_review_and_verification_endpoints(api_client):
     assert "explanation" in v_data
     assert "source_diversity" in v_data
 
-    # 4. POST /api/claims/<claim_id>/review (Human Review: Accept)
     rev_resp = api_client.post(f"/api/claims/{claim_id}/review", json={
         "reviewer_id": "FACTCHECKER-API-01",
+        "reviewer_role": "LEAD_REVIEWER",
         "action": "accept_assessment",
         "review_notes": "All budget lines cross-verified with finance portal."
     })
@@ -667,7 +608,6 @@ def test_12_rest_api_verify_review_and_verification_endpoints(api_client):
     r_data = rev_resp.get_json()["data"]
     assert r_data["review_status"] == "ACCEPTED"
 
-    # 5. GET /api/claims/<claim_id>/verification (Full verification profile & audit history)
     prof_resp = api_client.get(f"/api/claims/{claim_id}/verification")
     assert prof_resp.status_code == 200
     p_data = prof_resp.get_json()["data"]
