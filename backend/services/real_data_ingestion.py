@@ -1,15 +1,11 @@
 """
-Phase 6.10 — Real Public Dataset Ingestion & Integration Script.
+Public representative and constituency data ingestion pipeline.
 
-Processes preserved Phase 6 public records from data/raw/phase6:
-1. Registers Phase 6 raw inventory (Phase_6_DS_1 and Phase_6_DS_2).
-2. Seeds real canonical Lok Sabha Parliamentary Constituencies (39 PCs in Tamil Nadu)
-   and sample Assembly Constituencies based on ECI records in D3-001/D2-001.
-3. Ingests documented 17th Lok Sabha MP profiles and participation records (D4-001, D4-002, D4-003).
-4. Imports officially answered state-level MPLADS financial execution allocations (D8-001, D8-002, D8-004).
-5. Ingests official Census 2011 & Department of Economics and Statistics district baseline indicators (D11-001, D12-001).
-6. Cross-references verified promises (Phase 3) where applicable.
-7. Computes transparent performance metrics and completeness scores.
+Processes official public records for elected representatives:
+- Lok Sabha Parliamentary Constituencies (39 PCs in Tamil Nadu) and Assembly Constituencies.
+- Member of Parliament attendance, debates, and questions asked.
+- Official MPLADS execution and financial allocations.
+- District baseline socioeconomic indicators.
 """
 
 import os
@@ -37,17 +33,16 @@ from backend.models.representative import (
     AttributionType,
     GeographicLevel,
     CalculationMethod,
-    IndicatorQualityStatus
+    IndicatorQualityStatus,
+    PerformanceMetric
 )
 from backend.models.news import PoliticalParty
 from backend.models.common import Source, Document, ProcessingStatus
 from backend.services.performance_metrics import PerformanceMetricsEngine
 
-
 def compute_sha256(filepath: str) -> str:
     with open(filepath, "rb") as f:
         return hashlib.sha256(f.read()).hexdigest()
-
 
 def run_phase6_integration():
     Base.metadata.create_all(bind=engine)
@@ -61,7 +56,6 @@ def run_phase6_integration():
     print("PHASE 6.10 — REAL DATASET INTEGRATION AND PIPELINE INGESTION")
     print("=============================================================")
 
-    # 1. Register Source Documents & Data Sources
     print("\n[Step 1] Registering Raw Datasets in Canonical Provenance Tables...")
     ds1_hash = compute_sha256(ds1_zip)
     ds2_hash = compute_sha256(ds2_csv)
@@ -92,7 +86,6 @@ def run_phase6_integration():
     print(f"  -> Phase 6 DS 1 preserved (SHA-256: {ds1_hash[:16]}...)")
     print(f"  -> Phase 6 DS 2 preserved (SHA-256: {ds2_hash[:16]}...)")
 
-    # 2. Seed Political Parties (Real registered parties in TN)
     print("\n[Step 2] Seeding / Verifying Canonical Political Parties...")
     parties_data = [
         ("PARTY-DMK", "Dravida Munnetra Kazhagam", "DMK"),
@@ -110,7 +103,6 @@ def run_phase6_integration():
     db.commit()
     print(f"  -> {len(parties_data)} Political parties verified.")
 
-    # 3. Seed Canonical 39 Parliamentary Constituencies (Lok Sabha TN 2024)
     print("\n[Step 3] Importing Canonical Tamil Nadu Parliamentary Constituencies...")
     tn_39_pcs = [
         ("PC-TN-01", "Thiruvallur", "Thiruvallur"),
@@ -168,7 +160,6 @@ def run_phase6_integration():
     db.commit()
     print(f"  -> Ingested all {len(tn_39_pcs)} Parliamentary Constituencies of Tamil Nadu.")
 
-    # 4. Ingest Elections (17th & 18th Lok Sabha)
     print("\n[Step 4] Registering Election Cycles...")
     e_ls17 = Election(
         election_id="LS-2019",
@@ -196,7 +187,6 @@ def run_phase6_integration():
     db.merge(e_tnla16)
     db.commit()
 
-    # 5. Ingest Real Parliamentary Representatives (17th Lok Sabha MPs from D4-001, D4-002, D4-003)
     print("\n[Step 5] Ingesting Documented Parliamentary Representatives (D4-001, D4-002, D4-003)...")
     real_mps = [
         {
@@ -254,7 +244,6 @@ def run_phase6_integration():
         )
         db.merge(r)
 
-        # Ingest term
         term = RepresentativeTerm(
             term_id=f"TERM-17LS-{mp['id']}",
             representative_id=mp["id"],
@@ -269,7 +258,6 @@ def run_phase6_integration():
         )
         db.merge(term)
 
-        # Ingest verified legislative activities
         act_q = LegislativeActivity(
             activity_id=f"ACT-{mp['id']}-Q",
             representative_id=mp["id"],
@@ -311,12 +299,11 @@ def run_phase6_integration():
     db.commit()
     print(f"  -> Successfully imported {len(real_mps)} real MPs and their parliamentary activity records.")
 
-    # 6. Ingest State-Level MPLADS Works & Allocations (D8-001, D8-002, D8-004)
     print("\n[Step 6] Ingesting Official MPLADS State-Level Works & Expenditure (D8-001, D8-002)...")
     mplads_records = [
         {
             "id": "WRK-MPLADS-TN-17LS-D8001",
-            "constituency_id": "PC-TN-04",  # Associated central nodality
+            "constituency_id": "PC-TN-04",
             "scheme_id": "MPLADS",
             "description": "Tamil Nadu State-level MPLADS cumulative works sanctioned as reported in Lok Sabha Unstarred Q.1683",
             "sanctioned_amount": 1825000000.0,
@@ -355,7 +342,6 @@ def run_phase6_integration():
     db.commit()
     print(f"  -> Ingested {len(mplads_records)} verified MPLADS records.")
 
-    # 7. Ingest Census 2011 & DES TN Development Indicators (D11-001, D11-002, D12-001)
     print("\n[Step 7] Ingesting Census 2011 & DES TN Development Indicators...")
     real_indicators = [
         ("IND-CENSUS-TN-LIT-2011", "PC-TN-04", "LITERACY_RATE", 80.09, "PERCENT", "2011", GeographicLevel.CONSTITUENCY, "D11-001"),
@@ -383,7 +369,6 @@ def run_phase6_integration():
     db.commit()
     print(f"  -> Ingested {len(real_indicators)} Census 2011 & DES TN indicator observations.")
 
-    # 8. Compute Real Metrics & Sensitivity for Ingested MPs
     print("\n[Step 8] Executing Metrics Engine on Real Representatives...")
     engine_calc = PerformanceMetricsEngine(db=db)
     for mp in real_mps:
@@ -401,12 +386,10 @@ def run_phase6_integration():
         print(f"    - Attendance: {leg_metrics['raw_metrics']['attendance_percentage']}%")
         print(f"    - Data Completeness: {comp_metrics['completeness_ratio'] * 100}%")
 
-    # 9. Phase 6.11 Traceability: Register Source Documents, Granular Citations, Lineage, and Conflicts
     print("\n[Step 9] Registering Source Documents, Evidence Citations, Metric Lineages, and Conflicts (Phase 6.11)...")
     from backend.services.traceability_service import TraceabilityService
     trace_service = TraceabilityService(db=db)
 
-    # 9a. Register Source Documents
     source_docs = [
         {
             "id": "D4-001",
@@ -508,7 +491,6 @@ def run_phase6_integration():
             verification_status=sd["status"]
         )
 
-    # 9b. Link Facts to Granular Citations (Page/Table/Excerpt)
     citations = [
         {
             "link_id": "CIT-REP-PERAMBALUR",
@@ -580,7 +562,17 @@ def run_phase6_integration():
             confidence_score=cit["conf"]
         )
 
-    # 9c. Persist Metric Lineages for Derived Aggregates
+    if not db.query(PerformanceMetric).filter(PerformanceMetric.metric_id == "MET-EXPENDITURE-PC-TN-04").first():
+        db.add(PerformanceMetric(
+            metric_id="MET-EXPENDITURE-PC-TN-04",
+            reporting_period="2019-2024",
+            dimension="EXPENDITURE",
+            metric_code="EXPENDITURE_UTILIZATION",
+            raw_value=88.82,
+            raw_unit="PERCENTAGE"
+        ))
+        db.commit()
+
     trace_service.record_metric_lineage(
         lineage_id="LIN-EXP-PC-TN-04",
         metric_id="MET-EXPENDITURE-PC-TN-04",
@@ -594,7 +586,6 @@ def run_phase6_integration():
         geographic_level="STATE_CONSTITUENCY"
     )
 
-    # 9d. Record Conflicting Evidence (Preserving divergent reporting without arbitrary suppression)
     trace_service.record_conflicting_evidence(
         conflict_id="CONF-MPLADS-D8001-D8002",
         entity_type="CONSTITUENCY_WORK",
@@ -616,7 +607,6 @@ def run_phase6_integration():
     print("\n=============================================================")
     print("PHASE 6.10 & 6.11 INTEGRATION AND TRACEABILITY COMPLETE.")
     print("=============================================================")
-
 
 if __name__ == "__main__":
     run_phase6_integration()
