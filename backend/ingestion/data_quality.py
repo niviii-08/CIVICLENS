@@ -107,9 +107,9 @@ class SecretScrubber:
         re.IGNORECASE
     )
 
-    # Matches api_key="secret", token='123456', password = "foo"
+    # Matches api_key="secret", internal_token='123456', password = "foo"
     AUTH_KV_PATTERN = re.compile(
-        r"(?i)\b(api[_-]?key|access[_-]?token|secret[_-]?key|password|auth|authorization)\b(\s*[:=]\s*['\"]?)([\w\-\.\+/=]{6,})(['\"]?)",
+        r"(?i)\b([\w\-_]*(?:api[_-]?key|token|secret|password|auth|authorization))\b(\s*[:=]\s*['\"]?)([\w\-\.\+/=]{6,})(['\"]?)",
     )
 
     # Matches bearer <token>

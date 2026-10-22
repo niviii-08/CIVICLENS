@@ -19,6 +19,7 @@ from backend.api.timelines import timelines_bp
 from backend.api.local_insights import local_insights_bp
 from backend.api.reports import reports_bp
 from backend.api.tracking import tracking_bp
+from backend.api.freshness import freshness_bp
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -65,6 +66,7 @@ api_bp.register_blueprint(timelines_bp)
 api_bp.register_blueprint(local_insights_bp)
 api_bp.register_blueprint(reports_bp)
 api_bp.register_blueprint(tracking_bp)
+api_bp.register_blueprint(freshness_bp)
 
 namespaces = []
 
