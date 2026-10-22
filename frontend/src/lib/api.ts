@@ -2059,3 +2059,155 @@ export async function fetchRelatedRecords(
   }
   return [];
 }
+
+export interface CrossModuleIntelligence {
+  source_record: {
+    id: string;
+    canonical_id: string;
+    type: string;
+    type_label: string;
+    title: string;
+    href: string;
+    current_status: string;
+  };
+  summary_counts: {
+    total: number;
+    direct: number;
+    evidence: number;
+    inferred: number;
+  };
+  has_related_records: boolean;
+  notice?: string | null;
+  explicit_relationships: RelatedRecord[];
+  inferred_relationships: RelatedRecord[];
+  timeline_navigation: {
+    available: boolean;
+    timeline_api?: string | null;
+    timeline_ui?: string | null;
+    milestone_count: number;
+    date_range: {
+      start_date?: string | null;
+      end_date?: string | null;
+      latest_milestone?: string | null;
+    };
+  };
+  public_reports: {
+    available: boolean;
+    domain?: string | null;
+    report_api?: string | null;
+    export_formats: {
+      json?: string | null;
+      csv?: string | null;
+      markdown?: string | null;
+      html?: string | null;
+    };
+  };
+  saved_tracking: {
+    supported: boolean;
+    tracking_payload?: any;
+    tracking_api?: string | null;
+    status_check_api?: string | null;
+  };
+  geographic_insights: {
+    available: boolean;
+    level?: string;
+    code?: string;
+    name?: string;
+    profile_api?: string;
+    compare_api?: string;
+    explore_ui?: string;
+  };
+  epistemic_integrity: {
+    non_causal_statement: string;
+    dpdpa_privacy_compliance: string;
+    audit_integrity: string;
+  };
+}
+
+export interface Phase13Journey {
+  journey_id: string;
+  phase_capability: string;
+  title: string;
+  start_route: string;
+  step_1: string;
+  step_2: string;
+  step_3: string;
+  step_4?: string;
+}
+
+/**
+ * Phase 13.9: Fetches complete 360-degree Cross-Module Civic Intelligence
+ * integrating related records, timelines, reports, tracking, and geographic insights.
+ */
+export async function fetchCrossModuleIntelligence(
+  recordType: string,
+  recordId: string,
+  includeInferred: boolean = true
+): Promise<CrossModuleIntelligence | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/integration/cross-module/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}?include_inferred=${includeInferred}`,
+      { cache: 'no-store' }
+    );
+    if (res.ok) {
+      const json = await res.json();
+      if (json.status === 'success' && json.data) {
+        return json.data as CrossModuleIntelligence;
+      }
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch cross-module intelligence for ${recordType}/${recordId}:`, err);
+  }
+  return null;
+}
+
+/**
+ * Phase 13.9: Fetches canonical Phase 13 cross-module citizen journeys.
+ */
+export async function fetchPhase13Journeys(): Promise<Phase13Journey[]> {
+  try {
+    const res = await fetch(`${API_BASE}/integration/journeys/phase13`, { cache: 'no-store' });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.status === 'success' && json.data?.journeys) {
+        return json.data.journeys;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to fetch Phase 13 journeys:', err);
+  }
+  return [];
+}
+
+/**
+ * Phase 13.9: Discovers multi-hop connection paths between two civic entities.
+ */
+export async function fetchMultiHopPath(
+  fromType: string,
+  fromId: string,
+  toId: string,
+  toType?: string,
+  maxHops: number = 3
+): Promise<any | null> {
+  try {
+    const params = new URLSearchParams({
+      from_type: fromType,
+      from_id: fromId,
+      to_id: toId,
+      max_hops: String(maxHops),
+    });
+    if (toType) {
+      params.append('to_type', toType);
+    }
+    const res = await fetch(`${API_BASE}/integration/path?${params.toString()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.status === 'success' && json.data) {
+        return json.data;
+      }
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch multi-hop path from ${fromType}:${fromId} to ${toId}:`, err);
+  }
+  return null;
+}

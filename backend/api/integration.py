@@ -216,7 +216,7 @@ def get_integration_matrix():
 @integration_bp.route("/journeys", methods=["GET"])
 def get_supported_journeys():
     """
-    Returns the 6 primary citizen navigation journeys supported across CIVICLENS TN.
+    Returns the canonical citizen navigation journeys supported across CIVICLENS TN.
     """
     return success_response(
         data={
@@ -225,3 +225,134 @@ def get_supported_journeys():
         },
         message="Supported cross-phase citizen journeys retrieved successfully."
     )
+
+
+# -------------------------------------------------------------------
+# PHASE 13 CROSS-MODULE CIVIC INTELLIGENCE ENDPOINTS
+# -------------------------------------------------------------------
+
+@integration_bp.route("/cross-module/<record_type>/<record_id>", methods=["GET"])
+def get_cross_module_intelligence(record_type: str, record_id: str):
+    """
+    Phase 13.9: Returns unified 360-degree Civic Intelligence for any record:
+      - Related Records (explicit vs inferred breakdown)
+      - Evidence Timelines & Milestones
+      - Geographic Insights & Administrative Profile
+      - Public Reports & Export Links (JSON, CSV, MD, HTML)
+      - Saved Record Tracking Payload & Live Status
+      - Non-Causal Epistemic Guardrails & DPDPA 2023 Redaction
+    """
+    clean_type = record_type.strip().lower()
+    clean_id = record_id.strip()
+
+    if not clean_id or not clean_type:
+        return error_response(
+            message="Both record_type and record_id are required.",
+            status_code=400
+        )
+
+    include_inferred = request.args.get("include_inferred", "true").lower() in ("true", "1", "yes")
+
+    db: Session = get_db()
+    try:
+        data = CrossPhaseIntegrationService.get_cross_module_intelligence(
+            db=db,
+            record_type=clean_type,
+            record_id=clean_id,
+            include_inferred=include_inferred,
+            user_role="citizen"
+        )
+        return success_response(
+            data=data,
+            message=f"Cross-module civic intelligence for {clean_type} '{clean_id}' generated successfully."
+        )
+    except Exception as e:
+        logger.error(f"Error generating cross-module intelligence for {clean_type}/{clean_id}: {e}", exc_info=True)
+        return error_response(
+            message="Unable to generate cross-module civic intelligence due to an internal service error.",
+            error_details=str(e),
+            status_code=500
+        )
+    finally:
+        db.close()
+
+
+@integration_bp.route("/journeys/phase13", methods=["GET"])
+def get_phase13_journeys():
+    """
+    Phase 13.9: Returns the 7 canonical cross-module citizen journeys
+    connecting promises, schemes, budgets, claims, timelines, geographic
+    comparisons, transparent reports, and saved tracking.
+    """
+    journeys = CrossPhaseIntegrationService.get_phase13_journeys()
+    return success_response(
+        data={
+            "journeys": journeys,
+            "total_journeys": len(journeys),
+            "epistemic_notice": (
+                "Each journey reflects documented statutory or evidentiary pathways. "
+                "CivicLens TN enforces strict non-causal attribution across all modules."
+            )
+        },
+        message="Phase 13 cross-module citizen journeys retrieved successfully."
+    )
+
+
+@integration_bp.route("/path", methods=["GET"])
+def get_multi_hop_path():
+    """
+    Phase 13.9: Discovers traceable multi-hop connection paths between civic entities
+    with cycle prevention and bounded search depth.
+
+    Query parameters:
+      - from_type (or source_type): string (required)
+      - from_id (or source_id): string (required)
+      - to_type (or target_type): string (optional)
+      - to_id (or target_id): string (required)
+      - max_hops: integer (default: 3, max: 5)
+    """
+    src_type = request.args.get("from_type") or request.args.get("source_type")
+    src_id = request.args.get("from_id") or request.args.get("source_id")
+    tgt_type = request.args.get("to_type") or request.args.get("target_type")
+    tgt_id = request.args.get("to_id") or request.args.get("target_id")
+
+    if not src_type or not src_id:
+        return error_response(
+            message="Source entity parameters ('from_type' and 'from_id') are required.",
+            status_code=400
+        )
+
+    if not tgt_id:
+        return error_response(
+            message="Target entity identifier ('to_id' or 'target_id') is required.",
+            status_code=400
+        )
+
+    try:
+        max_hops = int(request.args.get("max_hops", 3))
+    except ValueError:
+        return error_response(message="Invalid max_hops parameter. Must be an integer.", status_code=400)
+
+    db: Session = get_db()
+    try:
+        path_result = CrossPhaseIntegrationService.get_multi_hop_path(
+            db=db,
+            source_type=src_type,
+            source_id=src_id,
+            target_type=tgt_type,
+            target_id=tgt_id,
+            max_hops=max_hops
+        )
+        return success_response(
+            data=path_result,
+            message="Multi-hop relationship path search completed."
+        )
+    except Exception as e:
+        logger.error(f"Error computing multi-hop path: {e}", exc_info=True)
+        return error_response(
+            message="Unable to compute multi-hop path due to an internal service error.",
+            error_details=str(e),
+            status_code=500
+        )
+    finally:
+        db.close()
