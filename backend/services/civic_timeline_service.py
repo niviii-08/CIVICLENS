@@ -103,6 +103,42 @@ EVENT_TYPE_PRECEDENCE = {
     "HUMAN_AUDITOR_REVIEW": 110,
 }
 
+# Standard 8-Stage Lifecycle Statuses for Civic Events
+class EventLifecycleStatus:
+    PROPOSED = "PROPOSED"
+    ANNOUNCED = "ANNOUNCED"
+    APPROVED = "APPROVED"
+    FUNDED = "FUNDED"
+    STARTED = "STARTED"
+    COMPLETED = "COMPLETED"
+    AUDITED = "AUDITED"
+    OUTCOME_REPORTED = "OUTCOME_REPORTED"
+
+EVENT_TYPE_TO_LIFECYCLE_STATUS = {
+    "PROMISE_ANNOUNCEMENT": EventLifecycleStatus.PROPOSED,
+    "POLICY_PROPOSAL": EventLifecycleStatus.PROPOSED,
+    "CABINET_ANNOUNCEMENT": EventLifecycleStatus.ANNOUNCED,
+    "POLICY_ANNOUNCEMENT": EventLifecycleStatus.ANNOUNCED,
+    "STATUTORY_NOTIFICATION": EventLifecycleStatus.APPROVED,
+    "POLICY_ENACTMENT": EventLifecycleStatus.APPROVED,
+    "GOVERNMENT_ORDER": EventLifecycleStatus.APPROVED,
+    "BUDGET_ALLOCATION": EventLifecycleStatus.FUNDED,
+    "BUDGET_REVISION": EventLifecycleStatus.FUNDED,
+    "FUND_RELEASE": EventLifecycleStatus.FUNDED,
+    "IMPLEMENTATION_STARTED": EventLifecycleStatus.STARTED,
+    "GRIEVANCE_FILED": EventLifecycleStatus.STARTED,
+    "DEPARTMENT_ACKNOWLEDGEMENT": EventLifecycleStatus.STARTED,
+    "IMPLEMENTATION_MILESTONE": EventLifecycleStatus.STARTED,
+    "ACTION_TAKEN": EventLifecycleStatus.COMPLETED,
+    "DELIVERY_COMPLETED": EventLifecycleStatus.COMPLETED,
+    "WORK_COMPLETED": EventLifecycleStatus.COMPLETED,
+    "CLAIM_STATEMENT": EventLifecycleStatus.ANNOUNCED,
+    "CLAIM_VERIFICATION": EventLifecycleStatus.AUDITED,
+    "AUDIT_SCRUTINY": EventLifecycleStatus.AUDITED,
+    "HUMAN_AUDITOR_REVIEW": EventLifecycleStatus.AUDITED,
+    "OUTCOME_EVALUATION": EventLifecycleStatus.OUTCOME_REPORTED,
+}
+
 
 class CivicTimelineService:
     """
@@ -134,6 +170,45 @@ class CivicTimelineService:
         canonical = self._build_canonical_timeline(clean_id)
         if canonical:
             return canonical
+
+        # Check CANONICAL_SCHEME_TIMELINES from civic_timeline_ingestor
+        try:
+            from backend.ingestion.civic_timeline_ingestor import CANONICAL_SCHEME_TIMELINES
+            norm_id = clean_id.upper()
+            target_key = norm_id if norm_id in CANONICAL_SCHEME_TIMELINES else (norm_id.replace("SCH-", "SCH-TN-") if norm_id.replace("SCH-", "SCH-TN-") in CANONICAL_SCHEME_TIMELINES else None)
+            if target_key:
+                defn = CANONICAL_SCHEME_TIMELINES[target_key]
+                chronological, undated = self._sort_and_categorize_milestones(
+                    defn["milestones"] + defn.get("unanchored_milestones", [])
+                )
+                return {
+                    "timeline_id": f"TL-{target_key}",
+                    "entity_type": "scheme",
+                    "entity_id": target_key,
+                    "title": f"Civic Timeline: {defn['scheme_name']}",
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "total_milestones_evaluated": len(defn["milestones"]) + len(defn.get("unanchored_milestones", [])),
+                    "chronological_milestones_count": len(chronological),
+                    "unanchored_milestones_count": len(undated),
+                    "chronological_milestones": chronological,
+                    "unanchored_milestones": undated,
+                    "date_coverage": {
+                        "earliest_date": chronological[0]["date_semantics"]["primary_date"] if chronological else None,
+                        "latest_date": chronological[-1]["date_semantics"]["primary_date"] if chronological else None,
+                        "reporting_periods_spanned": sorted(list({
+                            m["date_semantics"]["reporting_period"]
+                            for m in chronological
+                            if m["date_semantics"].get("reporting_period")
+                        })),
+                    },
+                    "guardrails": {
+                        "causation_limitation": EPISTEMIC_SEQUENCE_NOT_CAUSATION,
+                        "date_semantics_notice": EPISTEMIC_DATE_SEMANTICS_NOTICE,
+                        "inferred_relationship_disclosure": EPISTEMIC_INFERRED_RELATIONSHIP_DISCLOSURE,
+                    },
+                }
+        except ImportError:
+            pass
 
         db = self._get_db()
         try:
@@ -663,21 +738,77 @@ class CivicTimelineService:
         return []
 
     # -------------------------------------------------------------------
-    # Sorting and Chronological Organization
+    # Sorting, Deduplication and Chronological Organization
     # -------------------------------------------------------------------
+
+    @staticmethod
+    def deduplicate_milestones(milestones: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Deduplicates milestones that represent the same civic event
+        reported across multiple sources (e.g. Government Order vs. News report vs. Press Release).
+        Preserves all source citations by merging citations into the canonical milestone.
+        """
+        dedup_map: Dict[str, Dict[str, Any]] = {}
+        for m in milestones:
+            e_ref = m.get("entity_reference", {})
+            e_id = e_ref.get("canonical_identifier") or e_ref.get("entity_id") or "GLOBAL"
+            e_type = m.get("event_type") or m.get("event_status") or "MILESTONE"
+            p_date = m.get("date_semantics", {}).get("primary_date") or "UNDATED"
+            date_key = p_date[:10] if (p_date and len(p_date) >= 10) else p_date
+
+            dedup_key = f"{e_id}:{e_type}:{date_key}"
+            if dedup_key in dedup_map:
+                existing = dedup_map[dedup_key]
+                # Merge citations
+                existing_doc_ids = {c.get("document_id") for c in existing.get("source_citations", [])}
+                for c in m.get("source_citations", []):
+                    if c.get("document_id") not in existing_doc_ids:
+                        existing.setdefault("source_citations", []).append(c)
+                        existing_doc_ids.add(c.get("document_id"))
+                # Merge conflict notes
+                if m.get("date_semantics", {}).get("has_date_conflict"):
+                    existing["date_semantics"]["has_date_conflict"] = True
+                    existing["date_semantics"]["conflict_explanation"] = m["date_semantics"].get("conflict_explanation")
+                if m.get("date_semantics", {}).get("is_superseded"):
+                    existing["date_semantics"]["is_superseded"] = True
+                    existing["date_semantics"]["superseded_by"] = m["date_semantics"].get("superseded_by")
+            else:
+                dedup_map[dedup_key] = m
+        return list(dedup_map.values())
 
     def _sort_and_categorize_milestones(
         self, milestones: List[Dict[str, Any]]
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
-        Sorts milestones strictly chronologically by primary date.
+        Enriches milestones with 8 lifecycle statuses and complete 6 date dimensions,
+        deduplicates multi-source representations, and sorts strictly chronologically.
         Uses event_type precedence for same-day tie-breaks.
         Separates undated milestones into an unanchored list.
         """
+        # Standardize event_status and date_semantics across all milestones
+        standardized: List[Dict[str, Any]] = []
+        for m in milestones:
+            m_copy = dict(m)
+            e_type = m_copy.get("event_type", "IMPLEMENTATION_MILESTONE")
+            if not m_copy.get("event_status"):
+                m_copy["event_status"] = EVENT_TYPE_TO_LIFECYCLE_STATUS.get(e_type, "STARTED")
+
+            ds = dict(m_copy.get("date_semantics", {}))
+            ds.setdefault("announcement_date", ds.get("event_date") if m_copy["event_status"] in ["PROPOSED", "ANNOUNCED"] else None)
+            ds.setdefault("effective_date", ds.get("event_date") if m_copy["event_status"] in ["APPROVED", "STARTED", "COMPLETED"] else None)
+            ds.setdefault("retrieval_date", ds.get("indexed_at") or datetime.now(timezone.utc).isoformat())
+            ds.setdefault("is_superseded", False)
+            ds.setdefault("superseded_by", None)
+            m_copy["date_semantics"] = ds
+            standardized.append(m_copy)
+
+        # Deduplicate identical events across sources
+        deduped = self.deduplicate_milestones(standardized)
+
         chronological: List[Dict[str, Any]] = []
         undated: List[Dict[str, Any]] = []
 
-        for m in milestones:
+        for m in deduped:
             p_date = m.get("date_semantics", {}).get("primary_date")
             if not p_date or p_date.strip().upper() in ("UNKNOWN", "NONE", ""):
                 undated.append(m)
