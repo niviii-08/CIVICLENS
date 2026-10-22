@@ -383,11 +383,13 @@ class CivicTimelineService:
         if policy:
             activities = db.query(ImplementationActivity).filter(ImplementationActivity.policy_id == policy.policy_id).all()
             for act in activities:
-                act_date = act.start_date.isoformat() if act.start_date else None
+                raw_dt = getattr(act, "scheduled_start", None) or getattr(act, "start_date", None) or getattr(act, "actual_end", None)
+                act_date = raw_dt.isoformat() if hasattr(raw_dt, "isoformat") else (str(raw_dt) if raw_dt else None)
+                act_desc = getattr(act, "description", None) or f"Operational progress in {getattr(act, 'geographic_unit_id', 'Tamil Nadu')}."
                 milestones.append({
                     "milestone_id": f"MS-{code_norm}-ACT-{act.activity_id}",
                     "title": f"Implementation: {act.activity_name}",
-                    "description": act.description or f"Operational progress in {act.district or 'Tamil Nadu'}.",
+                    "description": act_desc,
                     "event_type": "IMPLEMENTATION_MILESTONE",
                     "date_semantics": {
                         "primary_date": act_date,

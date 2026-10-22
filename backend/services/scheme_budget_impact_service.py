@@ -102,8 +102,19 @@ class SchemeBudgetImpactService:
         raw_str = str(identifier).strip()
         upper_str = raw_str.upper()
 
-        # Check canonical aliases first
-        canonical_target = RECORD_ALIASES.get(upper_str, upper_str)
+        # Check scheme synonyms and canonical aliases
+        scheme_alias_map = {
+            "SCH-SW-KMUT": "SCH-TN-KMUT",
+            "SCH-TN-KMUT": "SCH-TN-KMUT",
+            "KMUT": "SCH-TN-KMUT",
+            "MAGALIR": "SCH-TN-KMUT",
+            "SCH-TN-CM-BREAKFAST": "SCH-TN-BREAKFAST",
+            "SCH-EDU-BREAKFAST": "SCH-TN-BREAKFAST",
+            "BREAKFAST": "SCH-TN-BREAKFAST",
+            "SCH-HE-PUDHUMAI": "SCH-TN-PUDHUMAI",
+            "PUDHUMAI": "SCH-TN-PUDHUMAI",
+        }
+        canonical_target = scheme_alias_map.get(upper_str, RECORD_ALIASES.get(upper_str, upper_str))
 
         # 1. Search Policy Registry by policy_id or canonical_scheme_code
         policy = (
@@ -220,6 +231,9 @@ class SchemeBudgetImpactService:
             elif historical_scheme and historical_scheme.department:
                 department_name = historical_scheme.department.name
 
+            if "KMUT" in canonical_code or "MAGALIR" in scheme_name.upper():
+                department_name = "Social Welfare & Women Empowerment / Special Programme Implementation Department"
+
             # 2. Extract Budget Records & Multi-Year Financial Series
             budget_records: List[BudgetRecord] = []
             if budget_scheme:
@@ -249,11 +263,18 @@ class SchemeBudgetImpactService:
                 stage = rec.budget_stage.value if hasattr(rec.budget_stage, "value") else str(rec.budget_stage)
                 amount = float(rec.amount) if rec.amount is not None else None
 
-                if "budget_estimate" in stage.lower():
+                stage_lower = stage.lower()
+                if "budget_estimate" in stage_lower:
                     financial_years_data[fy]["budget_allocation_cr"] = amount
-                elif "revised_estimate" in stage.lower():
+                elif any(k in stage_lower for k in ("sanctioned", "allocation")):
+                    if financial_years_data[fy]["budget_allocation_cr"] is None:
+                        financial_years_data[fy]["budget_allocation_cr"] = amount
+                elif "revised_estimate" in stage_lower or "revised" in stage_lower:
                     financial_years_data[fy]["revised_estimate_cr"] = amount
-                elif "actual" in stage.lower() or "expenditure" in stage.lower():
+                elif "fund_release" in stage_lower:
+                    if financial_years_data[fy]["revised_estimate_cr"] is None:
+                        financial_years_data[fy]["revised_estimate_cr"] = amount
+                elif "actual" in stage_lower or "expenditure" in stage_lower:
                     financial_years_data[fy]["actual_expenditure_cr"] = amount
 
                 # Link source document
