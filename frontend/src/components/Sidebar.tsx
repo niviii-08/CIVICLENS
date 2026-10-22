@@ -16,6 +16,7 @@ import {
   Network,
   Compass,
   FileCheck2,
+  Bookmark,
 } from 'lucide-react';
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
   { name: 'Bilingual News Framing', href: '/news', icon: Newspaper },
   { name: 'Policy Outcome Audit', href: '/policy-evaluation', icon: TrendingUp },
   { name: 'Evidence Graph', href: '/graph', icon: Network },
+  { name: 'Tracked & Saved', href: '/saved', icon: Bookmark, badge: 'Local' },
 ];
 
 export const Sidebar: React.FC = () => {
