@@ -1,1152 +1,1777 @@
 """
-Phase 7 — Political Claim Verification & Evidence Intelligence Database Models.
 
-Defines canonical SQLAlchemy ORM entities for:
-1. Claim
-2. ClaimVersion
-3. ClaimSubject
-4. ClaimSource
-5. EvidenceDocument
-6. EvidencePassage
-7. ClaimEvidenceRelationship
-8. VerificationRun
-9. VerificationResult
-10. VerificationHistory
-11. SourceAssessment
-12. ReviewRecord
+Political claim verification and evidence intelligence database models.
 
-Adheres strictly to core verification principles:
-- Original claim preservation
-- Atomic propositions separation
-- Distinguishing empirical evidence from interpretation
-- Recording supporting and contradicting signals
-- Explicit uncertainty exposure and source-level provenance
-- Human review tracking
-- Strictly NO automated political truthfulness rankings or leaderboards
+Defines canonical SQLAlchemy ORM entities for public political and policy claims,
+
+decomposed atomic propositions, documentary evidence sources, verification runs,
+
+expert review records, and audit history.
+
 """
 
 import enum
+
 from datetime import datetime, timezone
+
 from typing import List, Optional, Dict, Any
+
 from sqlalchemy import (
+
     Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean, Enum, JSON, UniqueConstraint
+
 )
+
 from sqlalchemy.orm import relationship
+
 from backend.database.base_class import Base
 
-
 class ClaimCategory(str, enum.Enum):
+
     """
+
     Standardized classification for public political and civic claims in Tamil Nadu.
+
     """
+
     GOVERNMENT_SCHEMES = "GOVERNMENT_SCHEMES"
+
     BUDGET_EXPENDITURE = "BUDGET_EXPENDITURE"
+
     ELECTION_RESULTS = "ELECTION_RESULTS"
+
     POLITICAL_PROMISES = "POLITICAL_PROMISES"
+
     REPRESENTATIVE_ACTIVITY = "REPRESENTATIVE_ACTIVITY"
+
     PUBLIC_FUNDING = "PUBLIC_FUNDING"
+
     DEMOGRAPHIC_STATISTICS = "DEMOGRAPHIC_STATISTICS"
+
     PUBLIC_INFRASTRUCTURE = "PUBLIC_INFRASTRUCTURE"
+
     HEALTHCARE_EDUCATION = "HEALTHCARE_EDUCATION"
+
     EMPLOYMENT_ECONOMIC = "EMPLOYMENT_ECONOMIC"
+
     OTHER_PUBLIC_INTEREST = "OTHER_PUBLIC_INTEREST"
 
-
 class ClaimStatus(str, enum.Enum):
+
     PENDING = "PENDING"
+
     DECOMPOSED = "DECOMPOSED"
+
     EVIDENCE_LINKED = "EVIDENCE_LINKED"
+
     VERIFIED = "VERIFIED"
+
     UNDER_REVIEW = "UNDER_REVIEW"
+
     ARCHIVED = "ARCHIVED"
 
-
 class SourceTier(str, enum.Enum):
-    """
-    Objective credibility hierarchy for evidence sources.
-    """
-    TIER_1_STATUTORY = "TIER_1_STATUTORY"                # Gazettes, ECI returns, Hansard, CAG audits
-    TIER_2_OFFICIAL_AGENCY = "TIER_2_OFFICIAL_AGENCY"    # PIB, TN DIPR releases, RBI, MoSPI, NFHS
-    TIER_3_ACCREDITED_FACTCHECK = "TIER_3_ACCREDITED_FACTCHECK"  # IFCN factcheckers, primary news of record
-    TIER_4_SECONDARY_CIVIC = "TIER_4_SECONDARY_CIVIC"    # Academic papers, civil society dashboards
-    TIER_5_UNVERIFIED = "TIER_5_UNVERIFIED"              # Social media, uncorroborated blogs
 
+    """
+
+    Objective credibility hierarchy for evidence sources.
+
+    """
+
+    TIER_1_STATUTORY = "TIER_1_STATUTORY"
+    TIER_2_OFFICIAL_AGENCY = "TIER_2_OFFICIAL_AGENCY"
+    TIER_3_ACCREDITED_FACTCHECK = "TIER_3_ACCREDITED_FACTCHECK"
+    TIER_4_SECONDARY_CIVIC = "TIER_4_SECONDARY_CIVIC"
+    TIER_5_UNVERIFIED = "TIER_5_UNVERIFIED"
 
 class EvidenceRelationshipType(str, enum.Enum):
+
     """
+
     Explicit bidirectional relationship between evidence passage and claim proposition.
+
     """
+
     SUPPORTS = "SUPPORTS"
+
     CONTRADICTS = "CONTRADICTS"
+
     PARTIALLY_SUPPORTS = "PARTIALLY_SUPPORTS"
+
     CONTEXTUALIZES = "CONTEXTUALIZES"
+
     UNRELATED = "UNRELATED"
+
     UNCLEAR = "UNCLEAR"
+
     NEUTRAL = "NEUTRAL"
 
     @classmethod
+
     def from_string(cls, val: Any) -> "EvidenceRelationshipType":
+
         if isinstance(val, cls):
+
             return val
+
         if not val:
+
             return cls.UNCLEAR
+
         clean = str(val).strip().upper()
+
         if clean in cls.__members__:
+
             return cls[clean]
+
         for item in cls:
+
             if item.value.upper() == clean:
+
                 return item
+
         return cls.UNCLEAR
 
-
 class VerificationVerdict(str, enum.Enum):
+
     """
+
     Exhaustive standardized verdict taxonomy.
+
     """
+
     SUPPORTED = "SUPPORTED"
+
     CONTRADICTED = "CONTRADICTED"
+
     PARTIALLY_SUPPORTED = "PARTIALLY_SUPPORTED"
+
     MISLEADING_CONTEXT = "MISLEADING_CONTEXT"
+
     UNVERIFIABLE_INSUFFICIENT_EVIDENCE = "UNVERIFIABLE_INSUFFICIENT_EVIDENCE"
+
     DISPUTED_METHODOLOGY = "DISPUTED_METHODOLOGY"
 
-
 class VerificationOutcome(str, enum.Enum):
+
     """
-    Standardized evidence outcome labels for Phase 7.7.
+
+    Standardized evidence outcome labels for claim verification.
+
     These are evidence assessments, not judgments about a person's honesty or intent.
+
     """
+
     SUPPORTED_BY_AVAILABLE_EVIDENCE = "supported_by_available_evidence"
+
     CONTRADICTED_BY_AVAILABLE_EVIDENCE = "contradicted_by_available_evidence"
+
     PARTIALLY_SUPPORTED = "partially_supported"
+
     MISSING_IMPORTANT_CONTEXT = "missing_important_context"
+
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+
     DISPUTED_EVIDENCE = "disputed_evidence"
+
     UNVERIFIABLE = "unverifiable"
+
     PENDING_REVIEW = "pending_review"
 
     @classmethod
+
     def from_string(cls, val: Any) -> "VerificationOutcome":
+
         if isinstance(val, cls):
+
             return val
+
         if not val:
+
             return cls.PENDING_REVIEW
+
         clean = str(val).strip().lower()
+
         for item in cls:
+
             if item.value == clean or item.name.lower() == clean:
+
                 return item
+
         verdict_map = {
+
             "supported": cls.SUPPORTED_BY_AVAILABLE_EVIDENCE,
+
             "contradicted": cls.CONTRADICTED_BY_AVAILABLE_EVIDENCE,
+
             "partially_supported": cls.PARTIALLY_SUPPORTED,
+
             "misleading_context": cls.MISSING_IMPORTANT_CONTEXT,
+
             "unverifiable_insufficient_evidence": cls.INSUFFICIENT_EVIDENCE,
+
             "disputed_methodology": cls.DISPUTED_EVIDENCE,
+
         }
+
         return verdict_map.get(clean, cls.PENDING_REVIEW)
 
-
 class ReviewAction(str, enum.Enum):
+
     """
+
     Human-in-the-loop audit actions.
+
     """
+
     ACCEPT_ASSESSMENT = "accept_assessment"
+
     CORRECT_CLAIM_DECOMPOSITION = "correct_claim_decomposition"
+
     ADD_EVIDENCE = "add_evidence"
+
     MARK_EVIDENCE_IRRELEVANT = "mark_evidence_irrelevant"
+
     REVISE_OUTCOME = "revise_outcome"
 
-
 class ReviewStatus(str, enum.Enum):
+
     PENDING_REVIEW = "PENDING_REVIEW"
+
     IN_REVIEW = "IN_REVIEW"
+
     ACCEPTED = "ACCEPTED"
+
     OVERRIDDEN = "OVERRIDDEN"
+
     REJECTED = "REJECTED"
 
-
 class SubjectType(str, enum.Enum):
+
     POLITICIAN = "POLITICIAN"
+
     POLITICAL_PARTY = "POLITICAL_PARTY"
+
     GOVERNMENT_DEPARTMENT = "GOVERNMENT_DEPARTMENT"
+
     SCHEME = "SCHEME"
+
     CONSTITUENCY = "CONSTITUENCY"
+
     STATISTICAL_INDICATOR = "STATISTICAL_INDICATOR"
+
     INSTITUTION = "INSTITUTION"
 
-
 class AttributionType(str, enum.Enum):
+
     """
+
     Distinguishes the quotation or attribution modality of the statement.
+
     """
+
     DIRECT_QUOTE = "DIRECT_QUOTE"
+
     PARAPHRASE = "PARAPHRASE"
+
     JOURNALIST_DESCRIPTION = "JOURNALIST_DESCRIPTION"
+
     USER_SUBMITTED = "USER_SUBMITTED"
+
     AUTOMATED_EXTRACTION = "AUTOMATED_EXTRACTION"
 
-
 class CandidateSourceType(str, enum.Enum):
+
     """
+
     Originating intake channel for the claim candidate.
+
     """
+
     PUBLIC_SPEECH = "PUBLIC_SPEECH"
+
     OFFICIAL_STATEMENT = "OFFICIAL_STATEMENT"
+
     PRESS_RELEASE = "PRESS_RELEASE"
+
     LEGISLATIVE_RECORD = "LEGISLATIVE_RECORD"
+
     MANIFESTO = "MANIFESTO"
+
     NEWS_ARTICLE = "NEWS_ARTICLE"
+
     FACT_CHECK_ARTICLE = "FACT_CHECK_ARTICLE"
+
     MANUAL_SUBMISSION = "MANUAL_SUBMISSION"
 
-
 class VerifiabilityStatus(str, enum.Enum):
+
     """
+
     Distinguishes verifiable factual claims from subjective or non-factual statements.
+
     """
+
     VERIFIABLE_FACTUAL = "VERIFIABLE_FACTUAL"
+
     OPINION = "OPINION"
+
     PREDICTION = "PREDICTION"
+
     VALUE_JUDGMENT = "VALUE_JUDGMENT"
+
     RHETORICAL_QUESTION = "RHETORICAL_QUESTION"
+
     SLOGAN = "SLOGAN"
+
     AMBIGUOUS_UNVERIFIABLE = "AMBIGUOUS_UNVERIFIABLE"
 
-
 class AtomicClaimType(str, enum.Enum):
+
     """
+
     Taxonomy of verifiable and non-verifiable proposition types.
+
     """
+
     NUMERICAL_STATISTIC = "NUMERICAL_STATISTIC"
+
     SCHEME_BENEFIT = "SCHEME_BENEFIT"
+
     BUDGET_ALLOCATION = "BUDGET_ALLOCATION"
+
     POLICY_DECISION = "POLICY_DECISION"
+
     ELECTION_OUTCOME = "ELECTION_OUTCOME"
+
     HISTORICAL_RECORD = "HISTORICAL_RECORD"
+
     INFRASTRUCTURE_DELIVERY = "INFRASTRUCTURE_DELIVERY"
+
     EMPLOYMENT_METRIC = "EMPLOYMENT_METRIC"
+
     NON_FACTUAL = "NON_FACTUAL"
 
-
-# ---------------------------------------------------------------------------
-# 1. ClaimSource Entity
-# ---------------------------------------------------------------------------
 class ClaimSource(Base):
+
     """
+
     Captures provenance details of where, when, and how a claim was voiced or published.
+
     """
+
     __tablename__ = "claim_sources"
 
     source_id = Column(String, primary_key=True, index=True)
-    source_type = Column(String, nullable=False, index=True)  # PRESS_MEET, CAMPAIGN_RALLY, SOCIAL_POST, MANIFESTO, DEBATE
+
+    source_type = Column(String, nullable=False, index=True)
     organization_or_party = Column(String, nullable=True, index=True)
+
     speaker_name = Column(String, nullable=True, index=True)
+
     speaker_party = Column(String, nullable=True, index=True)
+
     venue = Column(String, nullable=True)
+
     source_url = Column(String, nullable=True)
+
     archive_url = Column(String, nullable=True)
+
     publication_date = Column(DateTime, nullable=True)
+
     collection_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
     collection_method = Column(String, default="manual_intake")
+
     checksum = Column(String, nullable=True)
+
     notes = Column(Text, nullable=True)
 
-    # Relationships
     claims = relationship("Claim", back_populates="source", cascade="all, delete-orphan")
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "source_id": self.source_id,
+
             "source_type": self.source_type,
+
             "organization_or_party": self.organization_or_party,
+
             "speaker_name": self.speaker_name,
+
             "speaker_party": self.speaker_party,
+
             "venue": self.venue,
+
             "source_url": self.source_url,
+
             "archive_url": self.archive_url,
+
             "publication_date": self.publication_date.isoformat() if self.publication_date else None,
+
             "collection_date": self.collection_date.isoformat() if self.collection_date else None,
+
             "collection_method": self.collection_method,
+
             "checksum": self.checksum,
+
             "notes": self.notes
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 2. Claim Entity
-# ---------------------------------------------------------------------------
 class Claim(Base):
+
     """
+
     Canonical Claim entity. Preserves original unaltered wording and links to
+
     decomposed subjects, evidence relationships, and verification results.
+
     """
+
     __tablename__ = "political_claims"
 
     claim_id = Column(String, primary_key=True, index=True)
+
     source_id = Column(String, ForeignKey("claim_sources.source_id", ondelete="SET NULL"), nullable=True, index=True)
 
-    # Utterance Text & Context Preservation
-    original_text = Column(Text, nullable=False)  # Immutable verbatim claim text
-    normalized_text = Column(Text, nullable=False)  # Stemmed, whitespace cleaned
-    context_text = Column(Text, nullable=True)      # Surrounding speech or dialogue
-    language = Column(String, default="ta")         # ta, en, bilingual
+    original_text = Column(Text, nullable=False)
+    normalized_text = Column(Text, nullable=False)
+    context_text = Column(Text, nullable=True)
+    language = Column(String, default="ta")
 
-    # Categorization & Scope
     claim_category = Column(Enum(ClaimCategory), nullable=False, index=True)
+
     speaker_name = Column(String, nullable=True, index=True)
-    speaker_role = Column(String, nullable=True)  # where supported (e.g. Chief Minister, MLA, MP)
+
+    speaker_role = Column(String, nullable=True)
     speaker_party = Column(String, nullable=True, index=True)
-    party = Column(String, nullable=True, index=True)  # canonical alias for party where supported
+
+    party = Column(String, nullable=True, index=True)
     claim_date = Column(DateTime, nullable=True, index=True)
-    publication_date = Column(DateTime, nullable=True, index=True)  # where applicable
+
+    publication_date = Column(DateTime, nullable=True, index=True)
     claim_source_url = Column(String, nullable=True)
+
     source_document_id = Column(String, nullable=True, index=True)
-    temporal_scope = Column(String, nullable=True)  # e.g. "2021-2022", "Last 3 years"
-    geographic_scope = Column(String, nullable=True, default="Tamil Nadu")  # e.g. "Tamil Nadu", "Chennai"
+
+    temporal_scope = Column(String, nullable=True)
+    geographic_scope = Column(String, nullable=True, default="Tamil Nadu")
     extraction_method = Column(String, default="MANUAL")
 
-    # Ingestion Attribution & Source Channel
     attribution_type = Column(Enum(AttributionType), default=AttributionType.DIRECT_QUOTE, index=True)
+
     candidate_source_type = Column(Enum(CandidateSourceType), default=CandidateSourceType.PUBLIC_SPEECH, index=True)
+
     content_fingerprint = Column(String, nullable=True, index=True)
 
-    # Cross-Phase Stable Identifiers & Foreign Keys
     promise_id = Column(String, ForeignKey("political_promises.promise_id", ondelete="SET NULL"), nullable=True, index=True)
+
     historical_scheme_id = Column(Integer, ForeignKey("historical_schemes.id", ondelete="SET NULL"), nullable=True, index=True)
+
     news_article_id = Column(String, ForeignKey("news_articles.article_id", ondelete="SET NULL"), nullable=True, index=True)
+
     financial_document_id = Column(String, ForeignKey("financial_documents.document_id", ondelete="SET NULL"), nullable=True, index=True)
+
     representative_id = Column(String, ForeignKey("representatives.representative_id", ondelete="SET NULL"), nullable=True, index=True)
+
     constituency_id = Column(String, ForeignKey("constituencies.constituency_id", ondelete="SET NULL"), nullable=True, index=True)
 
-    # Status & Audit
     status = Column(Enum(ClaimStatus), default=ClaimStatus.PENDING, index=True)
+
     review_status = Column(Enum(ReviewStatus), default=ReviewStatus.PENDING_REVIEW, index=True)
+
     is_test_fixture = Column(Boolean, default=False)
+
     metadata_json = Column(JSON, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     source = relationship("ClaimSource", back_populates="claims")
+
     versions = relationship("ClaimVersion", back_populates="claim", cascade="all, delete-orphan")
+
     subjects = relationship("ClaimSubject", back_populates="claim", cascade="all, delete-orphan")
+
     atomic_claims = relationship("AtomicClaim", back_populates="claim", cascade="all, delete-orphan")
+
     retrieval_candidates = relationship("ClaimRetrievalCandidate", back_populates="claim", cascade="all, delete-orphan")
+
     evidence_relationships = relationship("ClaimEvidenceRelationship", back_populates="claim", cascade="all, delete-orphan")
+
     verification_runs = relationship("VerificationRun", back_populates="claim", cascade="all, delete-orphan")
+
     verification_results = relationship("VerificationResult", back_populates="claim", cascade="all, delete-orphan")
+
     verification_history = relationship("VerificationHistory", back_populates="claim", cascade="all, delete-orphan")
+
     reviews = relationship("ReviewRecord", back_populates="claim", cascade="all, delete-orphan")
 
-    # Cross-phase module relationships
     promise = relationship("PoliticalPromise", foreign_keys=[promise_id])
+
     historical_scheme = relationship("HistoricalScheme", foreign_keys=[historical_scheme_id])
+
     news_article = relationship("Article", foreign_keys=[news_article_id])
+
     financial_document = relationship("FinancialDocument", foreign_keys=[financial_document_id])
+
     representative = relationship("Representative", foreign_keys=[representative_id])
+
     constituency = relationship("Constituency", foreign_keys=[constituency_id])
+
     cross_phase_links = relationship("ClaimCrossPhaseLink", back_populates="claim", cascade="all, delete-orphan")
 
     def to_dict(self) -> Dict[str, Any]:
+
         current_res = next((r for r in self.verification_results if r.is_current), None)
+
         return {
+
             "claim_id": self.claim_id,
+
             "source_id": self.source_id,
+
             "original_text": self.original_text,
+
             "normalized_text": self.normalized_text,
+
             "context_text": self.context_text,
+
             "language": self.language,
+
             "claim_category": self.claim_category.value if hasattr(self.claim_category, "value") else str(self.claim_category),
+
             "speaker_name": self.speaker_name,
+
             "speaker_role": self.speaker_role,
+
             "speaker_party": self.speaker_party or self.party,
+
             "party": self.party or self.speaker_party,
+
             "claim_date": self.claim_date.isoformat() if self.claim_date else None,
+
             "publication_date": self.publication_date.isoformat() if self.publication_date else None,
+
             "claim_source_url": self.claim_source_url,
+
             "source_document_id": self.source_document_id,
+
             "temporal_scope": self.temporal_scope,
+
             "geographic_scope": self.geographic_scope,
+
             "extraction_method": self.extraction_method,
+
             "attribution_type": self.attribution_type.value if hasattr(self.attribution_type, "value") else str(self.attribution_type),
+
             "candidate_source_type": self.candidate_source_type.value if hasattr(self.candidate_source_type, "value") else str(self.candidate_source_type),
+
             "status": self.status.value if hasattr(self.status, "value") else str(self.status),
+
             "review_status": self.review_status.value if hasattr(self.review_status, "value") else str(self.review_status),
+
             "atomic_claims_count": len(self.atomic_claims) if self.atomic_claims else 0,
+
             "evidence_relationships_count": len(self.evidence_relationships) if self.evidence_relationships else 0,
+
             "cross_phase_identifiers": {
+
                 "promise_id": self.promise_id,
+
                 "historical_scheme_id": self.historical_scheme_id,
+
                 "news_article_id": self.news_article_id,
+
                 "financial_document_id": self.financial_document_id,
+
                 "representative_id": self.representative_id,
+
                 "constituency_id": self.constituency_id,
+
             },
+
             "current_verification": current_res.to_dict() if current_res else None,
+
             "created_at": self.created_at.isoformat() if self.created_at else None,
+
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+
             "metadata_json": self.metadata_json or {}
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 3. ClaimVersion Entity
-# ---------------------------------------------------------------------------
 class ClaimVersion(Base):
+
     """
+
     Captures revisions, transcript corrections, or bilingual translations 
+
     without overwriting the canonical original utterance text.
+
     """
+
     __tablename__ = "claim_versions"
 
     version_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     version_number = Column(Integer, default=1)
+
     edited_text = Column(Text, nullable=False)
+
     transliterated_text = Column(Text, nullable=True)
+
     additional_context = Column(Text, nullable=True)
+
     change_rationale = Column(Text, nullable=False)
+
     edited_by = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     claim = relationship("Claim", back_populates="versions")
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "version_id": self.version_id,
+
             "claim_id": self.claim_id,
+
             "version_number": self.version_number,
+
             "edited_text": self.edited_text,
+
             "transliterated_text": self.transliterated_text,
+
             "additional_context": self.additional_context,
+
             "change_rationale": self.change_rationale,
+
             "edited_by": self.edited_by,
+
             "created_at": self.created_at.isoformat() if self.created_at else None
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 4. ClaimSubject Entity
-# ---------------------------------------------------------------------------
 class ClaimSubject(Base):
+
     """
+
     Atomic subject or entity decomposed from a claim (e.g. MLA, scheme, department).
+
     """
+
     __tablename__ = "claim_subjects"
 
     subject_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     subject_type = Column(Enum(SubjectType), nullable=False, index=True)
-    entity_id = Column(String, nullable=True, index=True)  # Links to representative_id, scheme_id, party_id
+
+    entity_id = Column(String, nullable=True, index=True)
     canonical_name = Column(String, nullable=False, index=True)
+
     confidence = Column(Float, default=1.0)
 
-    # Relationships
     claim = relationship("Claim", back_populates="subjects")
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "subject_id": self.subject_id,
+
             "claim_id": self.claim_id,
+
             "subject_type": self.subject_type.value if hasattr(self.subject_type, "value") else str(self.subject_type),
+
             "entity_id": self.entity_id,
+
             "canonical_name": self.canonical_name,
+
             "confidence": self.confidence
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 4b. AtomicClaim Entity
-# ---------------------------------------------------------------------------
 class AtomicClaim(Base):
+
     """
+
     Decomposed atomic verifiable proposition extracted from a compound political claim.
+
     Preserves exact sub-proposition text, linguistic context, and structured SPO fields.
+
     """
+
     __tablename__ = "atomic_claims"
 
     atomic_claim_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     atomic_claim_text = Column(Text, nullable=False)
+
     language = Column(String, default="en", index=True)
 
-    # Structured Semantic Frame (SPO)
     subject = Column(String, nullable=True, index=True)
+
     predicate = Column(String, nullable=True)
+
     action = Column(String, nullable=True)
+
     object = Column(String, nullable=True)
 
-    # Temporal & Spatial Scope
     time_period = Column(String, nullable=True)
+
     geographic_scope = Column(String, nullable=True, default="Tamil Nadu")
 
-    # Quantitative Attributes
     numeric_value = Column(Float, nullable=True)
+
     unit = Column(String, nullable=True)
+
     denominator = Column(String, nullable=True)
+
     comparison_operator = Column(String, nullable=True)
+
     baseline_value = Column(Float, nullable=True)
 
-    # Taxonomy & Verifiability
     claim_type = Column(String, nullable=False, default="NUMERICAL_STATISTIC", index=True)
+
     verifiability_status = Column(String, nullable=False, default="VERIFIABLE_FACTUAL", index=True)
+
     is_verifiable = Column(Boolean, default=True, index=True)
+
     is_negated = Column(Boolean, default=False)
 
-    # Processing Provenance
     decomposition_method = Column(String, default="MULTILINGUAL_NLP_V1")
+
     confidence = Column(Float, default=1.0)
+
     translation_text = Column(Text, nullable=True)
+
     metadata_json = Column(JSON, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     claim = relationship("Claim", back_populates="atomic_claims")
+
     cross_phase_links = relationship("ClaimCrossPhaseLink", back_populates="atomic_claim", cascade="all, delete-orphan")
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "atomic_claim_id": self.atomic_claim_id,
+
             "claim_id": self.claim_id,
+
             "atomic_claim_text": self.atomic_claim_text,
+
             "language": self.language,
+
             "subject": self.subject,
+
             "predicate": self.predicate,
+
             "action": self.action,
+
             "object": self.object,
+
             "time_period": self.time_period,
+
             "geographic_scope": self.geographic_scope,
+
             "numeric_value": self.numeric_value,
+
             "unit": self.unit,
+
             "denominator": self.denominator,
+
             "comparison_operator": self.comparison_operator,
+
             "baseline_value": self.baseline_value,
+
             "claim_type": self.claim_type,
+
             "verifiability_status": self.verifiability_status,
+
             "is_verifiable": self.is_verifiable,
+
             "is_negated": self.is_negated,
+
             "decomposition_method": self.decomposition_method,
+
             "confidence": self.confidence,
+
             "translation_text": self.translation_text,
+
             "metadata_json": self.metadata_json or {},
+
             "created_at": self.created_at.isoformat() if self.created_at else None
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 4c. ClaimCrossPhaseLink Entity
-# ---------------------------------------------------------------------------
 class ClaimCrossPhaseLink(Base):
+
     """
+
     Explicit junction linking a Claim or AtomicClaim to entities across
+
     CIVICLENS TN modules (Phase 2 Schemes, Phase 3 Promises, Phase 4 News,
+
     Phase 5 Funding, Phase 6 Representatives/Constituencies).
+
     """
+
     __tablename__ = "claim_cross_phase_links"
 
     link_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     atomic_claim_id = Column(String, ForeignKey("atomic_claims.atomic_claim_id", ondelete="CASCADE"), nullable=True, index=True)
 
-    target_phase = Column(String, nullable=False, index=True)  # PHASE_2_SCHEME, PHASE_3_PROMISE, PHASE_4_NEWS, PHASE_5_FUNDING, PHASE_6_REPRESENTATIVE, PHASE_6_CONSTITUENCY
-    entity_type = Column(String, nullable=False, index=True)  # HISTORICAL_SCHEME, POLITICAL_PROMISE, ARTICLE, FINANCIAL_DOCUMENT, REPRESENTATIVE, CONSTITUENCY
-    entity_id = Column(String, nullable=False, index=True)    # Stable primary key or identifier in target module
-    relationship_nature = Column(String, nullable=True)        # evaluates_promise, grounded_in_scheme, reported_by_news, addresses_funding, made_by_representative
+    target_phase = Column(String, nullable=False, index=True)
+    entity_type = Column(String, nullable=False, index=True)
+    entity_id = Column(String, nullable=False, index=True)
+    relationship_nature = Column(String, nullable=True)
     relevance_score = Column(Float, default=1.0)
+
     metadata_json = Column(JSON, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     claim = relationship("Claim", back_populates="cross_phase_links")
+
     atomic_claim = relationship("AtomicClaim", back_populates="cross_phase_links")
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "link_id": self.link_id,
+
             "claim_id": self.claim_id,
+
             "atomic_claim_id": self.atomic_claim_id,
+
             "target_phase": self.target_phase,
+
             "entity_type": self.entity_type,
+
             "entity_id": self.entity_id,
+
             "relationship_nature": self.relationship_nature,
+
             "relevance_score": self.relevance_score,
+
             "metadata_json": self.metadata_json or {},
+
             "created_at": self.created_at.isoformat() if self.created_at else None
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 5. EvidenceDocument Entity
-# ---------------------------------------------------------------------------
 class EvidenceDocument(Base):
+
     """
+
     Represents an ingested statutory record, budget book, Hansard transcript,
+
     government order, or independent fact-check document.
+
     """
+
     __tablename__ = "evidence_documents"
 
     document_id = Column(String, primary_key=True, index=True)
+
     source_tier = Column(Enum(SourceTier), default=SourceTier.TIER_1_STATUTORY, index=True)
-    source_name = Column(String, nullable=False, index=True)  # e.g., "Finance Department TN"
-    publisher = Column(String, nullable=True, index=True)      # Publisher / issuing authority
-    document_type = Column(String, nullable=False, index=True)  # e.g., "GOVERNMENT_ORDER", "BUDGET_DDG", "PRESS_RELEASE"
-    source_category = Column(String, nullable=True, index=True) # e.g. "OFFICIAL_GOVERNMENT", "LEGISLATIVE_RECORD", "FACT_CHECK"
+
+    source_name = Column(String, nullable=False, index=True)
+    publisher = Column(String, nullable=True, index=True)
+    document_type = Column(String, nullable=False, index=True)
+    source_category = Column(String, nullable=True, index=True)
     title = Column(String, nullable=False)
+
     publication_date = Column(DateTime, nullable=True, index=True)
+
     retrieval_date = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
     source_url = Column(String, nullable=True)
+
     file_path = Column(String, nullable=True)
+
     file_hash_sha256 = Column(String, nullable=False, unique=True, index=True)
+
     extraction_method = Column(String, default="DIRECT_PARSE")
-    access_status = Column(String, default="ACCESSIBLE_PUBLIC")  # ACCESSIBLE_PUBLIC, RESTRICTED_SNIPPET_ONLY, CACHED_LOCAL, ROBOTS_DENIED
+
+    access_status = Column(String, default="ACCESSIBLE_PUBLIC")
     language = Column(String, default="en")
+
     is_official = Column(Boolean, default=True)
+
     is_test_fixture = Column(Boolean, default=False)
+
     metadata_json = Column(JSON, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     @property
+
     def evidence_document_id(self) -> str:
+
         return self.document_id
 
     @property
+
     def file_hash(self) -> str:
+
         return self.file_hash_sha256
 
     @property
+
     def source_title(self) -> str:
+
         return self.title
 
-    # Relationships
     passages = relationship("EvidencePassage", back_populates="document", cascade="all, delete-orphan")
+
     source_assessments = relationship("SourceAssessment", back_populates="document", cascade="all, delete-orphan")
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "document_id": self.document_id,
+
             "evidence_document_id": self.document_id,
+
             "source_tier": self.source_tier.value if hasattr(self.source_tier, "value") else str(self.source_tier),
+
             "source_name": self.source_name,
+
             "publisher": self.publisher,
+
             "document_type": self.document_type,
+
             "source_category": self.source_category,
+
             "title": self.title,
+
             "source_title": self.title,
+
             "publication_date": self.publication_date.isoformat() if self.publication_date else None,
+
             "retrieval_date": self.retrieval_date.isoformat() if self.retrieval_date else None,
+
             "source_url": self.source_url,
+
             "file_path": self.file_path,
+
             "file_hash_sha256": self.file_hash_sha256,
+
             "file_hash": self.file_hash_sha256,
+
             "extraction_method": self.extraction_method,
+
             "access_status": self.access_status,
+
             "language": self.language,
+
             "is_official": self.is_official,
+
             "passages_count": len(self.passages) if self.passages else 0,
+
             "metadata_json": self.metadata_json or {},
+
             "created_at": self.created_at.isoformat() if self.created_at else None
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 6. EvidencePassage Entity
-# ---------------------------------------------------------------------------
 class EvidencePassage(Base):
+
     """
+
     Granular text excerpt, tabular cell, or speech passage providing precise proof.
+
     """
+
     __tablename__ = "evidence_passages"
 
     passage_id = Column(String, primary_key=True, index=True)
+
     document_id = Column(String, ForeignKey("evidence_documents.document_id", ondelete="CASCADE"), nullable=False, index=True)
+
     passage_text = Column(Text, nullable=False)
+
     page_number = Column(Integer, nullable=True)
+
     section_or_table = Column(String, nullable=True)
+
     context_text = Column(Text, nullable=True)
+
     extracted_entities = Column(JSON, nullable=True)
-    numerical_values = Column(JSON, nullable=True)  # e.g., {"amount_crores": 5000.0, "year": 2022}
+
+    numerical_values = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     document = relationship("EvidenceDocument", back_populates="passages")
+
     claim_relationships = relationship("ClaimEvidenceRelationship", back_populates="passage", cascade="all, delete-orphan")
 
     def to_dict(self) -> Dict[str, Any]:
+
         doc = self.document
+
         return {
+
             "passage_id": self.passage_id,
+
             "evidence_passage_id": self.passage_id,
+
             "document_id": self.document_id,
+
             "passage_text": self.passage_text,
+
             "page_number": self.page_number,
+
             "section_or_table": self.section_or_table,
+
             "context_text": self.context_text,
+
             "extracted_entities": self.extracted_entities or {},
+
             "numerical_values": self.numerical_values or {},
+
             "document_title": doc.title if doc else None,
+
             "source_title": doc.title if doc else None,
+
             "source_url": doc.source_url if doc else None,
+
             "publisher": doc.publisher if doc else None,
+
             "source_tier": (doc.source_tier.value if hasattr(doc.source_tier, "value") else str(doc.source_tier)) if doc else None,
+
             "created_at": self.created_at.isoformat() if self.created_at else None
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 7. ClaimEvidenceRelationship Entity
-# ---------------------------------------------------------------------------
 class ClaimEvidenceRelationship(Base):
+
     """
+
     Explicit junction linking a claim proposition to an evidence passage with
+
     support vs. contradiction signals and multi-signal scores.
+
     """
+
     __tablename__ = "claim_evidence_relationships"
 
     relationship_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     atomic_claim_id = Column(String, ForeignKey("atomic_claims.atomic_claim_id", ondelete="CASCADE"), nullable=True, index=True)
+
     evidence_document_id = Column(String, ForeignKey("evidence_documents.document_id", ondelete="CASCADE"), nullable=True, index=True)
+
     passage_id = Column(String, ForeignKey("evidence_passages.passage_id", ondelete="CASCADE"), nullable=False, index=True)
 
-    # Core Relationship Classification & Stance
     relationship_type = Column(Enum(EvidenceRelationshipType), nullable=False, index=True)
+
     supporting_text_reference = Column(Text, nullable=True)
+
     contradicting_text_reference = Column(Text, nullable=True)
+
     analysis_method = Column(String, default="RULE_AND_NLP_EVIDENCE_ANALYSIS_V1")
+
     confidence = Column(Float, default=1.0)
+
     model_version = Column(String, default="civiclens-evidence-rel-v1.0")
+
     human_review_status = Column(Enum(ReviewStatus), default=ReviewStatus.PENDING_REVIEW, index=True)
 
-    # Multi-Dimensional Alignment Checks
-    entity_alignment = Column(String, nullable=True)        # EXACT_MATCH, RELATED_ENTITY, MISMATCH
-    temporal_alignment = Column(String, nullable=True)      # CONTEMPORANEOUS, OUTDATED, FUTURE_PROJECTION
-    geographic_alignment = Column(String, nullable=True)    # EXACT_JURISDICTION, BROADER_NATIONAL, MISMATCH
-    quantitative_alignment = Column(String, nullable=True)  # EXACT_MATCH, VALUE_CONTRADICTION, UNIT_MISMATCH, NOT_QUANTITATIVE
-    proposition_alignment = Column(String, nullable=True)   # IDENTICAL_PROPOSITION, RELATED_CONTEXT, DIFFERENT_PROPOSITION
-    source_stance = Column(String, default="INDEPENDENT_FACT")  # INDEPENDENT_FACT vs REPORTING_CLAIM
+    entity_alignment = Column(String, nullable=True)
+    temporal_alignment = Column(String, nullable=True)
+    geographic_alignment = Column(String, nullable=True)
+    quantitative_alignment = Column(String, nullable=True)
+    proposition_alignment = Column(String, nullable=True)
+    source_stance = Column(String, default="INDEPENDENT_FACT")
 
-    # Epistemic Flags
     is_outdated = Column(Boolean, default=False, index=True)
+
     is_syndicated_copy = Column(Boolean, default=False, index=True)
+
     syndication_cluster_id = Column(String, nullable=True, index=True)
 
-    # Backwards compatibility scores & notes
-    relevance_score = Column(Float, default=0.0)        # 0.0 to 1.0
-    confidence_score = Column(Float, default=0.0)       # 0.0 to 1.0
-    contradiction_score = Column(Float, default=0.0)    # 0.0 to 1.0
-    matching_method = Column(String, nullable=True)     # e.g. "hybrid_multi_signal"
+    relevance_score = Column(Float, default=0.0)
+    confidence_score = Column(Float, default=0.0)
+    contradiction_score = Column(Float, default=0.0)
+    matching_method = Column(String, nullable=True)
     reconciliation_notes = Column(Text, nullable=True)
+
     reasoning_summary = Column(Text, nullable=True)
+
     metadata_json = Column(JSON, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     @property
+
     def evidence_passage_id(self) -> str:
+
         return self.passage_id
 
     @evidence_passage_id.setter
+
     def evidence_passage_id(self, value: str) -> None:
+
         self.passage_id = value
 
     def to_dict(self) -> Dict[str, Any]:
+
         passage = self.passage
+
         doc = passage.document if passage and getattr(passage, "document", None) else getattr(self, "document", None)
 
         doc_id = self.evidence_document_id or (doc.document_id if doc else None)
+
         src_url = doc.source_url if doc else None
+
         src_title = doc.title if doc else None
+
         publisher = doc.publisher or (doc.source_name if doc else None)
+
         pub_date = doc.publication_date.isoformat() if doc and doc.publication_date else None
+
         ret_date = doc.retrieval_date.isoformat() if doc and doc.retrieval_date else None
+
         lang = doc.language if doc else None
+
         source_tier = (doc.source_tier.value if hasattr(doc.source_tier, "value") else str(doc.source_tier)) if doc else None
 
         page_num = passage.page_number if passage else None
+
         sec_table = passage.section_or_table if passage else None
+
         passage_ref = self.supporting_text_reference or self.contradicting_text_reference or (passage.passage_text if passage else None)
+
         rel_type_str = self.relationship_type.value.lower() if hasattr(self.relationship_type, "value") else str(self.relationship_type).lower()
+
         verif_status = self.human_review_status.value if hasattr(self.human_review_status, "value") else str(self.human_review_status)
 
         return {
+
             "evidence_id": self.relationship_id,
+
             "relationship_id": self.relationship_id,
+
             "claim_id": self.claim_id,
+
             "atomic_claim_id": self.atomic_claim_id,
+
             "document_id": doc_id,
+
             "evidence_document_id": doc_id,
+
             "evidence_passage_id": self.passage_id,
+
             "passage_id": self.passage_id,
+
             "source_url": src_url,
+
             "source_title": src_title,
+
             "publisher": publisher,
+
             "publication_date": pub_date,
+
             "retrieval_date": ret_date,
+
             "language": lang,
+
             "source_tier": source_tier,
+
             "page_number": page_num,
+
             "section_or_table": sec_table,
+
             "passage_reference": passage_ref,
+
             "evidence_relationship": rel_type_str,
+
             "relationship_type": rel_type_str,
+
             "verification_status": verif_status,
+
             "supporting_text_reference": self.supporting_text_reference,
+
             "contradicting_text_reference": self.contradicting_text_reference,
+
             "analysis_method": self.analysis_method,
+
             "confidence": self.confidence,
+
             "model_version": self.model_version,
+
             "human_review_status": verif_status,
+
             "entity_alignment": self.entity_alignment,
+
             "temporal_alignment": self.temporal_alignment,
+
             "geographic_alignment": self.geographic_alignment,
+
             "quantitative_alignment": self.quantitative_alignment,
+
             "proposition_alignment": self.proposition_alignment,
+
             "source_stance": self.source_stance,
+
             "is_outdated": self.is_outdated,
+
             "is_syndicated_copy": self.is_syndicated_copy,
+
             "syndication_cluster_id": self.syndication_cluster_id,
+
             "relevance_score": self.relevance_score,
+
             "confidence_score": self.confidence_score,
+
             "contradiction_score": self.contradiction_score,
+
             "reconciliation_notes": self.reconciliation_notes,
+
             "reasoning_summary": self.reasoning_summary,
+
             "created_at": self.created_at.isoformat() if self.created_at else None
+
         }
 
-    # Relationships
     claim = relationship("Claim", back_populates="evidence_relationships")
+
     passage = relationship("EvidencePassage", back_populates="claim_relationships")
+
     document = relationship("EvidenceDocument", foreign_keys=[evidence_document_id])
 
-
-# ---------------------------------------------------------------------------
-# 7b. ClaimRetrievalCandidate Entity
-# ---------------------------------------------------------------------------
 class ClaimRetrievalCandidate(Base):
+
     """
+
     Stores evidence retrieval search results with multi-signal matching scores,
+
     semantic similarity, exact keyword match, entity and date overlap.
+
     """
+
     __tablename__ = "claim_retrieval_candidates"
 
     candidate_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     atomic_claim_id = Column(String, nullable=True, index=True)
+
     evidence_document_id = Column(String, ForeignKey("evidence_documents.document_id", ondelete="CASCADE"), nullable=False, index=True)
+
     evidence_passage_id = Column(String, ForeignKey("evidence_passages.passage_id", ondelete="CASCADE"), nullable=False, index=True)
 
-    # Multi-Signal Retrieval Scores
-    retrieval_score = Column(Float, nullable=False, index=True)  # Composite relevance score (0.0 - 1.0)
+    retrieval_score = Column(Float, nullable=False, index=True)
     semantic_similarity = Column(Float, default=0.0)
+
     keyword_match = Column(Float, default=0.0)
+
     entity_match = Column(Float, default=0.0)
+
     date_match = Column(Float, default=0.0)
 
-    # Retrieval Metadata & Flags
     retrieval_method = Column(String, default="HYBRID_MULTI_SIGNAL_V1")
+
     model_version = Column(String, default="paraphrase-multilingual-MiniLM-L12-v2")
+
     retrieval_timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
     is_potentially_contradictory = Column(Boolean, default=False, index=True)
+
     rank = Column(Integer, default=1)
+
     metadata_json = Column(JSON, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     claim = relationship("Claim", back_populates="retrieval_candidates")
+
     document = relationship("EvidenceDocument")
+
     passage = relationship("EvidencePassage")
 
-
-# ---------------------------------------------------------------------------
-# 8. VerificationRun Entity
-# ---------------------------------------------------------------------------
 class VerificationRun(Base):
+
     """
+
     Execution trace for an automated verification pass.
+
     """
+
     __tablename__ = "verification_runs"
 
     run_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     engine_version = Column(String, default="v1.0")
+
     model_names = Column(JSON, nullable=True)
+
     started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
     completed_at = Column(DateTime, nullable=True)
+
     execution_status = Column(String, default="SUCCESS")
+
     configuration_json = Column(JSON, nullable=True)
 
-    # Relationships
     claim = relationship("Claim", back_populates="verification_runs")
+
     result = relationship("VerificationResult", back_populates="run", uselist=False, cascade="all, delete-orphan")
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "run_id": self.run_id,
+
             "claim_id": self.claim_id,
+
             "engine_version": self.engine_version,
+
             "model_names": self.model_names or [],
+
             "execution_status": self.execution_status,
+
             "configuration_json": self.configuration_json or {},
+
             "started_at": self.started_at.isoformat() if self.started_at else None,
+
             "completed_at": self.completed_at.isoformat() if self.completed_at else None
+
         }
 
-
-# ---------------------------------------------------------------------------
-# 9. VerificationResult Entity
-# ---------------------------------------------------------------------------
 class VerificationResult(Base):
+
     """
+
     Synthesized evidence assessment containing confidence, source diversity,
+
     and multi-part atomic proposition explanations.
+
     These are evidence assessments, not judgments about a person's honesty or intent.
+
     """
+
     __tablename__ = "verification_results"
 
     result_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     run_id = Column(String, ForeignKey("verification_runs.run_id", ondelete="SET NULL"), nullable=True, index=True)
 
-    # Core Phase 7.7 Outcome and Explanations
     outcome = Column(Enum(VerificationOutcome), nullable=True, default=VerificationOutcome.PENDING_REVIEW, index=True)
+
     explanation = Column(Text, nullable=True)
 
     def __init__(self, **kwargs):
-        if "explanation" not in kwargs and "rationale" in kwargs:
-            kwargs["explanation"] = kwargs["rationale"]
-        if "outcome" not in kwargs and "verdict" in kwargs:
-            kwargs["outcome"] = VerificationOutcome.from_string(kwargs["verdict"])
-        super().__init__(**kwargs)
-    atomic_claim_ids = Column(JSON, nullable=True)  # List[str]
-    supporting_evidence_ids = Column(JSON, nullable=True)  # List[str]
-    contradicting_evidence_ids = Column(JSON, nullable=True)  # List[str]
-    context_evidence_ids = Column(JSON, nullable=True)  # List[str]
-    source_diversity = Column(JSON, nullable=True)  # Dict with source counts, tiers, publishers
 
-    # Confidence and Uncertainty Indicators
+        if "explanation" not in kwargs and "rationale" in kwargs:
+
+            kwargs["explanation"] = kwargs["rationale"]
+
+        if "outcome" not in kwargs and "verdict" in kwargs:
+
+            kwargs["outcome"] = VerificationOutcome.from_string(kwargs["verdict"])
+
+        super().__init__(**kwargs)
+
+    atomic_claim_ids = Column(JSON, nullable=True)
+    supporting_evidence_ids = Column(JSON, nullable=True)
+    contradicting_evidence_ids = Column(JSON, nullable=True)
+    context_evidence_ids = Column(JSON, nullable=True)
+    source_diversity = Column(JSON, nullable=True)
+
     confidence = Column(Float, default=0.0)
+
     uncertainty_indicator = Column(Float, default=0.0)
 
-    # Provenance and Versioning
     methodology_version = Column(String, default="METHODOLOGY_V1")
+
     model_version = Column(String, default="civiclens-verifier-v1.0")
+
     verification_timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
     review_status = Column(Enum(ReviewStatus), default=ReviewStatus.PENDING_REVIEW, index=True)
 
-    # Preservation of Automated Baseline before Human Revisions
     automated_outcome = Column(Enum(VerificationOutcome), nullable=True)
+
     automated_explanation = Column(Text, nullable=True)
+
     automated_confidence = Column(Float, nullable=True)
+
     human_revision_notes = Column(Text, nullable=True)
 
-    # Legacy attributes for backwards compatibility with Phase 7.1
     verdict = Column(Enum(VerificationVerdict), nullable=True, index=True)
+
     confidence_score = Column(Float, default=0.0)
+
     support_score = Column(Float, default=0.0)
+
     contradiction_score = Column(Float, default=0.0)
+
     uncertainty_score = Column(Float, default=0.0)
+
     rationale = Column(Text, nullable=True)
+
     empirical_findings = Column(JSON, nullable=True)
+
     limitations_and_caveats = Column(Text, nullable=True)
+
     is_current = Column(Boolean, default=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     @property
+
     def verification_id(self) -> str:
+
         return self.result_id
 
     def get_structured_reasoning(self) -> Dict[str, Any]:
+
         """
+
         Returns 10-point structured explainable reasoning breakdown for auditable verification:
+
         1. Claim being evaluated
+
         2. Specific proposition being checked
+
         3. Evidence supporting the proposition
+
         4. Evidence contradicting the proposition
+
         5. Relevant context and qualifications
+
         6. Important evidence gaps
+
         7. Source reliability and limitations
+
         8. Reason the selected outcome follows from the available evidence
+
         9. Remaining uncertainty
+
         10. Methodology and model version
+
         """
+
         if isinstance(self.empirical_findings, dict) and "structured_reasoning" in self.empirical_findings:
+
             return self.empirical_findings["structured_reasoning"]
 
         claim_text = self.claim.original_text if self.claim else "Political assertion"
+
         propositions = (
+
             [ac.atomic_claim_text for ac in self.claim.atomic_claims]
+
             if self.claim and self.claim.atomic_claims
+
             else [claim_text]
+
         )
+
         supp_count = len(self.supporting_evidence_ids or [])
+
         contra_count = len(self.contradicting_evidence_ids or [])
+
         ctx_count = len(self.context_evidence_ids or [])
+
         outcome_val = self.outcome.value if hasattr(self.outcome, "value") else str(self.outcome)
+
         unc_val = self.uncertainty_indicator if self.uncertainty_indicator is not None else 0.0
 
         return {
+
             "claim_evaluated": claim_text,
+
             "specific_propositions": propositions,
+
             "supporting_evidence_summary": f"{supp_count} corroborating passage(s) identified in statutory/gazetted sources." if supp_count > 0 else "No directly supporting empirical evidence identified in examined sources.",
+
             "contradicting_evidence_summary": f"{contra_count} contradictory passage(s) demonstrating shortfall or conflicting baseline." if contra_count > 0 else "No contradictory statutory or audit records identified in examined sources.",
+
             "context_and_qualifications": f"{ctx_count} contextual record(s) indicating scope, pipeline realization, or demographic baseline nuances." if ctx_count > 0 else "No qualifying scope divergence detected.",
+
             "evidence_gaps": "Unresolved propositions or missing statutory records present." if outcome_val in ["insufficient_evidence", "pending_review", "partially_supported"] else "Comprehensive statutory records indexed.",
+
             "source_reliability_and_limitations": self.limitations_and_caveats or "Provisional records subject to final statutory audit by CAG / departmental reconciliation. Deduplication applied to syndicated wire services.",
+
             "outcome_justification": f"Outcome '{outcome_val}' directly assigned based on evidentiary balance: {supp_count} supporting vs {contra_count} contradicting signals across {self.source_diversity.get('independent_non_syndicated_sources', 1) if isinstance(self.source_diversity, dict) else 1} independent sources.",
+
             "remaining_uncertainty": f"Uncertainty index: {unc_val:.2f}. Absence of proof does not establish proof of falsehood.",
+
             "methodology_and_model": f"{self.methodology_version or 'CIVICLENS_VERIFICATION_METHODOLOGY_V1'} (Model: {self.model_version or 'civiclens-verifier-v1.0'})"
+
         }
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "verification_id": self.result_id,
+
             "result_id": self.result_id,
+
             "claim_id": self.claim_id,
+
             "run_id": self.run_id,
+
             "atomic_claim_ids": self.atomic_claim_ids or [],
+
             "outcome": self.outcome.value if hasattr(self.outcome, "value") else str(self.outcome),
+
             "verdict": self.verdict.value if self.verdict else (self.outcome.value if self.outcome else "SUPPORTED"),
+
             "explanation": self.explanation or self.rationale,
+
             "rationale": self.explanation or self.rationale,
+
             "structured_reasoning": self.get_structured_reasoning(),
+
             "supporting_evidence_ids": self.supporting_evidence_ids or [],
+
             "contradicting_evidence_ids": self.contradicting_evidence_ids or [],
+
             "context_evidence_ids": self.context_evidence_ids or [],
+
             "source_diversity": self.source_diversity or {},
+
             "confidence": self.confidence,
+
             "confidence_score": self.confidence_score or self.confidence,
+
             "support_score": self.support_score,
+
             "contradiction_score": self.contradiction_score,
+
             "uncertainty_score": self.uncertainty_score or self.uncertainty_indicator,
+
             "uncertainty_indicator": self.uncertainty_indicator,
+
             "methodology_version": self.methodology_version,
+
             "methodology": f"Methodology {self.methodology_version or 'v1.0'}: Multi-signal hybrid retrieval with explicit contradiction retention and human-in-the-loop audit.",
+
             "model_version": self.model_version,
+
             "verification_timestamp": self.verification_timestamp.isoformat() if self.verification_timestamp else None,
+
             "review_status": self.review_status.value if hasattr(self.review_status, "value") else str(self.review_status),
+
             "automated_outcome": self.automated_outcome.value if hasattr(self.automated_outcome, "value") else (str(self.automated_outcome) if self.automated_outcome else None),
+
             "automated_explanation": self.automated_explanation,
+
             "automated_confidence": self.automated_confidence,
+
             "human_revision_notes": self.human_revision_notes,
+
             "limitations": self.limitations_and_caveats or "Evidence assessment reflects available empirical and statutory records. Absence of proof does not constitute proof of falsehood. Syndicated wire copies are deduplicated and not counted as independent corroboration.",
+
             "limitations_and_caveats": self.limitations_and_caveats or "Evidence assessment reflects available empirical and statutory records. Absence of proof does not constitute proof of falsehood. Syndicated wire copies are deduplicated and not counted as independent corroboration.",
+
             "epistemic_disclaimer": "These are evidence assessments regarding specific factual claims, not judgments about a person's honesty or intent.",
+
             "is_current": self.is_current,
+
             "created_at": self.created_at.isoformat() if self.created_at else None
+
         }
 
-    # Relationships
     claim = relationship("Claim", back_populates="verification_results")
+
     run = relationship("VerificationRun", back_populates="result")
+
     reviews = relationship("ReviewRecord", back_populates="verification", cascade="all, delete-orphan")
 
-
-# ---------------------------------------------------------------------------
-# 10. VerificationHistory Entity
-# ---------------------------------------------------------------------------
 class VerificationHistory(Base):
+
     """
+
     Audit log tracking verdict/outcome transitions, rationale updates, or human overrides.
+
     """
+
     __tablename__ = "verification_history"
 
     history_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     result_id = Column(String, ForeignKey("verification_results.result_id", ondelete="SET NULL"), nullable=True, index=True)
 
     previous_verdict = Column(String, nullable=True)
+
     new_verdict = Column(String, nullable=False)
+
     previous_outcome = Column(String, nullable=True)
+
     new_outcome = Column(String, nullable=True)
+
     change_reason = Column(Text, nullable=True)
-    triggered_by = Column(String, default="AUTOMATED_PIPELINE")  # AUTOMATED_PIPELINE, HUMAN_REVIEWER, NEW_EVIDENCE
+
+    triggered_by = Column(String, default="AUTOMATED_PIPELINE")
     changed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "history_id": self.history_id,
+
             "claim_id": self.claim_id,
+
             "result_id": self.result_id,
+
             "previous_outcome": self.previous_outcome or self.previous_verdict,
+
             "new_outcome": self.new_outcome or self.new_verdict,
+
             "change_reason": self.change_reason,
+
             "triggered_by": self.triggered_by,
+
             "changed_at": self.changed_at.isoformat() if self.changed_at else None
+
         }
 
-    # Relationships
     claim = relationship("Claim", back_populates="verification_history")
 
-
-# ---------------------------------------------------------------------------
-# 11. SourceAssessment Entity
-# ---------------------------------------------------------------------------
 class SourceAssessment(Base):
+
     """
+
     Objective credibility evaluation for an evidence document.
+
     """
+
     __tablename__ = "source_assessments"
 
     assessment_id = Column(String, primary_key=True, index=True)
+
     document_id = Column(String, ForeignKey("evidence_documents.document_id", ondelete="CASCADE"), nullable=False, index=True)
 
     source_tier = Column(Enum(SourceTier), nullable=False, index=True)
+
     tier_weight = Column(Float, default=1.0)
+
     primary_source_score = Column(Float, default=1.0)
+
     institutional_independence_score = Column(Float, default=1.0)
+
     verifiability_score = Column(Float, default=1.0)
+
     composite_quality_score = Column(Float, default=1.0)
+
     assessment_notes = Column(Text, nullable=True)
+
     assessed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     document = relationship("EvidenceDocument", back_populates="source_assessments")
 
-
-# ---------------------------------------------------------------------------
-# 12. ReviewRecord Entity
-# ---------------------------------------------------------------------------
 class ReviewRecord(Base):
+
     """
+
     Human-in-the-loop audit trail capturing expert analyst validation or overrides.
+
     """
+
     __tablename__ = "review_records"
 
     review_id = Column(String, primary_key=True, index=True)
+
     claim_id = Column(String, ForeignKey("political_claims.claim_id", ondelete="CASCADE"), nullable=False, index=True)
+
     verification_id = Column(String, ForeignKey("verification_results.result_id", ondelete="SET NULL"), nullable=True, index=True)
+
     reviewer_id = Column(String, nullable=False, index=True)
+
     reviewer_role = Column(String, default="DOMAIN_EXPERT")
+
     review_status = Column(Enum(ReviewStatus), default=ReviewStatus.PENDING_REVIEW, index=True)
 
     action = Column(String, default="accept_assessment")
+
     original_verdict = Column(String, nullable=True)
+
     reviewed_verdict = Column(String, nullable=False)
+
     original_outcome = Column(String, nullable=True)
+
     reviewed_outcome = Column(String, nullable=True)
+
     review_notes = Column(Text, nullable=False)
+
     explanation = Column(Text, nullable=True)
+
     override_applied = Column(Boolean, default=False)
+
     reviewed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
+
             "review_id": self.review_id,
+
             "claim_id": self.claim_id,
+
             "verification_id": self.verification_id,
+
             "reviewer_id": self.reviewer_id,
+
             "reviewer_role": self.reviewer_role,
+
             "review_status": self.review_status.value if hasattr(self.review_status, "value") else str(self.review_status),
+
             "action": self.action,
+
             "original_outcome": self.original_outcome or self.original_verdict,
+
             "reviewed_outcome": self.reviewed_outcome or self.reviewed_verdict,
+
             "review_notes": self.review_notes,
+
             "explanation": self.explanation,
+
             "override_applied": self.override_applied,
+
             "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None
+
         }
 
-    # Relationships
     claim = relationship("Claim", back_populates="reviews")
+
     verification = relationship("VerificationResult", back_populates="reviews")
+

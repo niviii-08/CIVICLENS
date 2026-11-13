@@ -8,7 +8,6 @@ from backend.models.common import (
     ModelEvaluation
 )
 
-# Export instantiated repositories for the common models
 source_repo = CRUDBase[Source](Source)
 data_source_repo = CRUDBase[DataSource](DataSource)
 document_repo = CRUDBase[Document](Document)

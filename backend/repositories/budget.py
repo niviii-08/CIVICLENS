@@ -7,7 +7,7 @@ from backend.models.budget import BudgetRecord, BudgetDepartment, BudgetScheme, 
 class BudgetRecordRepository(CRUDBase[BudgetRecord]):
     def __init__(self):
         super().__init__(BudgetRecord)
-        
+
     def get_records(
         self,
         db: Session,
@@ -26,33 +26,31 @@ class BudgetRecordRepository(CRUDBase[BudgetRecord]):
         Returns a tuple: (list of records, total count).
         """
         query = db.query(self.model).join(BudgetScheme).join(BudgetDepartment)
-        
+
         if financial_year:
             query = query.filter(self.model.financial_year == financial_year)
-            
+
         if budget_stage:
             query = query.filter(self.model.budget_stage == budget_stage)
-            
+
         if department_id is not None:
             query = query.filter(BudgetScheme.department_id == department_id)
         elif department_name:
             query = query.filter(BudgetDepartment.name.ilike(f"%{department_name}%"))
-            
+
         if scheme_id is not None:
             query = query.filter(self.model.scheme_id == scheme_id)
         elif scheme_name:
             query = query.filter(BudgetScheme.name.ilike(f"%{scheme_name}%"))
-            
-        # Get total count before pagination
+
         total_count = query.count()
-        
-        # Apply pagination and ordering
+
         records = query.order_by(
             BudgetDepartment.name, 
             BudgetScheme.name, 
             desc(self.model.financial_year)
         ).offset(skip).limit(limit).all()
-        
+
         return records, total_count
 
     def get_available_years(self, db: Session) -> List[str]:

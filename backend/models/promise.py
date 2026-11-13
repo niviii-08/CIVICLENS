@@ -16,7 +16,6 @@ class PromiseStatus(str, enum.Enum):
     UNCLEAR = "unclear"
     DISPUTED = "disputed"
 
-
 class PoliticalPromise(Base):
     """
     Core Promise entity representing an extracted political manifesto promise.
@@ -27,7 +26,7 @@ class PoliticalPromise(Base):
     promise_id = Column(String, primary_key=True, index=True)
     manifesto_id = Column(String, ForeignKey("manifestos.manifesto_id", ondelete="CASCADE"), nullable=False, index=True)
 
-    original_text = Column(Text, nullable=False)  # Exact original wording preserved
+    original_text = Column(Text, nullable=False)
     normalized_text = Column(Text, nullable=False)
     page_number = Column(Integer, nullable=True)
     section = Column(String, nullable=True)
@@ -38,19 +37,17 @@ class PoliticalPromise(Base):
     is_ambiguous = Column(Boolean, default=False)
     is_test_fixture = Column(Boolean, default=False)
 
-    metadata_json = Column(JSON, nullable=True)  # Target pop, sector, dept, geography, targets, etc.
+    metadata_json = Column(JSON, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     manifesto = relationship("Manifesto", back_populates="promises")
     categories = relationship("PromiseCategoryMapping", back_populates="promise", cascade="all, delete-orphan")
     evidence_links = relationship("PromiseEvidenceLink", back_populates="promise", cascade="all, delete-orphan")
     scheme_links = relationship("PromiseSchemeLink", back_populates="promise", cascade="all, delete-orphan")
     assessments = relationship("PromiseAssessment", back_populates="promise", cascade="all, delete-orphan")
     assessment_history = relationship("PromiseAssessmentHistory", back_populates="promise", cascade="all, delete-orphan")
-
 
 class PromiseCategory(Base):
     """
@@ -59,12 +56,11 @@ class PromiseCategory(Base):
     __tablename__ = "promise_categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    category_code = Column(String, nullable=False, unique=True, index=True)  # e.g. "Education", "Healthcare"
+    category_code = Column(String, nullable=False, unique=True, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
 
     mappings = relationship("PromiseCategoryMapping", back_populates="category", cascade="all, delete-orphan")
-
 
 class PromiseCategoryMapping(Base):
     """
@@ -81,7 +77,6 @@ class PromiseCategoryMapping(Base):
     promise = relationship("PoliticalPromise", back_populates="categories")
     category = relationship("PromiseCategory", back_populates="mappings")
 
-
 class PromiseEvidenceLink(Base):
     """
     Explicit junction linking a Promise to Evidence (separate from promise and assessment records).
@@ -95,17 +90,16 @@ class PromiseEvidenceLink(Base):
 
     similarity_score = Column(Float, nullable=True)
     relevance_score = Column(Float, nullable=True)
-    matching_method = Column(String, nullable=True)  # e.g. "multi_signal_hybrid_retrieval"
+    matching_method = Column(String, nullable=True)
     model_name = Column(String, nullable=True)
     model_version = Column(String, nullable=True)
-    matched_metadata = Column(JSON, nullable=True)  # Signal scores, matched keywords/entities
+    matched_metadata = Column(JSON, nullable=True)
     relevance_notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     promise = relationship("PoliticalPromise", back_populates="evidence_links")
     evidence = relationship("Evidence")
-
 
 class PromiseSchemeLink(Base):
     """
@@ -121,7 +115,7 @@ class PromiseSchemeLink(Base):
 
     similarity_score = Column(Float, nullable=True)
     matching_method = Column(String, nullable=True)
-    match_type = Column(String, nullable=True)  # e.g. "pre_existing_scheme", "new_scheme_instance"
+    match_type = Column(String, nullable=True)
     model_name = Column(String, nullable=True)
     model_version = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
@@ -131,7 +125,6 @@ class PromiseSchemeLink(Base):
     promise = relationship("PoliticalPromise", back_populates="scheme_links")
     historical_scheme = relationship("HistoricalScheme")
     budget_scheme = relationship("BudgetScheme")
-
 
 class PromiseAssessment(Base):
     """
@@ -146,14 +139,13 @@ class PromiseAssessment(Base):
     status = Column(Enum(PromiseStatus), nullable=False, default=PromiseStatus.NOT_ASSESSED, index=True)
     confidence_score = Column(Float, default=0.0)
     rationale = Column(Text, nullable=True)
-    assessed_by = Column(String, nullable=True)  # e.g. "rule_engine_v1", "human_expert"
+    assessed_by = Column(String, nullable=True)
     assessment_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_current = Column(Boolean, default=True)
-    assessment_metadata = Column(JSON, nullable=True)  # evidence_ids, source_tiers, methodology details
+    assessment_metadata = Column(JSON, nullable=True)
 
     promise = relationship("PoliticalPromise", back_populates="assessments")
     history_entries = relationship("PromiseAssessmentHistory", back_populates="assessment", cascade="all, delete-orphan")
-
 
 class PromiseAssessmentHistory(Base):
     """

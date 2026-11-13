@@ -2,7 +2,6 @@ from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
 from sqlalchemy.orm import Session
 from backend.database.base_class import Base
 
-# Define a generic type variable bound to our SQLAlchemy Base
 ModelType = TypeVar("ModelType", bound=Base)
 
 class CRUDBase(Generic[ModelType]):

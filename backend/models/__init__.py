@@ -6,4 +6,3 @@ from backend.models import common, budget, manifesto, promise, news, funding, re
 
 __all__ = ["common", "budget", "manifesto", "promise", "news", "funding", "representative", "claim", "civic_issue", "graph", "entity_registry", "policy_evaluation"]
 
-

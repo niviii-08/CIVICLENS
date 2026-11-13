@@ -17,12 +17,11 @@ class Source(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
     url = Column(String, nullable=True)
-    type = Column(String, nullable=True)  # e.g., News, Government, NGO
-    
+    type = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    
-    # Relationships
+
     data_sources = relationship("DataSource", back_populates="source")
     documents = relationship("Document", back_populates="source")
 
@@ -34,13 +33,12 @@ class DataSource(Base):
     source_id = Column(Integer, ForeignKey("source.id"), nullable=True)
     name = Column(String, nullable=False)
     file_path = Column(String, nullable=True)
-    format = Column(String, nullable=True)  # e.g., CSV, PDF, JSON
+    format = Column(String, nullable=True)
     status = Column(Enum(ProcessingStatus), default=ProcessingStatus.PENDING)
-    
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    
-    # Relationships
+
     source = relationship("Source", back_populates="data_sources")
     evidences = relationship("Evidence", back_populates="data_source")
 
@@ -55,11 +53,10 @@ class Document(Base):
     url = Column(String, nullable=True)
     published_date = Column(Date, nullable=True)
     status = Column(Enum(ProcessingStatus), default=ProcessingStatus.PENDING)
-    
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    
-    # Relationships
+
     source = relationship("Source", back_populates="documents")
     evidences = relationship("Evidence", back_populates="document")
 
@@ -71,21 +68,19 @@ class Evidence(Base):
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(Integer, ForeignKey("document.id"), nullable=True)
     data_source_id = Column(Integer, ForeignKey("datasource.id"), nullable=True)
-    
-    content = Column(Text, nullable=False) # The extracted text or data point
+
+    content = Column(Text, nullable=False)
     page_number = Column(Integer, nullable=True)
-    context = Column(Text, nullable=True) # Surrounding context to help human evaluators
-    
-    # Explainability fields
-    explanation = Column(Text, nullable=True) # Human-readable explanation of why this evidence matters
-    supporting_values = Column(JSON, nullable=True) # Numerical or structured values extracted
-    result_type = Column(String, nullable=True) # Type of result this supports (e.g. 'BudgetAnomaly')
-    result_id = Column(String, nullable=True) # ID of the result this supports
-    
+    context = Column(Text, nullable=True)
+
+    explanation = Column(Text, nullable=True)
+    supporting_values = Column(JSON, nullable=True)
+    result_type = Column(String, nullable=True)
+    result_id = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    
-    # Relationships
+
     document = relationship("Document", back_populates="evidences")
     data_source = relationship("DataSource", back_populates="evidences")
     model_predictions = relationship("ModelPrediction", back_populates="evidence")
@@ -97,18 +92,16 @@ class ModelPrediction(Base):
     id = Column(Integer, primary_key=True, index=True)
     model_name = Column(String, nullable=False, index=True)
     model_version = Column(String, nullable=False)
-    
-    # Generic target tracking for what entity this prediction refers to
-    target_type = Column(String, nullable=False) # e.g., 'Claim', 'BudgetLine'
+
+    target_type = Column(String, nullable=False)
     target_id = Column(String, nullable=False)
-    
-    prediction_data = Column(JSON, nullable=False) # Stores the actual prediction (e.g. {"class": "Positive", "confidence": 0.89})
-    
+
+    prediction_data = Column(JSON, nullable=False)
+
     evidence_id = Column(Integer, ForeignKey("evidence.id"), nullable=True)
-    
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    # Relationships
+
     evidence = relationship("Evidence", back_populates="model_predictions")
 
 class ModelEvaluation(Base):
@@ -118,9 +111,9 @@ class ModelEvaluation(Base):
     id = Column(Integer, primary_key=True, index=True)
     model_name = Column(String, nullable=False, index=True)
     model_version = Column(String, nullable=False)
-    
-    evaluation_metric = Column(String, nullable=False) # e.g., 'F1-score', 'Accuracy'
+
+    evaluation_metric = Column(String, nullable=False)
     score = Column(Float, nullable=False)
-    dataset_reference = Column(String, nullable=True) # E.g., 'v1_gold_standard'
-    
+    dataset_reference = Column(String, nullable=True)
+
     evaluated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
