@@ -14,7 +14,6 @@ from backend.nlp.intelligence_layer import IntelligenceLayerService
 
 logger = setup_logger("civiclens.services.event_comparison_service")
 
-
 class EventCandidateDetector:
     """Detects candidate political event clusters from ingested news articles."""
 
@@ -66,7 +65,6 @@ class EventCandidateDetector:
 
         return clusters
 
-
 class EventClusteringEngine:
     """Maps candidate article clusters to ground-truth PoliticalEvent DB records."""
 
@@ -104,7 +102,6 @@ class EventClusteringEngine:
         db.refresh(event)
         return event
 
-
 class SourceGroupingEngine:
     """Groups clustered articles covering an event by their parent news source."""
 
@@ -117,7 +114,6 @@ class SourceGroupingEngine:
                 grouped[sid] = []
             grouped[sid].append(art)
         return grouped
-
 
 class CrossSourceEventComparer:
     """
@@ -141,7 +137,6 @@ class CrossSourceEventComparer:
         if not articles:
             return {"event_id": event_id, "event_name": event.event_name, "message": "No articles linked to this event."}
 
-        # 1. Group articles by source
         grouped = SourceGroupingEngine.group_by_source(db, articles)
         all_registered_sources = db.query(NewsSource).filter(NewsSource.active_status == "active").all()
         active_source_ids = [s.source_id for s in all_registered_sources]
@@ -153,16 +148,13 @@ class CrossSourceEventComparer:
             src_obj = db.query(NewsSource).filter(NewsSource.source_id == sid).first()
             sname = src_obj.source_name if src_obj else sid
 
-            # Timing
             dates = [a.publication_date for a in src_arts if a.publication_date]
             earliest_src = min(dates) if dates else overall_earliest
             reporting_delay_min = round((earliest_src - overall_earliest).total_seconds() / 60.0, 1)
 
-            # Headlines & Depth
             headlines = [a.title for a in src_arts]
             mean_word_count = round(sum(a.word_count for a in src_arts) / len(src_arts), 1)
 
-            # Entity Prominence Breakdown
             entity_prominence = {}
             for a in src_arts:
                 for e in a.entities:
@@ -179,7 +171,6 @@ class CrossSourceEventComparer:
                     "avg_prominence": round(data["prominence_sum"] / len(src_arts), 3)
                 }
 
-            # Sentiment & Sourcing Signals
             headline_sentiments = []
             body_sentiments = []
             quote_counts = []
@@ -215,11 +206,9 @@ class CrossSourceEventComparer:
                 }
             }
 
-        # 2. Compute Disparities & Omissions (Neutral Terminology)
         coverage_disparities = []
         covered_source_ids = set(grouped.keys())
 
-        # Omission / Presence Differential
         for sid in active_source_ids:
             if sid not in covered_source_ids:
                 src_obj = db.query(NewsSource).filter(NewsSource.source_id == sid).first()
@@ -231,14 +220,12 @@ class CrossSourceEventComparer:
                     "description": f"Coverage disparity: Source '{sname}' did not publish reports on event '{event.event_name}' while rival outlets covered it."
                 })
 
-        # Pairwise Entity & Framing Divergence
         source_pairs = list(source_analyses.keys())
         for i in range(len(source_pairs)):
             for j in range(i+1, len(source_pairs)):
                 s1 = source_analyses[source_pairs[i]]
                 s2 = source_analyses[source_pairs[j]]
 
-                # Entity Emphasis Difference
                 ent1 = set(s1["entity_prominence_breakdown"].keys())
                 ent2 = set(s2["entity_prominence_breakdown"].keys())
 
@@ -268,7 +255,6 @@ class CrossSourceEventComparer:
             "coverage_disparities": coverage_disparities
         }
 
-
 class EventComparisonService:
     """Unified service for candidate detection, clustering, cross-source comparison, and indicator persistence."""
 
@@ -287,7 +273,6 @@ class EventComparisonService:
             event = self.clustering.link_cluster_to_event(self.db, cl, f"Event: {cl['title_sample'][:40]}")
             comp = self.comparer.compare_event_coverage(self.db, event.event_id)
 
-            # Persist neutral bias indicators into DB
             for disp in comp.get("coverage_disparities", []):
                 ind_id = f"ind_disp_{uuid.uuid4().hex[:8]}"
                 ind = BiasIndicator(

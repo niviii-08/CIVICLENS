@@ -17,11 +17,10 @@ class ModelEvaluationService:
         for field in required_fields:
             if field not in obj_in:
                 raise ValueError(f"Missing required evaluation field: {field}")
-                
-        # Ensure score is numeric
+
         try:
             obj_in["score"] = float(obj_in["score"])
         except ValueError:
             raise ValueError("Evaluation score must be a number.")
-        
+
         return model_evaluation_repo.create(db, obj_in=obj_in)

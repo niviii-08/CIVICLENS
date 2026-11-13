@@ -43,7 +43,6 @@ class NewsService:
         )
         self.db.add(source)
 
-        # Sync with core common.Source model for unified provenance
         common_source = self.db.query(Source).filter(Source.name == source_name).first()
         if not common_source:
             common_source = Source(
@@ -68,7 +67,6 @@ class NewsService:
         if not source:
             raise ValueError(f"News source '{source_id}' not found in registry.")
 
-        # Check exact duplicate URL or text hash
         text_hash = self.scraper.compute_text_hash(article_text)
         existing_art = self.db.query(Article).filter(
             (Article.url == url) | (Article.text_hash == text_hash)
@@ -77,7 +75,6 @@ class NewsService:
             logger.info(f"Duplicate article detected for URL: {url}. Skipping ingestion.")
             return existing_art
 
-        # Detect language and normalize Tamil script
         lang = self.analyzer.detect_language(article_text)
         normalized_text = self.analyzer.normalize_tamil_text(article_text) if lang == "ta" else article_text
         normalized_title = self.analyzer.normalize_tamil_text(title) if lang == "ta" else title
@@ -103,7 +100,6 @@ class NewsService:
         )
         self.db.add(article)
 
-        # Track Initial Version
         version = ArticleVersion(
             article_id=article_id,
             version_number=1,
@@ -112,7 +108,6 @@ class NewsService:
         )
         self.db.add(version)
 
-        # Core Unified Provenance Link: Create Document & Evidence records
         common_source = self.db.query(Source).filter(Source.name == source.source_name).first()
         common_doc = Document(
             source_id=common_source.id if common_source else None,
@@ -126,17 +121,15 @@ class NewsService:
 
         evidence = Evidence(
             document_id=common_doc.id,
-            content=normalized_text[:500], # Lead paragraph snippet
+            content=normalized_text[:500],
             explanation="Ingested news article for Phase 4 political coverage analysis.",
             result_type="NewsArticle",
             result_id=article_id
         )
         self.db.add(evidence)
 
-        # Run NLP Extraction
         entities = self.analyzer.extract_entities(normalized_text)
         for ent_data in entities:
-            # Ensure entity exists in PoliticalEntity DB
             db_ent = self.db.query(PoliticalEntity).filter(PoliticalEntity.entity_id == ent_data["entity_id"]).first()
             if not db_ent:
                 db_ent = PoliticalEntity(
@@ -156,7 +149,6 @@ class NewsService:
             )
             self.db.add(art_ent)
 
-        # Run Topic Classification
         topics = self.analyzer.classify_topics(normalized_text)
         for idx, top_data in enumerate(topics):
             db_top = self.db.query(Topic).filter(Topic.topic_id == top_data["topic_id"]).first()
@@ -176,7 +168,6 @@ class NewsService:
             )
             self.db.add(art_top)
 
-        # Extract NLP Features & Signals
         feat_data = self.analyzer.extract_features(normalized_title, normalized_text)
         features = ArticleFeature(
             article_id=article_id,
@@ -208,7 +199,6 @@ class NewsService:
         if total_articles == 0:
             return []
 
-        # 1. Topic Emphasis Indicator
         indicators = []
         topic_counts = {}
         for art in articles:
@@ -232,7 +222,6 @@ class NewsService:
             )
             indicators.append(ind)
 
-        # 2. Entity Prominence Indicator
         entity_prominence = {}
         for art in articles:
             for ent in art.entities:

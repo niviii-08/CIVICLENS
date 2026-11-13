@@ -27,7 +27,7 @@ class EvidenceService:
         """
         if not content or content.strip() == "":
             raise ValueError("Evidence content cannot be empty.")
-            
+
         obj_in = {
             "content": content,
             "context": context,
@@ -37,12 +37,12 @@ class EvidenceService:
             "result_id": result_id,
             "page_number": page_number
         }
-        
+
         if document_id:
             obj_in["document_id"] = document_id
         if data_source_id:
             obj_in["data_source_id"] = data_source_id
-            
+
         return evidence_repo.create(db, obj_in=obj_in)
 
     @staticmethod

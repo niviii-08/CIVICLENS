@@ -28,15 +28,12 @@ class SchemeIntegrator:
             dept_name = record.get("department_name")
             scheme_name = record.get("scheme_name")
             
-            # 1. Lookup Department
             dept = self.db.query(BudgetDepartment).filter(BudgetDepartment.name == dept_name).first()
             if not dept:
                 report["failed_department_lookup"] += 1
                 mapping_table.append({"record": record, "status": "FAILED_DEPT", "matched_id": None})
                 continue
                 
-            # 2. Strict Exact Matching to Phase 1 BudgetScheme
-            # We enforce strict lowercase exact string match to avoid false positive merges
             existing_schemes = self.db.query(BudgetScheme).filter(BudgetScheme.department_id == dept.id).all()
             
             exact_match_id = None
@@ -48,14 +45,11 @@ class SchemeIntegrator:
                     break
                     
             if not exact_match_id:
-                # Naive uncertain match rule: one name is a subset of another and > 10 chars
-                # Or fuzzy ratio > 80% (simulated here via basic substring)
                 for bs in existing_schemes:
                     if len(scheme_name) > 10 and (scheme_name.lower() in bs.name.lower() or bs.name.lower() in scheme_name.lower()):
                         uncertain_match_id = bs.id
                         break
             
-            # 3. Determine Integration Status
             budget_scheme_id = None
             is_uncertain = 0
             
@@ -79,10 +73,6 @@ class SchemeIntegrator:
                 "budget_scheme_id": budget_scheme_id
             })
             
-            # 4. Construct DB Model (If we were inserting)
-            # original_source_identifier is preserved via record_id
-            # This logic just evaluates the match and prepares the integration.
-            # In a real run, we'd add to session.
             
             hist_scheme = HistoricalScheme(
                 original_source_identifier=record.get("record_id"),
@@ -98,7 +88,6 @@ class SchemeIntegrator:
                 is_uncertain_match=is_uncertain,
                 match_confidence=1.0 if status == "EXACT_MATCH" else (0.7 if status == "UNCERTAIN_MATCH" else 0.0)
             )
-            # self.db.add(hist_scheme) # Omitted explicit commit to allow purely returning the mapping
             
         return {
             "report": report,

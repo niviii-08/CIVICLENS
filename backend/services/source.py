@@ -10,15 +10,12 @@ class SourceService:
     
     @staticmethod
     def create_source(db: Session, *, obj_in: Dict[str, Any]) -> Source:
-        # Validate inputs
         if not obj_in.get("name"):
             raise ValueError("Source name is strictly required.")
             
-        # Example of business logic: Normalize source types
         if obj_in.get("type"):
             obj_in["type"] = obj_in["type"].strip().capitalize()
             
-        # Delegate persistence to the repository
         return source_repo.create(db, obj_in=obj_in)
         
     @staticmethod

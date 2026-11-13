@@ -1,24 +1,9 @@
 """
-Phase 10.4 — Policy Indicator Registry and Baseline Construction Service.
-=========================================================================
+Policy indicator registry and baseline construction service.
 
-Implements the indicator registry, baseline construction engine, and strict
-compatibility validators for measuring documented policy implementation and outcome changes:
-
-1. Supports all 10 indicator domains (budget expenditure, beneficiary count, facilities
-   constructed/upgraded, service delivery count, target achievement, service access,
-   education, health, infrastructure/development, complaint/resolution measures).
-2. Records all 12 required indicator attributes (canonical ID, definition, unit, source,
-   reporting frequency, geographic level, baseline period & value, comparison period & value,
-   collection method, missing-data status, calculation formula, known limitations).
-3. Enforces compatibility checks across 4 dimensions before any comparison or aggregation:
-   - Compatible Units (blocks silent unit mismatches; supports explicit linear scale conversion)
-   - Compatible Definitions (never silently combines observations with differing definition codes)
-   - Compatible Geographic Boundaries (detects district bifurcations and boundary changes)
-   - Compatible Reporting Periods / Frequencies (blocks comparing quarterly vs annual flows)
-4. Enforces Missing-Data Integrity:
-   - Never treats missing data (None) as 0.0.
-   - Records whether a baseline is OFFICIAL_PUBLISHED, CALCULATED_FROM_SOURCE_DATA, or UNAVAILABLE.
+Manages canonical indicator definitions, baseline observations, and compatibility
+rules across results-chain tiers (input, activity, output, outcome, impact)
+to ensure methodologically sound indicator comparisons.
 """
 
 from __future__ import annotations
@@ -37,7 +22,6 @@ from backend.models.policy_evaluation import (
     MissingDataStatus,
 )
 
-
 class IncompatibleIndicatorComparisonError(ValueError):
     """
     Raised when attempting to compare or combine indicator observations with
@@ -48,8 +32,6 @@ class IncompatibleIndicatorComparisonError(ValueError):
         self.error_code = error_code
         super().__init__(f"{error_code}: {message}")
 
-
-# Safe linear unit conversion multipliers (within identical physical/monetary dimensions only)
 LINEAR_UNIT_CONVERSIONS: Dict[Tuple[str, str], float] = {
     ("RUPEES_LAKH", "RUPEES_CRORE"): 0.01,
     ("RUPEES_CRORE", "RUPEES_LAKH"): 100.0,
@@ -63,16 +45,12 @@ LINEAR_UNIT_CONVERSIONS: Dict[Tuple[str, str], float] = {
     ("KM", "METERS"): 1000.0,
 }
 
-
 class PolicyIndicatorRegistryService:
     """
     Service for registering policy indicators, constructing baselines with explicit
     provenance, and validating cross-period and cross-geography comparisons.
     """
 
-    # -----------------------------------------------------------------------
-    # 1. Missing-Data Status Resolution (Never Treat Missing Data as Zero)
-    # -----------------------------------------------------------------------
     @staticmethod
     def determine_missing_data_status(
         baseline_value: Optional[float],
@@ -102,9 +80,6 @@ class PolicyIndicatorRegistryService:
             return MissingDataStatus.MISSING_BASELINE
         return MissingDataStatus.MISSING_COMPARISON
 
-    # -----------------------------------------------------------------------
-    # 2. Indicator Registration
-    # -----------------------------------------------------------------------
     @classmethod
     def register_indicator(
         cls,
@@ -148,7 +123,6 @@ class PolicyIndicatorRegistryService:
         if not source or not source.strip():
             raise ValueError("Indicator source is required.")
 
-        # Resolve baseline construction status
         if baseline_construction_status is not None:
             b_status = BaselineConstructionStatus.from_string(baseline_construction_status)
             if b_status == BaselineConstructionStatus.UNAVAILABLE and baseline_value is not None:
@@ -194,10 +168,10 @@ class PolicyIndicatorRegistryService:
             geographic_level=geographic_level.strip().upper(),
             boundary_reference=boundary_reference.strip(),
             baseline_period=baseline_period,
-            baseline_value=baseline_value,  # Strictly preserves None if missing
+            baseline_value=baseline_value,
             baseline_construction_status=b_status,
             comparison_period=comparison_period,
-            comparison_value=comparison_value,  # Strictly preserves None if missing
+            comparison_value=comparison_value,
             collection_method=collection_method.strip(),
             missing_data_status=m_status,
             calculation_formula=calculation_formula.strip(),
@@ -212,9 +186,6 @@ class PolicyIndicatorRegistryService:
         db.refresh(indicator)
         return indicator
 
-    # -----------------------------------------------------------------------
-    # 3. Unit Conversion & Compatibility Validation
-    # -----------------------------------------------------------------------
     @staticmethod
     def convert_unit_if_compatible(
         value: Optional[float],
@@ -231,7 +202,7 @@ class PolicyIndicatorRegistryService:
         u_to = to_unit.strip().upper()
 
         if u_from == u_to:
-            return value  # type: ignore
+            return value
 
         if not allow_linear_conversion:
             raise IncompatibleIndicatorComparisonError(
@@ -248,7 +219,7 @@ class PolicyIndicatorRegistryService:
             )
 
         if value is None:
-            return None  # type: ignore
+            return None
 
         return value * LINEAR_UNIT_CONVERSIONS[pair]
 
@@ -272,7 +243,6 @@ class PolicyIndicatorRegistryService:
         Returns (normalized_baseline_value, normalized_comparison_value).
         Never silently combines incompatible observations.
         """
-        # 1. Definition Compatibility
         base_def = baseline_obs.definition_code or indicator.definition_code or f"DEF:{indicator.indicator_id}"
         comp_def = comparison_obs.definition_code or indicator.definition_code or f"DEF:{indicator.indicator_id}"
         if base_def != comp_def:
@@ -282,7 +252,6 @@ class PolicyIndicatorRegistryService:
                 f"baseline='{base_def}' vs comparison='{comp_def}'.",
             )
 
-        # 2. Unit Compatibility
         target_unit = indicator.unit.strip().upper()
         base_unit = (baseline_obs.unit_override or target_unit).strip().upper()
         comp_unit = (comparison_obs.unit_override or target_unit).strip().upper()
@@ -304,7 +273,6 @@ class PolicyIndicatorRegistryService:
                 f"Baseline unit '{base_unit}' does not match comparison unit '{comp_unit}'.",
             )
 
-        # 3. Geographic Level, Unit, and Boundary Compatibility
         if baseline_obs.geographic_level.upper() != comparison_obs.geographic_level.upper():
             raise IncompatibleIndicatorComparisonError(
                 "GEOGRAPHIC_LEVEL_MISMATCH",
@@ -328,7 +296,6 @@ class PolicyIndicatorRegistryService:
                 "Requires boundary harmonization before comparison.",
             )
 
-        # 4. Reporting Period / Frequency Compatibility
         ind_freq = (
             indicator.reporting_frequency.value
             if hasattr(indicator.reporting_frequency, "value")
@@ -347,9 +314,6 @@ class PolicyIndicatorRegistryService:
 
         return norm_base_val, norm_comp_val
 
-    # -----------------------------------------------------------------------
-    # 4. Baseline Construction Engine
-    # -----------------------------------------------------------------------
     @classmethod
     def construct_baseline_from_observations(
         cls,
@@ -385,7 +349,6 @@ class PolicyIndicatorRegistryService:
                 "missing_data_status": indicator.missing_data_status.value,
             }
 
-        # Check for any missing values in source_observations — NEVER treat None as 0.0!
         missing_obs = [obs for obs in source_observations if obs.value is None]
         if missing_obs:
             indicator.baseline_period = baseline_period
@@ -406,7 +369,6 @@ class PolicyIndicatorRegistryService:
                 "missing_observation_ids": [o.observation_id for o in missing_obs],
             }
 
-        # Verify unit and definition compatibility across all source observations
         expected_def = indicator.definition_code or f"DEF:{indicator.indicator_id}"
         expected_unit = indicator.unit.strip().upper()
         expected_bound = source_observations[0].boundary_reference or indicator.boundary_reference
@@ -431,7 +393,7 @@ class PolicyIndicatorRegistryService:
                     "BOUNDARY_MISMATCH",
                     f"Observation {obs.observation_id} uses boundary '{obs_bound}' vs '{expected_bound}'.",
                 )
-            values.append(float(obs.value))  # type: ignore
+            values.append(float(obs.value))
 
         if len(values) == 1 and mode == BaselineConstructionStatus.OFFICIAL_PUBLISHED:
             computed_val = values[0]
@@ -461,9 +423,6 @@ class PolicyIndicatorRegistryService:
             "source_observation_count": len(values),
         }
 
-    # -----------------------------------------------------------------------
-    # 5. Cross-Period Indicator Comparison
-    # -----------------------------------------------------------------------
     @classmethod
     def compare_observations(
         cls,

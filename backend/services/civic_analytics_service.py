@@ -1,20 +1,9 @@
 """
-CIVICLENS TN — Civic Issue Analytics and Trend Detection Engine (Phase 8.7)
-===========================================================================
-Computes validated statistical metrics, temporal trends, and empirical indicators
-from public grievance records and civic issue intelligence data.
+Civic issue analytics and trend detection service.
 
-Adheres strictly to the following core principles:
-1. COMPLAINTS != PREVALENCE: Recorded complaint volume reflects reporting propensity,
-   portal accessibility, civic literacy, and digital infrastructure; it does NOT equate
-   to the true prevalence or severity of physical civic problems.
-2. NO UNCONTEXTUALIZED AREA COMPARISONS: Direct comparisons between administrative areas
-   without explaining population disparities, digital coverage gaps, and reporting channels
-   are methodologically invalid.
-3. SMALL SAMPLE GUARDS: Statistical anomaly detection is strictly guarded by minimum
-   sample size thresholds (N >= 30, baseline periods >= 3).
-4. EXPLORATORY LABELS: Unusual statistical patterns are labeled as
-   "INVESTIGATION_INDICATOR_UNUSUAL_VOLUME", never as proof of negligence or misconduct.
+Computes validated statistical metrics, temporal trends, and empirical indicators
+from public grievance records and civic issue intelligence data, including
+turnaround benchmarks and spatial hotspot detection.
 """
 
 from __future__ import annotations
@@ -42,10 +31,6 @@ from backend.models.civic_issue import (
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Methodological Constants & Mandatory Disclaimers
-# ---------------------------------------------------------------------------
-
 GENERAL_ANALYTICS_DISCLAIMER: str = (
     "COMPLAINTS DO NOT EQUAL PREVALENCE: Recorded grievance volume reflects citizen reporting "
     "propensity, mobile helpline access, civic awareness, and administrative portal availability. "
@@ -71,11 +56,6 @@ ANOMALY_INVESTIGATION_NOTICE: str = (
 MIN_ANOMALY_SAMPLE_SIZE: int = 30
 MIN_ANOMALY_BASELINE_PERIODS: int = 3
 
-
-# ---------------------------------------------------------------------------
-# Data Structures
-# ---------------------------------------------------------------------------
-
 @dataclass
 class MetricResult:
     """Standardized metric calculation result with reporting period and source."""
@@ -90,7 +70,6 @@ class MetricResult:
     caveats: str = ""
     extra_metadata: Dict[str, Any] = field(default_factory=dict)
 
-
 @dataclass
 class AnomalyItem:
     """Individual detected statistical anomaly."""
@@ -101,17 +80,15 @@ class AnomalyItem:
     indicator_label: str
     interpretation_note: str
 
-
 @dataclass
 class AnomalyDetectionResult:
     """Result of statistical volume anomaly detection."""
-    status: str  # "SUFFICIENT_DATA" or "INSUFFICIENT_DATA"
+    status: str
     sample_size: int
     baseline_periods_count: int
     anomalies: List[AnomalyItem] = field(default_factory=list)
     interpretative_notice: str = ANOMALY_INVESTIGATION_NOTICE
     reason: Optional[str] = None
-
 
 @dataclass
 class AreaComparisonResult:
@@ -131,7 +108,6 @@ class AreaComparisonResult:
     required_context: str
     interpretative_caveat: str = AREA_COMPARISON_CAVEAT
 
-
 @dataclass
 class CivicAnalyticsReport:
     """Consolidated analytics report across all 10 core civic metrics."""
@@ -142,11 +118,6 @@ class CivicAnalyticsReport:
     anomaly_detection: Optional[AnomalyDetectionResult] = None
     general_disclaimer: str = GENERAL_ANALYTICS_DISCLAIMER
 
-
-# ---------------------------------------------------------------------------
-# Civic Analytics Engine
-# ---------------------------------------------------------------------------
-
 class CivicAnalyticsEngine:
     """
     Analytics and trend detection engine for validated civic issue records.
@@ -156,9 +127,6 @@ class CivicAnalyticsEngine:
     def __init__(self, default_source: str = "VALIDATED_CIVIC_RECORDS"):
         self.default_source = default_source
 
-    # -----------------------------------------------------------------------
-    # Helper: Record Normalization
-    # -----------------------------------------------------------------------
     @staticmethod
     def _extract_date(record: Any, field_name: str) -> Optional[datetime]:
         """Extract datetime from ORM entity, dict, or object."""
@@ -184,9 +152,6 @@ class CivicAnalyticsEngine:
             return record.get(field_name, default)
         return getattr(record, field_name, default)
 
-    # -----------------------------------------------------------------------
-    # 1. Issue Counts by Category
-    # -----------------------------------------------------------------------
     def calculate_category_counts(
         self,
         records: List[Any],
@@ -231,9 +196,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # 2. Issue Counts by Administrative Area
-    # -----------------------------------------------------------------------
     def calculate_area_counts(
         self,
         records: List[Any],
@@ -262,7 +224,6 @@ class CivicAnalyticsEngine:
 
             counts[area_str] = counts.get(area_str, 0) + 1
 
-        # Calculate per-capita rates where population is known
         per_100k: Dict[str, Optional[float]] = {}
         for area_code, count in counts.items():
             pop = pop_map.get(area_code)
@@ -283,9 +244,6 @@ class CivicAnalyticsEngine:
             caveats=AREA_COMPARISON_CAVEAT,
         )
 
-    # -----------------------------------------------------------------------
-    # 3. Issue Counts by Department
-    # -----------------------------------------------------------------------
     def calculate_department_counts(
         self,
         records: List[Any],
@@ -334,9 +292,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # 4. Monthly and Yearly Trends
-    # -----------------------------------------------------------------------
     def calculate_temporal_trends(
         self,
         records: List[Any],
@@ -367,11 +322,9 @@ class CivicAnalyticsEngine:
                 monthly_counts["UNKNOWN_DATE"] = monthly_counts.get("UNKNOWN_DATE", 0) + 1
                 yearly_counts["UNKNOWN_DATE"] = yearly_counts.get("UNKNOWN_DATE", 0) + 1
 
-        # Sorted chronology
         sorted_months = dict(sorted(monthly_counts.items()))
         sorted_years = dict(sorted(yearly_counts.items()))
 
-        # Calculate month-over-month percentage changes where valid
         mom_changes: Dict[str, Optional[float]] = {}
         prev_month: Optional[int] = None
         for m, count in sorted_months.items():
@@ -404,9 +357,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # 5. Acknowledgement and Reported Resolution Times
-    # -----------------------------------------------------------------------
     def calculate_turnaround_times(
         self,
         records: List[Any],
@@ -433,12 +383,10 @@ class CivicAnalyticsEngine:
                 or self._extract_date(rec, "actual_resolution_date")
             )
 
-            # Check acknowledgement time
             if sub_dt and ack_dt and ack_dt >= sub_dt:
                 hours = (ack_dt - sub_dt).total_seconds() / 3600.0
                 ack_hours_list.append(round(hours, 2))
 
-            # Check resolution time
             if sub_dt and res_dt and res_dt >= sub_dt:
                 days = (res_dt - sub_dt).total_seconds() / 86400.0
                 res_days_list.append(round(days, 2))
@@ -485,9 +433,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # 6. Percentage of Records with Known Status
-    # -----------------------------------------------------------------------
     def calculate_known_status_percentage(
         self,
         records: List[Any],
@@ -538,9 +483,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # 7. Recurring Issue Clusters
-    # -----------------------------------------------------------------------
     def calculate_recurring_clusters(
         self,
         records: List[Any],
@@ -559,7 +501,6 @@ class CivicAnalyticsEngine:
             repeat_count = self._extract_attr(rec, "repeat_count", 1) or 1
             is_recurring = self._extract_attr(rec, "is_recurring", False)
 
-            # Spatial-category composite key for clustering
             cat = self._extract_attr(rec, "issue_category") or self._extract_attr(rec, "category", "general")
             cat_str = cat.value if hasattr(cat, "value") else str(cat).lower()
             area = self._extract_attr(rec, "administrative_area_id") or "unspecified_area"
@@ -570,7 +511,6 @@ class CivicAnalyticsEngine:
             if repeat_count > 1 or is_recurring:
                 recurring_count += 1
 
-        # Hotspots with 2 or more reports in the cluster
         multi_issue_hotspots = {k: v for k, v in clusters_map.items() if v > 1}
         recurrence_rate = round((recurring_count / n) * 100, 2) if n > 0 else 0.0
 
@@ -595,9 +535,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # 8. Reopened Issue Counts
-    # -----------------------------------------------------------------------
     def calculate_reopened_issues(
         self,
         records: List[Any],
@@ -649,9 +586,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # 9. Documented Response Rates
-    # -----------------------------------------------------------------------
     def calculate_documented_response_rate(
         self,
         records: List[Any],
@@ -671,7 +605,6 @@ class CivicAnalyticsEngine:
             if responses and len(responses) > 0:
                 with_response += 1
             else:
-                # Also check if grievance itself has acknowledgement or resolution date logged
                 ack = self._extract_date(rec, "acknowledgement_date")
                 res = self._extract_date(rec, "resolution_date") or self._extract_date(rec, "actual_resolution_date")
                 if ack or res:
@@ -698,9 +631,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # 10. Resolution Evidence Coverage
-    # -----------------------------------------------------------------------
     def calculate_resolution_evidence_coverage(
         self,
         records: List[Any],
@@ -761,9 +691,6 @@ class CivicAnalyticsEngine:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # Statistical Anomaly Detection (with Small Sample Protection)
-    # -----------------------------------------------------------------------
     def detect_volume_anomalies(
         self,
         records: List[Any],
@@ -789,7 +716,6 @@ class CivicAnalyticsEngine:
                 ),
             )
 
-        # Compute monthly counts
         monthly_counts: Dict[str, int] = {}
         for rec in records:
             dt = (
@@ -820,7 +746,6 @@ class CivicAnalyticsEngine:
         std_val = math.sqrt(variance)
 
         if std_val < 1e-4:
-            # Completely uniform counts across periods
             return AnomalyDetectionResult(
                 status="SUFFICIENT_DATA",
                 sample_size=n,
@@ -856,9 +781,6 @@ class CivicAnalyticsEngine:
             interpretative_notice=ANOMALY_INVESTIGATION_NOTICE,
         )
 
-    # -----------------------------------------------------------------------
-    # Comparative Area Analysis (with Strict Context Controls)
-    # -----------------------------------------------------------------------
     def compare_areas(
         self,
         area_a_code: str,
@@ -918,9 +840,6 @@ class CivicAnalyticsEngine:
             interpretative_caveat=AREA_COMPARISON_CAVEAT,
         )
 
-    # -----------------------------------------------------------------------
-    # Comprehensive Report Generation
-    # -----------------------------------------------------------------------
     def generate_comprehensive_report(
         self,
         records: List[Any],
@@ -969,9 +888,6 @@ class CivicAnalyticsEngine:
             general_disclaimer=GENERAL_ANALYTICS_DISCLAIMER,
         )
 
-    # -----------------------------------------------------------------------
-    # Database Persistence
-    # -----------------------------------------------------------------------
     def persist_report_to_db(
         self,
         db: Session,

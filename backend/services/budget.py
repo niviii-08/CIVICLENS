@@ -33,7 +33,7 @@ class BudgetAnalysisService:
             scheme_id=scheme_id,
             budget_stage=budget_stage
         )
-        
+
     @staticmethod
     def summarize_by_year(records: List[BudgetRecord]) -> Dict[str, float]:
         """
@@ -57,10 +57,9 @@ class BudgetAnalysisService:
         Returns ordered dict by year (ascending).
         """
         summary = BudgetAnalysisService.summarize_by_year(records)
-        
-        # Sort years ascending
+
         sorted_years = sorted(summary.keys())
-        
+
         trend = {}
         prev_val = None
         for year in sorted_years:
@@ -68,13 +67,13 @@ class BudgetAnalysisService:
             pct_change = None
             if prev_val is not None and prev_val != 0:
                 pct_change = ((val - prev_val) / prev_val) * 100
-            
+
             trend[year] = {
                 "total": val,
                 "percentage_change": pct_change
             }
             prev_val = val
-            
+
         return trend
 
     @staticmethod
@@ -110,7 +109,6 @@ class BudgetAnalysisService:
         Expects records of a single BudgetStage.
         Includes available budget stages in the summary metadata.
         """
-        # Group by scheme name
         scheme_groups = {}
         for record in records:
             if record.amount is None or not record.scheme:
@@ -122,17 +120,15 @@ class BudgetAnalysisService:
 
         trends = {}
         for s_name, s_records in scheme_groups.items():
-            # Get available budget stages for this scheme (overall metadata info)
             available_stages = list({r.budget_stage.value for r in s_records})
-            
-            # Use existing trend calculator for the scheme's records
+
             yearly_trend = BudgetAnalysisService.calculate_year_trend(s_records)
-            
+
             trends[s_name] = {
                 "available_stages": available_stages,
                 "yearly_trend": yearly_trend
             }
-            
+
         return trends
 
     @staticmethod
@@ -144,50 +140,45 @@ class BudgetAnalysisService:
         """
         Compares two budget stages (e.g. Budget Estimate vs Actual Expenditure) 
         for comparable entities.
-        
+
         Returns a dictionary mapping a unique identifier (e.g. scheme + year) 
         to the comparison metrics (absolute difference, percentage difference).
         """
         if stage_a == stage_b:
             raise ValueError("Cannot compare identical budget stages.")
-            
-        # Group amounts by unique entity (scheme_id + financial_year) and stage
+
         grouped_data = {}
-        
+
         for record in records:
             if record.amount is None or not record.scheme:
                 continue
-                
-            # We group by scheme and year. We could expand this to include head_of_account.
+
             entity_key = f"{record.scheme.name} ({record.financial_year})"
-            
+
             if entity_key not in grouped_data:
                 grouped_data[entity_key] = {}
-                
+
             if record.budget_stage in [stage_a, stage_b]:
-                # Assume single record per stage/scheme/year in this context, 
-                # or sum them if multiple entries exist (e.g. sub-schemes).
                 grouped_data[entity_key][record.budget_stage] = grouped_data[entity_key].get(record.budget_stage, 0.0) + record.amount
-                
-        # Perform comparison only where BOTH stages exist
+
         comparisons = {}
         for entity_key, stages_data in grouped_data.items():
             if stage_a in stages_data and stage_b in stages_data:
                 val_a = stages_data[stage_a]
                 val_b = stages_data[stage_b]
                 diff = val_b - val_a
-                
+
                 percent_diff = None
                 if val_a != 0:
                     percent_diff = (diff / val_a) * 100
-                    
+
                 comparisons[entity_key] = {
                     "value_a": val_a,
                     "value_b": val_b,
                     "absolute_difference": diff,
                     "percentage_difference": percent_diff
                 }
-                
+
         return comparisons
 
 budget_service = BudgetAnalysisService()
