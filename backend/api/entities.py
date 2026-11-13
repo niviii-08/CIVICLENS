@@ -1,15 +1,8 @@
 """
-Phase 9.2 — Cross-Phase Entity Registry & Resolution REST API Router.
-=====================================================================
+Entity registry and identity resolution REST API router.
 
-Endpoints:
-- GET  /api/entities/lookup                  Disambiguated entity lookup by name, alias, or source ID
-- GET  /api/entities/<entity_id>             Fetch full canonical entity profile, aliases, and source mappings
-- GET  /api/entities/<entity_id>/history     Retrieve full immutable audit ledger for merges, splits, and updates
-- GET  /api/entities/duplicates              Retrieve detected duplicate pairs and uncertain matches
-- POST /api/entities/merge                   Merge two canonical entities with mandatory rationale and audit record
-- POST /api/entities/split                   Split an entity into two distinct entities with audit log
-- POST /api/entities/candidates/<cand_id>/review  Human review of uncertain match candidates
+Provides endpoints for managing canonical civic entities, alternate aliases,
+and reviewing candidate duplicates.
 """
 
 from __future__ import annotations
@@ -34,7 +27,6 @@ from backend.services.entity_resolution_service import EntityResolutionService
 logger = logging.getLogger("civiclens.phase9.api.entities")
 
 entities_bp = Blueprint("entities", __name__, url_prefix="/entities")
-
 
 @entities_bp.route("/lookup", methods=["GET"])
 def lookup_entity():
@@ -91,7 +83,6 @@ def lookup_entity():
     finally:
         db.close()
 
-
 @entities_bp.route("/<entity_id>", methods=["GET"])
 def get_entity_profile(entity_id: str):
     """
@@ -109,7 +100,6 @@ def get_entity_profile(entity_id: str):
         return success_response(data=data, message="Canonical entity profile retrieved.")
     finally:
         db.close()
-
 
 @entities_bp.route("/<entity_id>/history", methods=["GET"])
 def get_entity_audit_history(entity_id: str):
@@ -130,7 +120,6 @@ def get_entity_audit_history(entity_id: str):
         )
     finally:
         db.close()
-
 
 @entities_bp.route("/duplicates", methods=["GET"])
 def list_duplicate_candidates():
@@ -155,7 +144,6 @@ def list_duplicate_candidates():
         )
     finally:
         db.close()
-
 
 @entities_bp.route("/merge", methods=["POST"])
 def merge_entities():
@@ -193,7 +181,6 @@ def merge_entities():
     finally:
         db.close()
 
-
 @entities_bp.route("/split", methods=["POST"])
 def split_entity():
     """
@@ -230,7 +217,6 @@ def split_entity():
         return error_response(message="Failed to split entity.", error_details=str(e), status_code=500)
     finally:
         db.close()
-
 
 @entities_bp.route("/candidates/<candidate_id>/review", methods=["POST"])
 def review_candidate(candidate_id: str):

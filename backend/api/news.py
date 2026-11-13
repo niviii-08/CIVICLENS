@@ -15,7 +15,6 @@ from backend.api.responses import success_response, error_response
 
 news_bp = Blueprint('news', __name__, url_prefix='/news')
 
-
 def build_provenance(article: Article, db) -> dict:
     """Builds explicit data provenance structure for an article."""
     source_name = article.source.source_name if article.source else article.source_id
@@ -36,11 +35,6 @@ def build_provenance(article: Article, db) -> dict:
         "evidence_id": evidence_id,
         "is_test_fixture": article.is_test_fixture
     }
-
-
-# ==========================================
-# 1. SOURCES API
-# ==========================================
 
 @news_bp.route('/sources', methods=['GET'])
 def get_sources():
@@ -75,7 +69,6 @@ def get_sources():
     finally:
         db.close()
 
-
 @news_bp.route('/sources', methods=['POST'])
 def register_source():
     """Register a new media outlet or government portal."""
@@ -103,11 +96,6 @@ def register_source():
         return error_response(message=f"Failed to register source: {str(e)}", status_code=500)
     finally:
         db.close()
-
-
-# ==========================================
-# 2. ARTICLES API
-# ==========================================
 
 @news_bp.route('/articles', methods=['GET'])
 def get_articles():
@@ -144,7 +132,6 @@ def get_articles():
         if language:
             query = query.filter(Article.language == language)
 
-        # Date filtering
         if date_str:
             try:
                 dt = datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -166,20 +153,16 @@ def get_articles():
             except ValueError:
                 pass
 
-        # Topic filtering
         if topic_id:
             query = query.join(ArticleTopic).filter(ArticleTopic.topic_id == topic_id)
 
-        # Entity / Party / Person filtering
         target_entities = [e for e in [entity_id, party_id, person_id] if e]
         if target_entities:
             query = query.join(ArticleEntity).filter(ArticleEntity.entity_id.in_(target_entities))
 
-        # Event filtering
         if event_id:
             query = query.join(ArticleEvent).filter(ArticleEvent.event_id == event_id)
 
-        # Search term filtering
         if search:
             query = query.filter(or_(
                 Article.title.ilike(f"%{search}%"),
@@ -209,7 +192,6 @@ def get_articles():
         )
     finally:
         db.close()
-
 
 @news_bp.route('/articles/<article_id>', methods=['GET'])
 def get_article_detail(article_id):
@@ -264,11 +246,6 @@ def get_article_detail(article_id):
     finally:
         db.close()
 
-
-# ==========================================
-# 3. TOPICS & ENTITIES API
-# ==========================================
-
 @news_bp.route('/topics', methods=['GET'])
 def get_topics():
     """Retrieve news topic taxonomy."""
@@ -285,7 +262,6 @@ def get_topics():
         return success_response(data=data, message="Topics retrieved successfully")
     finally:
         db.close()
-
 
 @news_bp.route('/entities', methods=['GET'])
 def get_entities():
@@ -316,11 +292,6 @@ def get_entities():
         return success_response(data=data, message="Entities retrieved successfully")
     finally:
         db.close()
-
-
-# ==========================================
-# 4. EVENTS API
-# ==========================================
 
 @news_bp.route('/events', methods=['GET'])
 def get_events():
@@ -357,7 +328,6 @@ def get_events():
     finally:
         db.close()
 
-
 @news_bp.route('/events/candidates', methods=['GET'])
 def get_event_candidates():
     """Detect candidate political event clusters from recent articles."""
@@ -376,7 +346,6 @@ def get_event_candidates():
     finally:
         db.close()
 
-
 @news_bp.route('/events/disparities', methods=['GET'])
 def get_coverage_disparities():
     """Retrieve multi-dimensional cross-source coverage disparities across all events."""
@@ -393,7 +362,6 @@ def get_coverage_disparities():
         return success_response(data=disparities, message="Coverage disparities retrieved successfully")
     finally:
         db.close()
-
 
 @news_bp.route('/events/<event_id>', methods=['GET'])
 def get_event_detail(event_id):
@@ -430,7 +398,6 @@ def get_event_detail(event_id):
     finally:
         db.close()
 
-
 @news_bp.route('/events/<event_id>/compare', methods=['GET'])
 def compare_event_coverage(event_id):
     """Compare multi-dimensional coverage across media outlets for a given political event."""
@@ -443,11 +410,6 @@ def compare_event_coverage(event_id):
         return success_response(data=comparison, message="Event coverage comparison calculated successfully")
     finally:
         db.close()
-
-
-# ==========================================
-# 5. COVERAGE & COMPARISON API
-# ==========================================
 
 @news_bp.route('/coverage', methods=['GET'])
 @news_bp.route('/metrics/coverage', methods=['GET'])
@@ -483,7 +445,6 @@ def get_coverage_metrics():
         return success_response(data=data, message="Coverage metrics retrieved successfully")
     finally:
         db.close()
-
 
 @news_bp.route('/source-comparison', methods=['GET'])
 @news_bp.route('/comparisons', methods=['GET'])
@@ -528,11 +489,6 @@ def get_source_comparisons():
     finally:
         db.close()
 
-
-# ==========================================
-# 6. BIAS INDICATORS API
-# ==========================================
-
 @news_bp.route('/bias-indicators', methods=['GET'])
 def get_bias_indicators():
     """
@@ -570,7 +526,6 @@ def get_bias_indicators():
         return success_response(data=data, message="Multi-dimensional bias indicators retrieved successfully")
     finally:
         db.close()
-
 
 @news_bp.route('/indicators/calculate', methods=['POST'])
 def calculate_indicators():

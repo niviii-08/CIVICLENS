@@ -3,14 +3,12 @@ from docx.shared import Pt, Inches
 
 def create_submission():
     doc = docx.Document()
-    
-    # Title
+
     title = doc.add_heading('CivicLens TN - Project Abstract Submission', 0)
-    title.alignment = 1 # Center
-    
-    # Combined Table
+    title.alignment = 1         
+
     doc.add_heading('1. Overview of Modules and ML Algorithms', level=1)
-    
+
     combined_data = [
         ("Module", "Core Function", "ML Algorithms & Techniques"),
         ("Budget & Scheme Analyzer", "Tracks department/scheme allocation over time; clusters related schemes; surfaces spending trends.", "Unsupervised Learning (K-Means, DBSCAN, Topic Modeling, PCA)"),
@@ -20,18 +18,17 @@ def create_submission():
         ("Political Funding Transparency", "Visualizes party/donor funding and flags statistically unusual donation patterns.", "Anomaly Detection (Isolation Forest)"),
         ("Claim Verification Engine", "Links a political claim to budget evidence and historical data for an evidence-based assessment.", "Deep Learning / NLP (IndicBERT, Sentence-BERT)")
     ]
-    
+
     table = doc.add_table(rows=len(combined_data), cols=3)
     table.style = 'Table Grid'
-    
+
     for i, row_data in enumerate(combined_data):
         row = table.rows[i]
         for j, cell_text in enumerate(row_data):
             row.cells[j].text = cell_text
-            
-    doc.add_paragraph() # spacing
-            
-    # Objectives
+
+    doc.add_paragraph()          
+
     doc.add_heading('2. Objectives', level=1)
     objectives = [
         "Collect and structure Tamil Nadu department- and scheme-wise budget data across multiple years.",
@@ -45,8 +42,7 @@ def create_submission():
     ]
     for obj in objectives:
         doc.add_paragraph(obj, style='List Bullet')
-        
-    # ML/DL Methods
+
     doc.add_heading('3. ML/DL Methods and Algorithms', level=1)
     methods = [
         "Supervised Learning: Logistic Regression, Random Forest, XGBoost, SVM (used for claim/promise implementation-status classification).",
@@ -57,8 +53,7 @@ def create_submission():
     ]
     for method in methods:
         doc.add_paragraph(method, style='List Bullet')
-        
-    # Datasets
+
     doc.add_heading('4. Corresponding Datasets', level=1)
     doc.add_paragraph("The project prioritizes real, publicly available data. Where domain-specific labeled data is not publicly available, a smaller annotated subset will be manually created for model training.")
     datasets = [
@@ -70,8 +65,7 @@ def create_submission():
     ]
     for ds in datasets:
         doc.add_paragraph(ds, style='List Bullet')
-        
-    # References
+
     doc.add_heading('5. References', level=1)
     refs = [
         "Government of Tamil Nadu. (n.d.). Tamil Nadu State Budget Portal. Retrieved from https://www.tn.gov.in/",
@@ -83,7 +77,7 @@ def create_submission():
     ]
     for i, ref in enumerate(refs):
         doc.add_paragraph(f"[{i+1}] {ref}")
-        
+
     doc.save(r'E:\CIVCLENS\CivicLens_TN_Abstract_Submission.docx')
     print("Document successfully created!")
 
