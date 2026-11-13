@@ -143,16 +143,16 @@ export default function BudgetPage() {
           { label: 'Budget & Spending' },
         ]}
         badge={
-          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
             Demands for Grants
           </span>
         }
         actions={
           <button
             onClick={() => alert('Downloading official GoTN Demands for Grants CSV export...')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-white/10 hover:border-cyan-500/40 text-xs font-semibold transition-all shadow-sm"
           >
-            <Download className="w-3.5 h-3.5 text-blue-400" />
+            <Download className="w-3.5 h-3.5 text-cyan-400" />
             <span>Export Audit Dataset</span>
           </button>
         }
@@ -163,7 +163,7 @@ export default function BudgetPage() {
         <MetricCard
           title="Budget Estimate (BE)"
           value={`₹${totalBE.toLocaleString()} Cr`}
-          icon={<Landmark className="w-5 h-5" />}
+          icon={<Landmark className="w-5 h-5 text-cyan-400" />}
           subtitle="Initial planned appropriation (FY 2023-24)"
         />
         <MetricCard
@@ -218,29 +218,29 @@ export default function BudgetPage() {
           onClearFilters={handleClearAll}
         />
       ) : (
-        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl">
+        <div className="rounded-2xl bg-slate-900/80 border border-white/10 overflow-hidden shadow-2xl backdrop-blur-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  <th className="py-3 px-4">Demand</th>
-                  <th className="py-3 px-4">Scheme & Department</th>
-                  <th className="py-3 px-4 text-right">
+                <tr className="border-b border-white/10 bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="py-3.5 px-4 font-mono">Demand</th>
+                  <th className="py-3.5 px-4">Scheme &amp; Department</th>
+                  <th className="py-3.5 px-4 text-right">
                     <span>Budget Est (BE)</span>
                     <span className="block text-[9px] text-slate-500 normal-case">Initial</span>
                   </th>
-                  <th className="py-3 px-4 text-right">
+                  <th className="py-3.5 px-4 text-right">
                     <span>Revised Est (RE)</span>
                     <span className="block text-[9px] text-indigo-400 normal-case">Mid-Year</span>
                   </th>
-                  <th className="py-3 px-4 text-right">
+                  <th className="py-3.5 px-4 text-right">
                     <span>Actuals (AE)</span>
                     <span className="block text-[9px] text-emerald-400 normal-case">Audited</span>
                   </th>
-                  <th className="py-3 px-4 text-center">Utilization</th>
+                  <th className="py-3.5 px-4 text-center">Utilization</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-xs">
+              <tbody className="divide-y divide-white/5 text-xs">
                 {filteredRecords.map((r) => {
                   const hasValidRe = r.revised_estimate !== undefined && r.revised_estimate > 0;
                   const calculatedRate = hasValidRe && r.actual_expenditure !== undefined
@@ -249,13 +249,13 @@ export default function BudgetPage() {
                   const displayRate = r.utilization_rate ? `${r.utilization_rate}%` : calculatedRate ? `${calculatedRate}%` : 'Pending CAG audit';
 
                   return (
-                    <tr key={r.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-4 px-4 font-mono font-bold text-blue-400">
+                    <tr key={r.id} className="hover:bg-cyan-500/5 transition-colors">
+                      <td className="py-4 px-4 font-mono font-bold text-cyan-400">
                         #{r.demand_no || 'NA'}
                       </td>
                       <td className="py-4 px-4">
                         <div className="font-semibold text-white">{r.scheme_name}</div>
-                        <div className="text-[11px] text-slate-400">{r.department_name} • FY 2023-24</div>
+                        <div className="text-[11px] text-slate-400 font-mono">{r.department_name} • FY 2023-24</div>
                       </td>
                       <td className="py-4 px-4 text-right font-mono text-slate-300">
                         {r.budget_estimate !== undefined ? `₹${r.budget_estimate.toLocaleString()} Cr` : <span className="text-slate-500 italic">Not published</span>}
@@ -272,7 +272,7 @@ export default function BudgetPage() {
                             <>
                               <div className="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                 <div
-                                  className="bg-emerald-500 h-full rounded-full"
+                                  className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full transition-all duration-500"
                                   style={{ width: `${Math.min(Number(r.utilization_rate || calculatedRate || 0), 100)}%` }}
                                 />
                               </div>
@@ -293,8 +293,8 @@ export default function BudgetPage() {
           </div>
 
           {/* Epistemic note at bottom of table */}
-          <div className="p-3 bg-slate-950/90 border-t border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
-            <Scale className="w-4 h-4 text-blue-400 shrink-0" />
+          <div className="p-3.5 bg-slate-950/90 border-t border-white/10 text-[11px] text-slate-400 flex items-center gap-2">
+            <Scale className="w-4 h-4 text-cyan-400 shrink-0" />
             <span>
               Statistical Discipline: Utilization percentages are calculated only when valid denominators exist (Revised Estimate &gt; 0). Missing audit values are labeled as pending rather than set to zero.
             </span>

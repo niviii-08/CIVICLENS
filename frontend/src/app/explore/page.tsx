@@ -31,7 +31,7 @@ const advancedModules = [
     description: 'Track political party funding disclosed under Election Commission of India (ECI) Form 24A. Inspect Electoral Trust contributions and corporate donations with DPDPA PII masking.',
     href: '/funding',
     icon: CreditCard,
-    accent: 'text-orange-400 bg-orange-500/10 border-orange-500/20',
+    accent: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
     stats: '₹581.5 Cr Declared Donations',
     phase: 'Phase 5'
   },
@@ -49,7 +49,7 @@ const advancedModules = [
     description: 'Traverse an explainable knowledge graph connecting election promises, budget allocations, government gazettes, and outcome studies with 9-factor evidence scoring.',
     href: '/graph',
     icon: Network,
-    accent: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    accent: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
     stats: '4,812 Nodes • 18,490 Edges',
     phase: 'Phase 9'
   }
@@ -63,7 +63,7 @@ export default function ExploreDirectoryPage() {
         description="Advanced analytical capabilities for investigative journalists, researchers, policy analysts, and data auditors. Explore deep public records across state budgets, campaign finance, and media discourse."
         breadcrumbs={[{ label: 'Explore all features' }]}
         badge={
-          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
             Advanced Civic Analytics
           </span>
         }
@@ -76,24 +76,24 @@ export default function ExploreDirectoryPage() {
           return (
             <div
               key={module.href}
-              className="rounded-2xl bg-slate-900/80 border border-slate-800 p-6 flex flex-col justify-between hover:border-slate-700 transition-all shadow-xl group space-y-4"
+              className="civic-card p-6 flex flex-col justify-between group space-y-4 transition-all duration-300"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className={`p-2.5 rounded-xl border ${module.accent}`}>
+                  <div className={`p-2.5 rounded-xl border ${module.accent} transition-transform group-hover:scale-110 duration-200`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-950/80 text-slate-400 border border-white/5 font-mono">
                       {module.phase}
                     </span>
-                    <span className="text-xs font-mono font-bold text-white bg-slate-800 px-2.5 py-0.5 rounded-full">
+                    <span className="text-xs font-mono font-bold text-white bg-slate-800/90 border border-white/10 px-2.5 py-0.5 rounded-full">
                       {module.stats}
                     </span>
                   </div>
                 </div>
 
-                <h3 className="font-bold text-lg text-white group-hover:text-blue-400 transition-colors">
+                <h3 className="font-bold text-lg text-white group-hover:text-cyan-300 transition-colors">
                   {module.title}
                 </h3>
 
@@ -102,16 +102,16 @@ export default function ExploreDirectoryPage() {
                 </p>
               </div>
 
-              <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+              <div className="pt-4 border-t border-white/5 flex items-center justify-between">
                 <span className="text-xs text-slate-400 font-mono">
-                  Route: <code className="text-blue-400">{module.href}</code>
+                  Route: <code className="text-cyan-400">{module.href}</code>
                 </span>
                 <Link
                   href={module.href}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/20 transition-all group-hover:shadow-cyan-500/25 active:scale-95"
                 >
                   <span>Launch Tool</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </div>
             </div>
@@ -120,10 +120,10 @@ export default function ExploreDirectoryPage() {
       </div>
 
       {/* Technical Provenance Note */}
-      <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 flex items-start gap-3">
+      <div className="p-5 rounded-2xl bg-slate-950/70 border border-white/10 flex items-start gap-3.5 backdrop-blur-md">
         <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
         <div className="space-y-1 text-xs">
-          <div className="font-bold text-white">Non-Causal Epistemic Guardrails & Open Data Standards</div>
+          <div className="font-bold text-white">Non-Causal Epistemic Guardrails &amp; Open Data Standards</div>
           <p className="text-slate-400 leading-relaxed">
             All tools in the Civic Intelligence Lab adhere strictly to non-causal epistemic discipline. Cross-phase graph links reflect statutory jurisdiction and thematic correlation, never unproven causal claims. Raw source gazettes are available upon request through open administrative access.
           </p>

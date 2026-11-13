@@ -110,16 +110,24 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 }) => {
   const { label, explanation, variant } = standardizeStatusLabel(status, isStatutoryVerified);
 
-  let styles = 'bg-slate-800 text-slate-300 border-slate-700';
+  let styles = 'bg-slate-900/80 text-slate-300 border-indigo-500/20 hover:border-indigo-500/40';
+  let dotColor = 'bg-slate-400';
+  let pulse = false;
 
   if (variant === 'complete') {
-    styles = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+    styles = 'bg-emerald-950/70 text-emerald-300 border-emerald-500/35 hover:border-emerald-400/60 shadow-sm shadow-emerald-500/10';
+    dotColor = 'bg-emerald-400';
+    pulse = true;
   } else if (variant === 'progress') {
-    styles = 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+    styles = 'bg-cyan-950/70 text-cyan-300 border-cyan-500/35 hover:border-cyan-400/60 shadow-sm shadow-cyan-500/10';
+    dotColor = 'bg-cyan-400';
+    pulse = true;
   } else if (variant === 'conflict') {
-    styles = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+    styles = 'bg-amber-950/70 text-amber-300 border-amber-500/35 hover:border-amber-400/60 shadow-sm shadow-amber-500/10';
+    dotColor = 'bg-amber-400';
   } else if (variant === 'insufficient') {
-    styles = 'bg-purple-500/15 text-purple-400 border-purple-500/30';
+    styles = 'bg-purple-950/70 text-purple-300 border-purple-500/35 hover:border-purple-400/60 shadow-sm shadow-purple-500/10';
+    dotColor = 'bg-purple-400';
   }
 
   const displayLabel = showTechnical && status && status !== label ? `${label} (${status})` : label;
@@ -127,9 +135,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   return (
     <span
       title={`Status Meaning: ${explanation}${status !== label ? ` • Technical record: "${status}"` : ''}`}
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-colors cursor-help ${styles} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-md transition-all duration-200 hover:scale-[1.03] cursor-help ${styles} ${className}`}
     >
-      <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current opacity-80" />
+      <span className="relative flex h-2 w-2">
+        {pulse && (
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${dotColor} opacity-75`} />
+        )}
+        <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColor}`} />
+      </span>
       <span>{displayLabel}</span>
     </span>
   );

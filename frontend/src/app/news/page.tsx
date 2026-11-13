@@ -70,12 +70,12 @@ export default function NewsPage() {
           title="Monitored News Publications"
           value="18 Outlets"
           icon={<Globe className="w-5 h-5 text-cyan-400" />}
-          subtitle="9 Tamil & 9 English Dailies"
+          subtitle="9 Tamil &amp; 9 English Dailies"
         />
         <MetricCard
           title="Bilingual Articles Processed"
           value="14,820"
-          change="Indic-NLP & SpaCy"
+          change="Indic-NLP &amp; SpaCy"
           changeType="positive"
           icon={<Sparkles className="w-5 h-5 text-indigo-400" />}
           subtitle="Entity normalization active"
@@ -90,27 +90,27 @@ export default function NewsPage() {
         />
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3.5">
         {articles.map((art) => (
           <div
             key={art.id}
-            className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all shadow-md space-y-2"
+            className="civic-card p-5 space-y-2.5 group transition-all duration-300"
           >
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-white">{art.outlet}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                <span className="font-bold text-white group-hover:text-cyan-300 transition-colors">{art.outlet}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
                   {art.language}
                 </span>
               </div>
-              <span className={`font-mono font-bold text-xs ${art.polarity_score.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-full ${art.polarity_score.startsWith('+') ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-rose-400 bg-rose-500/10 border border-rose-500/20'}`}>
                 Polarity {art.polarity_score}
               </span>
             </div>
             <h3 className="text-sm font-bold text-white leading-snug">{art.title}</h3>
-            <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-              <span>Topic: <strong className="text-slate-300">{art.topic}</strong></span>
-              <span>Framing: <strong className="text-blue-400">{art.framing}</strong></span>
+            <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/5">
+              <span>Topic: <strong className="text-slate-200">{art.topic}</strong></span>
+              <span>Framing: <strong className="text-cyan-400">{art.framing}</strong></span>
             </div>
           </div>
         ))}

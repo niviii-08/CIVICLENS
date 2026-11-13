@@ -21,7 +21,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   className = '',
 }) => {
   return (
-    <div className={`space-y-3 pb-6 border-b border-slate-800/80 mb-6 ${className}`}>
+    <div className={`space-y-3 pb-6 border-b border-white/10 mb-8 relative ${className}`}>
+      {/* Subtle ambient light line underneath */}
+      <div className="absolute -bottom-[1px] left-0 w-32 h-[1px] bg-gradient-to-r from-cyan-500 to-transparent" />
+
       {breadcrumbs && breadcrumbs.length > 0 && (
         <div className="pb-1">
           <Breadcrumb items={breadcrumbs} />
@@ -34,9 +37,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
               {title}
             </h1>
-            {badge && <div>{badge}</div>}
+            {badge && <div className="transition-transform hover:scale-105 duration-200">{badge}</div>}
           </div>
-          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
+          <p className="text-xs md:text-sm text-slate-400 leading-relaxed max-w-2xl">
             {description}
           </p>
         </div>
