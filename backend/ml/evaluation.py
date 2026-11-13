@@ -23,9 +23,7 @@ def evaluate_clustering(X: Any, labels: Any) -> Dict[str, Any]:
     like Topic Modeling or DBSCAN grouping.
     """
     unique_labels = len(set(labels))
-    # Silhouette score is only calculable with 1 < clusters < samples
     if 1 < unique_labels < len(X):
         return {"silhouette_score": float(silhouette_score(X, labels))}
-    
-    # Indicate invalid state gracefully
+
     return {"silhouette_score": -1.0}

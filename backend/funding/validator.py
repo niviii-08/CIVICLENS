@@ -1,22 +1,14 @@
 """
-Phase 5 — Financial Data Validation Module.
+Financial data validation and anomaly screening module.
 
-Executes 10 automated data quality and integrity checks across canonical funding records:
-1. Missing Values (V-01)
-2. Negative Amounts (V-02)
-3. Invalid Currency Values (V-03)
-4. Malformed Dates & Bounds (V-04)
-5. Duplicate Rows (V-05)
-6. Party Name Variations (V-06)
-7. Inconsistent Totals (V-07)
-8. OCR Corruption Artifacts (V-08)
-9. Financial Year Mismatches (V-09)
-10. Source Inconsistencies (V-10)
+Performs data quality and integrity checks across normalized funding records,
+including missing values, negative amounts, currency formatting, date boundaries,
+duplicate entries, entity naming variations, and reporting discrepancies.
 """
 
 import re
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 from backend.schemas.funding import (
     ContributionSchema,
@@ -28,19 +20,17 @@ from backend.funding.processor import AmountStatus
 
 logger = logging.getLogger("civiclens.funding.validator")
 
-
 class Severity:
     CRITICAL = "CRITICAL"
     WARNING = "WARNING"
     INFO = "INFO"
 
-
 class ValidationEngine:
-    """Core validation engine implementing Phase 5 financial validation rules."""
+    """Validates financial disclosures against integrity and consistency rules."""
 
     @staticmethod
     def _parse_fy_year_bounds(fy_str: str) -> Optional[Tuple[int, int]]:
-        """Parses FY string (e.g. FY2021-22) to start year and end year (2021, 2022)."""
+        """Parses fiscal year strings (e.g. FY2021-22) into start and end years (2021, 2022)."""
         match = re.search(r"FY(\d{4})-(\d{2})", fy_str)
         if match:
             start_yr = int(match.group(1))
@@ -52,7 +42,6 @@ class ValidationEngine:
     def validate_contribution(cls, contrib: ContributionSchema) -> List[ValidationIssueRecord]:
         issues: List[ValidationIssueRecord] = []
 
-        # Rule V-01: Missing Required Values
         if contrib.party_id == "PARTY_UNKNOWN":
             issues.append(ValidationIssueRecord(
                 issue_id=f"ISSUE_V01_{contrib.contribution_id}_PARTY",
@@ -66,7 +55,6 @@ class ValidationEngine:
                 suggested_action="Review party registration registry and add alias mapping."
             ))
 
-        # Rule V-02: Negative Amounts
         if contrib.amount is not None and contrib.amount < 0:
             issues.append(ValidationIssueRecord(
                 issue_id=f"ISSUE_V02_{contrib.contribution_id}_NEG",
@@ -80,7 +68,6 @@ class ValidationEngine:
                 suggested_action="Verify raw document page to check for refund remark or OCR minus artifact."
             ))
 
-        # Rule V-03: Invalid Currency Values
         if contrib.amount_status == AmountStatus.EXTRACTION_FAILURE.value:
             issues.append(ValidationIssueRecord(
                 issue_id=f"ISSUE_V03_{contrib.contribution_id}_CURR",
@@ -94,7 +81,6 @@ class ValidationEngine:
                 suggested_action="Perform manual OCR review on target table cell."
             ))
 
-        # Rule V-04: Malformed Dates & FY Date Bounds
         if contrib.contribution_date_as_reported and not contrib.contribution_date_normalized:
             issues.append(ValidationIssueRecord(
                 issue_id=f"ISSUE_V04_{contrib.contribution_id}_DATE_PARSE",
@@ -108,14 +94,12 @@ class ValidationEngine:
                 suggested_action="Standardize date format manually or verify page OCR."
             ))
 
-        # Rule V-09: Financial Year Mismatches
         if contrib.contribution_date_normalized and contrib.financial_year:
             fy_bounds = cls._parse_fy_year_bounds(contrib.financial_year)
             if fy_bounds:
                 start_yr, end_yr = fy_bounds
                 try:
                     dt = datetime.strptime(contrib.contribution_date_normalized, "%Y-%m-%d")
-                    # Financial year FY2021-22 runs from 2021-04-01 to 2022-03-31
                     fy_start_dt = datetime(start_yr, 4, 1)
                     fy_end_dt = datetime(end_yr, 3, 31, 23, 59, 59)
                     if not (fy_start_dt <= dt <= fy_end_dt):
@@ -133,7 +117,6 @@ class ValidationEngine:
                 except Exception:
                     pass
 
-        # Rule V-08: OCR Corruption Artifacts
         if contrib.extraction_confidence < 0.60 or re.search(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", contrib.original_row):
             issues.append(ValidationIssueRecord(
                 issue_id=f"ISSUE_V08_{contrib.contribution_id}_OCR",
@@ -154,12 +137,10 @@ class ValidationEngine:
         """Validates a batch of contribution records, checking row duplicates and aggregate sums."""
         issues: List[ValidationIssueRecord] = []
 
-        # Validate individual records
         seen_signatures: Dict[str, str] = {}
         for contrib in contributions:
             issues.extend(cls.validate_contribution(contrib))
 
-            # Rule V-05: Duplicate Rows Detection
             sig = f"{contrib.party_id}|{contrib.donor_name_normalized}|{contrib.amount}|{contrib.contribution_date_normalized}|{contrib.page_number}"
             if sig in seen_signatures:
                 issues.append(ValidationIssueRecord(
@@ -189,14 +170,12 @@ class ValidationEngine:
         """
         issues: List[ValidationIssueRecord] = []
 
-        # Rule V-07: Inconsistent Totals (Form 24A rows vs reported summary)
         valid_amounts = [c.amount for c in contributions if c.amount is not None and c.amount > 0]
         actual_sum = sum(valid_amounts)
 
         reported_20k = statement.income_categories.get("donations_above_20k") or statement.income_categories.get("contributions_above_20k")
         if reported_20k is not None and reported_20k > 0:
             diff = abs(actual_sum - reported_20k)
-            # Allow 1% tolerance for minor rounding or small disaggregated items
             if diff > (reported_20k * 0.05) and diff > 10000.0:
                 issues.append(ValidationIssueRecord(
                     issue_id=f"ISSUE_V07_{statement.statement_id}_SUM_MISMATCH",
@@ -210,7 +189,6 @@ class ValidationEngine:
                     suggested_action="Check for missing pages or un-itemized summary schedules."
                 ))
 
-        # Rule V-10: Source Inconsistencies (Form 24A total > Total Income)
         if statement.total_income_reported is not None and actual_sum > statement.total_income_reported:
             issues.append(ValidationIssueRecord(
                 issue_id=f"ISSUE_V10_{statement.statement_id}_SOURCE_INCONSISTENT",
