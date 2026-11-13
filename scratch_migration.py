@@ -5,7 +5,6 @@ path = r"E:\CIVCLENS\alembic\versions\7ccfdea60b7f_create_historical_scheme_data
 with open(path, "r", encoding="utf-8") as f:
     content = f.read()
 
-# Replace the historical_schemes block with batch_alter_table
 old_block = """    op.add_column('historical_schemes', sa.Column('category_id', sa.Integer(), nullable=True))
     op.add_column('historical_schemes', sa.Column('embedding', sa.JSON(), nullable=True))
     op.drop_constraint(op.f('uq_historical_scheme'), 'historical_schemes', type_='unique')
@@ -31,7 +30,6 @@ new_block = """    with op.batch_alter_table('historical_schemes', schema=None) 
 
 content = content.replace(old_block, new_block)
 
-# Downgrade block
 old_down = """    op.add_column('historical_schemes', sa.Column('source_page_number', sa.INTEGER(), nullable=True))
     op.add_column('historical_schemes', sa.Column('source_document_id', sa.INTEGER(), nullable=False))
     # WARNING: constraint name is None; this directive will fail as
@@ -55,7 +53,7 @@ new_down = """    with op.batch_alter_table('historical_schemes', schema=None) a
         batch_op.create_unique_constraint('uq_historical_scheme', ['scheme_name', 'department_id', 'financial_year', 'source_document_id'])
         batch_op.drop_column('embedding')
         batch_op.drop_column('category_id')"""
-        
+
 content = content.replace(old_down, new_down)
 
 with open(path, "w", encoding="utf-8") as f:

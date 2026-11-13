@@ -1,9 +1,7 @@
 """
-Batch script to match Political Promises with Phase 2 Historical Schemes.
+Batch promise-to-scheme matching script.
 
-Reads promises from database (or JSON fixtures if DB is empty),
-calculates Sentence-BERT / Cosine Similarity embeddings against historical schemes,
-and stores the resulting PromiseSchemeLink records in the database.
+Matches manifesto promises against historical welfare schemes using semantic embeddings.
 """
 import logging
 import os

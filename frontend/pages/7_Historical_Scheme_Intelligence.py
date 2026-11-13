@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 import streamlit as st
 import pandas as pd
 from frontend.services.api import api_client
@@ -14,11 +20,9 @@ tab_explore, tab_similar, tab_compare, tab_theme = st.tabs([
     "?? Theme Analysis"
 ])
 
-# --- STATE INITIALIZATION ---
 if "selected_scheme_id" not in st.session_state:
     st.session_state.selected_scheme_id = None
 
-# --- GLOBAL FILTERS DATA ---
 y_ok, years = api_client.get_budget_years()
 year_options = ["All"] + (years if y_ok else [])
 
@@ -34,9 +38,6 @@ def get_dept_name(d_id):
     return next((d["name"] for d in dept_options if d["id"] == d_id), "Unknown")
 
 
-# ==========================================
-# TAB 1: EXPLORER, TIMELINE & TRACEABILITY
-# ==========================================
 with tab_explore:
     if st.session_state.selected_scheme_id:
         if st.button("? Back to Search"):
@@ -131,9 +132,6 @@ with tab_explore:
                     st.error("Search failed.")
 
 
-# ==========================================
-# TAB 2: SIMILAR SCHEME DISCOVERY
-# ==========================================
 with tab_similar:
     st.info("?? **Model Explanation:** Similarity scores represent mathematical vector overlap in semantic descriptions. High similarity does not prove schemes are legally or politically identical.")
     
@@ -161,7 +159,6 @@ with tab_similar:
                 else:
                     st.error("Search failed.")
     else:
-        # Phase 2 schemes loader
         ok_s, s_list = api_client.search_schemes(department_id=s_dept_id, limit=200)
         if ok_s and s_list.get("items"):
             s_map = {f"{x['scheme_name']} ({x['financial_year']})": x['id'] for x in s_list["items"]}
@@ -183,9 +180,6 @@ with tab_similar:
             st.warning("No schemes found to select. Change filters.")
 
 
-# ==========================================
-# TAB 3: SCHEME COMPARISON
-# ==========================================
 with tab_compare:
     st.info("?? **Model Explanation:** Side-by-side comparison. Similarity scores represent semantic distance from the first selected scheme.")
     
@@ -228,9 +222,6 @@ with tab_compare:
             st.warning("Please select at least two schemes.")
 
 
-# ==========================================
-# TAB 4: THEME ANALYSIS
-# ==========================================
 with tab_theme:
     st.info("?? **Model Explanation:** Unsupervised K-Means clustering over Sentence Embeddings. Themes indicate topical textual overlap and carry no implied political intent.")
     
@@ -257,3 +248,4 @@ with tab_theme:
                             st.metric("Schemes in Theme", theme.get("scheme_count"))
             else:
                 st.error("Failed to generate themes. " + data.get("message", ""))
+

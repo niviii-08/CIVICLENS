@@ -1,27 +1,19 @@
+import sys
+from pathlib import Path
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 """
-Phase 9.8 — Frontend Test Fixtures for Unified Civic Evidence Graph Explorer.
-=============================================================================
+Frontend demo fixtures for unified civic evidence graph.
 
-Comprehensive mock dataset covering all 10 entity types across Phases 1–8:
-1. schemes
-2. budgets
-3. promises
-4. political parties
-5. representatives
-6. constituencies
-7. public claims
-8. civic issues
-9. government departments
-10. source documents
-
-Includes explicit edges, candidate proposals, persistent conflicts, and dialectical tensions.
+Mock dataset covering civic entity types (schemes, budgets, promises,
+political parties, representatives, constituencies, public claims, civic issues,
+departments, and source documents). Includes explicit edges and candidate proposals.
 """
 
 from typing import Dict, Any, List
 
-# -----------------------------------------------------------------------------
-# 1. CANONICAL NODES ACROSS ALL 10 ENTITY TYPES
-# -----------------------------------------------------------------------------
 FIXTURE_GRAPH_NODES: List[Dict[str, Any]] = [
     {
         "node_id": "NODE:DEPT:MAWS",
@@ -187,9 +179,6 @@ FIXTURE_GRAPH_NODES: List[Dict[str, Any]] = [
 ]
 
 
-# -----------------------------------------------------------------------------
-# 2. EVIDENCE EDGES CONNECTING THE NODES
-# -----------------------------------------------------------------------------
 FIXTURE_GRAPH_EDGES: List[Dict[str, Any]] = [
     {
         "edge_id": "EDGE:DEPT:SCHEME:001",
@@ -383,9 +372,6 @@ FIXTURE_GRAPH_EDGES: List[Dict[str, Any]] = [
 ]
 
 
-# -----------------------------------------------------------------------------
-# 3. UNREVIEWED CANDIDATE RELATIONSHIP PROPOSALS (PHASE 9.4 ENGINE)
-# -----------------------------------------------------------------------------
 FIXTURE_CANDIDATE_PROPOSALS: List[Dict[str, Any]] = [
     {
         "proposal_id": "PROP-CANDIDATE-001",
@@ -414,9 +400,6 @@ FIXTURE_CANDIDATE_PROPOSALS: List[Dict[str, Any]] = [
 ]
 
 
-# -----------------------------------------------------------------------------
-# 4. PERSISTENT CONFLICTS & DIALECTICAL TENSIONS (PHASE 9.6 ENGINE)
-# -----------------------------------------------------------------------------
 FIXTURE_CONFLICTS: List[Dict[str, Any]] = [
     {
         "conflict_id": "CONF-DESAL-OUTPUT-01",
@@ -451,9 +434,6 @@ FIXTURE_CONFLICTS: List[Dict[str, Any]] = [
 ]
 
 
-# -----------------------------------------------------------------------------
-# 5. INVESTIGATION PATH TEMPLATES (PHASE 9.5 ENGINE)
-# -----------------------------------------------------------------------------
 FIXTURE_INVESTIGATION_PATHS: Dict[str, Dict[str, Any]] = {
     "promise_delivery": {
         "title": "Path 1: Political Promise → Scheme → Budget → Resolution",
@@ -542,9 +522,6 @@ FIXTURE_INVESTIGATION_PATHS: Dict[str, Dict[str, Any]] = {
     },
 }
 
-# -----------------------------------------------------------------------------
-# 6. WORKFLOW AUDITABLE INVESTIGATION SUMMARIES (PHASE 9.9)
-# -----------------------------------------------------------------------------
 FIXTURE_WORKFLOW_RESULTS: Dict[str, Dict[str, Any]] = {
     "workflow_a": {
         "workflow": "WORKFLOW_A_PROMISE_DELIVERY",

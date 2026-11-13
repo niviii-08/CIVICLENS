@@ -15,7 +15,7 @@ with open(r"E:\CIVCLENS\scratch_out.txt", "w", encoding="utf-8") as out_f:
             with pdfplumber.open(path) as pdf:
                 out_f.write(f"\n--- {path} ---\n")
                 out_f.write(f"Pages: {len(pdf.pages)}\n")
-                for p_num in [2, 10, 50]: # Look at pages 2, 10, 50
+                for p_num in [2, 10, 50]:                          
                     if p_num < len(pdf.pages):
                         page = pdf.pages[p_num]
                         text = page.extract_text()

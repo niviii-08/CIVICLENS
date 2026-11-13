@@ -1,14 +1,8 @@
 """
-Phase 3 Pipeline Readiness Validation Script (Phase 3.15).
+Manifesto and promise pipeline readiness validation script.
 
-Programmatically verifies that all core sub-systems of CIVICLENS TN Phase 3
-(Acquisition, Processing, Promise Processing, Intelligence, Application)
-are fully operational and ready for real manifesto document collection.
-
-Important:
-This script validates pipeline READINESS only using synthetic test fixtures.
-No real political manifesto data is claimed or published.
-Result: "Phase 3 pipeline ready for real manifesto acquisition."
+Programmatically verifies that core components (acquisition, document parsing,
+promise extraction, and intelligence assessment) are operational.
 """
 
 import os
@@ -73,9 +67,6 @@ def run_validation():
         "Application": []
     }
 
-    # -------------------------------------------------------------------------
-    # 1. ACQUISITION VALIDATION
-    # -------------------------------------------------------------------------
     print("\n[1/5] Validating Acquisition System...")
     config_path = os.path.join("config", "evidence_sources.json")
     if os.path.exists(config_path):
@@ -87,26 +78,19 @@ def run_validation():
     allowed_count = len(pipeline.allowed_domains)
     checks["Acquisition"].append(("Acquisition layer works", allowed_count > 0, f"{allowed_count} allowed domains configured"))
 
-    # Test SHA-256 Checksum generation
     sample_text = "Synthetic document content for checksum validation"
     calc_hash = hashlib.sha256(sample_text.encode("utf-8")).hexdigest()
     checks["Acquisition"].append(("Checksums work", len(calc_hash) == 64, f"SHA-256: {calc_hash[:12]}..."))
 
-    # Test Provenance metadata mapping
     source_info = pipeline.get_source_info("https://cms.tn.gov.in/go/test.pdf")
     checks["Acquisition"].append(("Provenance works", source_info.get("source_tier") == 1, "Source tier & provenance mapped"))
 
-    # Test Cache & Duplicate detection
     cache_dir = "data/cache/evidence"
     checks["Acquisition"].append(("Caching & duplicate detection work", os.path.exists(cache_dir), f"Cache directory at {cache_dir}"))
 
-    # -------------------------------------------------------------------------
-    # 2. PROCESSING VALIDATION
-    # -------------------------------------------------------------------------
     print("\n[2/5] Validating Processing Pipeline...")
     extractor = PromiseExtractor()
     
-    # Test multilingual text & page reference tracking
     seg_en = {
         "manifesto_id": "MF-VAL-01",
         "page_number": 4,
@@ -136,9 +120,6 @@ def run_validation():
     checks["Processing"].append(("Multilingual text works", len(recs_en) > 0 and len(recs_ta) > 0, "English and Tamil text extracted"))
     checks["Processing"].append(("Page references work", recs_en[0].page_number == 4 and recs_ta[0].page_number == 5, "Page numbers preserved"))
 
-    # -------------------------------------------------------------------------
-    # 3. PROMISE PROCESSING VALIDATION
-    # -------------------------------------------------------------------------
     print("\n[3/5] Validating Promise Processing Pipeline...")
     normalizer_service = PromiseNormalizationService()
 
@@ -149,7 +130,6 @@ def run_validation():
     checks["Promise Processing"].append(("Normalization works", norm_en.normalized_text != "", "Unicode NFC normalization complete"))
     checks["Promise Processing"].append(("Categorization works", norm_en.primary_category in ["Education", "Healthcare", "Uncategorized"], f"Primary category: {norm_en.primary_category}"))
 
-    # Test Database Import
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     TestingSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -181,9 +161,6 @@ def run_validation():
     saved_p = db.query(PoliticalPromise).filter_by(promise_id=norm_en.promise_id).first()
     checks["Promise Processing"].append(("Database import works", saved_p is not None, "PoliticalPromise record saved to DB"))
 
-    # -------------------------------------------------------------------------
-    # 4. INTELLIGENCE VALIDATION
-    # -------------------------------------------------------------------------
     print("\n[4/5] Validating Intelligence Pipeline...")
     mock_embedder = MockEmbedder()
     searcher = SemanticSchemeSearcher(db_session=db, embedder=mock_embedder)
@@ -209,9 +186,6 @@ def run_validation():
         ("Assessment engine works", assessment["status"] == PromiseStatus.NO_EVIDENCE_FOUND.value, f"Status: {assessment['status']} (Absence of evidence strictly evaluates to no_evidence_found)")
     )
 
-    # -------------------------------------------------------------------------
-    # 5. APPLICATION VALIDATION
-    # -------------------------------------------------------------------------
     print("\n[5/5] Validating Application & Interface Pipeline...")
     app = create_app()
     app.config["TESTING"] = True
@@ -223,7 +197,6 @@ def run_validation():
     res = client.get("/api/promises/manifestos")
     checks["Application"].append(("APIs work", res.status_code == 200, "REST API endpoints operational"))
 
-    # Check empty states & test fixtures
     fixture_dir = os.path.join("tests", "fixtures", "manifestos")
     bilingual_fixture = os.path.join(fixture_dir, "sample_manifesto_bilingual.json")
     with open(bilingual_fixture, "r", encoding="utf-8") as f:
@@ -241,9 +214,6 @@ def run_validation():
     api_promises_module.get_db = orig_get_db
     db.close()
 
-    # -------------------------------------------------------------------------
-    # SUMMARY REPORT GENERATION
-    # -------------------------------------------------------------------------
     all_passed = True
     print("\n" + "=" * 80)
     print("READINESS SUMMARY RESULTS")

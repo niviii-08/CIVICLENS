@@ -7,7 +7,6 @@ manifest_path = 'data/raw/budget/manifest.json'
 with open(manifest_path, 'r') as f:
     manifest = json.load(f)
 
-# Filter only new years
 manifest['datasets'] = [ds for ds in manifest['datasets'] if ds['financial_year'] in ['2025-26', '2026-27']]
 
 temp_manifest = 'data/raw/budget/temp_manifest.json'

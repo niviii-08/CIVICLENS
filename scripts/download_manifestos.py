@@ -39,7 +39,6 @@ def main():
             
         logger.info(f"Processing {url}")
         
-        # Check if already successfully downloaded
         if item.get("retrieval_status") == "success" and item.get("local_storage_path"):
             if os.path.exists(item["local_storage_path"]):
                 logger.info(f"Already downloaded: {item['local_storage_path']}")
@@ -56,7 +55,6 @@ def main():
             party = item.get("party", "Unknown_Party")
             year = item.get("election_year", "Unknown_Year")
             
-            # Extract short name for party (e.g. DMK from "Dravida Munnetra Kazhagam (DMK)")
             if "(" in party and ")" in party:
                 short_party = party.split("(")[1].split(")")[0].strip()
             else:

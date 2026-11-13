@@ -1,9 +1,11 @@
-"""
-CIVICLENS TN — Phase 8.9: Civic Issue Intelligence Dashboard Helper.
-====================================================================
+import sys
+from pathlib import Path
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-Exposes shared taxonomies, color schemas, badge rendering functions,
-and fixture data for the Streamlit dashboard and unit test suites.
+"""
+Civic issue intelligence dashboard helper functions, taxonomies, and badge formatters.
 """
 
 from typing import Dict, Any, List
@@ -18,19 +20,16 @@ from frontend.pages.eight_civic_fixtures import (
     FIXTURE_SOURCE_DOCUMENTS,
 )
 
-# -----------------------------------------------------------------------------
-# EPISTEMIC STATUS PALETTE & BADGE RENDERERS
-# -----------------------------------------------------------------------------
 STATUS_COLORS = {
-    "independently_verified_resolved": "#198754",  # Forest Green
-    "marked_resolved": "#ffc107",                  # Amber / Warning Yellow
-    "action_reported": "#0dcaf0",                  # Cyan
-    "under_review": "#0d6efd",                     # Blue
-    "acknowledged": "#6f42c1",                     # Purple
-    "submitted": "#6c757d",                        # Gray
-    "reopened": "#fd7e14",                         # Orange
-    "disputed": "#d63384",                         # Pink/Magenta
-    "unknown": "#495057",                          # Dark Gray
+    "independently_verified_resolved": "#198754",
+    "marked_resolved": "#ffc107",
+    "action_reported": "#0dcaf0",
+    "under_review": "#0d6efd",
+    "acknowledged": "#6f42c1",
+    "submitted": "#6c757d",
+    "reopened": "#fd7e14",
+    "disputed": "#d63384",
+    "unknown": "#495057",
 }
 
 STATUS_LABELS = {
@@ -82,16 +81,16 @@ def render_severity_badge(severity: str) -> str:
 
 
 ORIGIN_COLORS = {
-    "OFFICIAL_GOVERNMENT_RECORD": "#0d6efd",   # Blue
-    "AUTOMATED_SYSTEM_INFERENCE": "#6f42c1",   # Purple
-    "HUMAN_AUDITOR_REVIEW": "#fd7e14",         # Orange
-    "INDEPENDENT_EVIDENCE": "#198754",         # Green
-    "NOT_AVAILABLE": "#dc3545",                # Red
-    "NO_OFFICIAL_RESPONSE": "#dc3545",         # Red
-    "NO_EMPIRICAL_EVIDENCE": "#dc3545",        # Red
-    "PENDING_REVIEW": "#6c757d",               # Gray
-    "UNRESOLVED_JURISDICTION": "#6c757d",      # Gray
-    "UNRESOLVED_OR_PENDING": "#6c757d",        # Gray
+    "OFFICIAL_GOVERNMENT_RECORD": "#0d6efd",
+    "AUTOMATED_SYSTEM_INFERENCE": "#6f42c1",
+    "HUMAN_AUDITOR_REVIEW": "#fd7e14",
+    "INDEPENDENT_EVIDENCE": "#198754",
+    "NOT_AVAILABLE": "#dc3545",
+    "NO_OFFICIAL_RESPONSE": "#dc3545",
+    "NO_EMPIRICAL_EVIDENCE": "#dc3545",
+    "PENDING_REVIEW": "#6c757d",
+    "UNRESOLVED_JURISDICTION": "#6c757d",
+    "UNRESOLVED_OR_PENDING": "#6c757d",
 }
 
 ORIGIN_ICONS = {

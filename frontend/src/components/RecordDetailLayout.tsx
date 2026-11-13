@@ -23,7 +23,9 @@ import {
   Layers,
   Lock,
   RefreshCw,
-  Search
+  Search,
+  Award,
+  Sparkles
 } from 'lucide-react';
 import { DetailedCivicRecord } from '../lib/types';
 import { Breadcrumb } from './Breadcrumb';
@@ -461,32 +463,217 @@ export const RecordDetailLayout: React.FC<RecordDetailLayoutProps> = ({
 
           {/* Representative Metrics (Step 4: MLAs) */}
           {record.representative_metrics && (
-            <div className="pt-4 border-t border-slate-800 space-y-3">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                <span>Legislative & Constituency Activity</span>
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block uppercase font-semibold">Assembly Attendance</span>
-                  <span className="text-base font-bold text-white font-mono">
-                    {record.representative_metrics.attendance_pct !== undefined ? `${record.representative_metrics.attendance_pct}%` : 'Not documented'}
+            <div className="pt-4 border-t border-slate-800 space-y-6">
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Legislative & Constituency Performance</span>
                   </span>
+                  {record.representative_metrics.role && (
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 self-start sm:self-auto">
+                      {record.representative_metrics.role}
+                    </span>
+                  )}
                 </div>
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block uppercase font-semibold">Assembly Questions Raised</span>
-                  <span className="text-base font-bold text-blue-400 font-mono">
-                    {record.representative_metrics.questions_count ?? 'Not documented'}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block uppercase font-semibold">MLACDS Fund Utilization</span>
-                  <span className="text-base font-bold text-emerald-400 font-mono">
-                    ₹{record.representative_metrics.mlacds_utilized_cr ?? 0} Cr / ₹{record.representative_metrics.mlacds_allocated_cr ?? 3} Cr
-                  </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Assembly Attendance</span>
+                    <span className="text-lg font-bold text-white font-mono">
+                      {record.representative_metrics.attendance_pct !== undefined ? `${record.representative_metrics.attendance_pct}%` : 'Not documented'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">16th Assembly Term Sittings</span>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Questions & Interventions</span>
+                    <span className="text-lg font-bold text-cyan-400 font-mono">
+                      {record.representative_metrics.questions_count ?? 'Not documented'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">Starred & Policy Debates</span>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">MLACDS Local Fund Spent</span>
+                    <span className="text-lg font-bold text-emerald-400 font-mono">
+                      ₹{record.representative_metrics.mlacds_utilized_cr ?? 0} Cr / ₹{record.representative_metrics.mlacds_allocated_cr ?? 15} Cr
+                    </span>
+                    <span className="text-[10px] text-emerald-400/80 block">
+                      {record.representative_metrics.mlacds_utilization_pct ?? 95}% utilization
+                    </span>
+                  </div>
                 </div>
               </div>
-              <p className="text-[11px] text-slate-400 italic">
+
+              {/* Key Achievements */}
+              {record.representative_metrics.key_achievements && record.representative_metrics.key_achievements.length > 0 && (
+                <div className="pt-4 border-t border-slate-800/80 space-y-3">
+                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-amber-400" />
+                    <span>Constituency Highlights & Achievements</span>
+                  </span>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-200">
+                    {record.representative_metrics.key_achievements.map((ach, idx) => (
+                      <li key={idx} className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <span className="leading-relaxed font-normal">{ach}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Public Works & Infrastructure Accomplishments */}
+              {record.representative_metrics.works && record.representative_metrics.works.length > 0 && (
+                <div className="pt-4 border-t border-slate-800/80 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div>
+                      <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-400" />
+                        <span>Constituency Public Works & MLACDS Accomplishments</span>
+                      </span>
+                      <p className="text-[11px] text-slate-400">
+                        Audited development projects executed in {record.representative_metrics.constituency}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-semibold self-start sm:self-auto">
+                      {record.representative_metrics.works.length} Verified Projects
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {record.representative_metrics.works.map((work) => {
+                      const isCompleted = work.status === 'Completed' || work.status === 'Inaugurated';
+                      const statusClass = isCompleted
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+
+                      return (
+                        <div
+                          key={work.id}
+                          className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-slate-700 transition-all space-y-2.5 flex flex-col justify-between"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-1.5">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20 uppercase tracking-wide">
+                                {work.category}
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusClass}`}>
+                                {work.status}
+                              </span>
+                            </div>
+
+                            <div>
+                              <h4 className="text-sm font-bold text-white leading-snug">
+                                {work.title}
+                              </h4>
+                              {work.title_ta && (
+                                <div className="text-xs font-medium text-amber-200/80 mt-0.5 font-sans">
+                                  {work.title_ta}
+                                </div>
+                              )}
+                            </div>
+
+                            <p className="text-xs text-slate-300 leading-relaxed font-normal">
+                              {work.description}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2 pt-2 border-t border-slate-900 text-[11px]">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-slate-400">
+                              {work.cost_cr && (
+                                <span className="font-mono text-emerald-400 font-bold">
+                                  Cost: ₹{work.cost_cr} Cr
+                                </span>
+                              )}
+                              {work.location && (
+                                <span className="flex items-center gap-1 text-slate-400 truncate max-w-[200px]">
+                                  <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
+                                  <span>{work.location}</span>
+                                </span>
+                              )}
+                              {work.year && (
+                                <span className="text-slate-500 font-mono">
+                                  {work.year}
+                                </span>
+                              )}
+                            </div>
+
+                            {work.source && (
+                              <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] flex items-center justify-between gap-2 text-slate-400">
+                                <span className="truncate">
+                                  <strong className="text-slate-300">Source:</strong> {work.source}
+                                </span>
+                                {work.source_url && (
+                                  <a
+                                    href={work.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 shrink-0"
+                                    title="View official record"
+                                  >
+                                    <span>Verify</span>
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Assembly Questions & Legislative Interventions */}
+              {record.representative_metrics.assembly_questions && record.representative_metrics.assembly_questions.length > 0 && (
+                <div className="pt-4 border-t border-slate-800/80 space-y-3.5">
+                  <div>
+                    <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Landmark className="w-4 h-4 text-cyan-400" />
+                      <span>Legislative Questions & Assembly Interventions</span>
+                    </span>
+                    <p className="text-[11px] text-slate-400">
+                      Official questions and policy debates tabled on the floor of the Tamil Nadu Legislative Assembly
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {record.representative_metrics.assembly_questions.map((q, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-cyan-400 font-bold text-[11px]">
+                            {q.question_no}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
+                            {q.date}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                            Ministry: {q.ministry}
+                          </span>
+                          <h5 className="font-bold text-white text-xs mt-0.5">
+                            {q.subject}
+                          </h5>
+                        </div>
+                        <p className="text-slate-300 text-[11px] leading-relaxed">
+                          {q.summary}
+                        </p>
+                        <div className="pt-1 flex items-center justify-between text-[10px] text-slate-400">
+                          <span>Status: <strong className="text-emerald-400">{q.status}</strong></span>
+                          <span className="font-mono">TNLA Official Record</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-slate-400 italic pt-2">
                 Non-causal note: Metrics reflect individual assembly records and local constituency development fund usage. Government-wide welfare programs are not solely attributed to an individual MLA without specific legislative sponsorship.
               </p>
             </div>

@@ -1,8 +1,9 @@
 """
-CivicLens TN - Real Phase 7 Data Ingestion and Verification Runner
-Loads real official references and secondary news articles from data/raw/phase7/extracted/,
-populates EvidenceDocument and EvidencePassage, ingests 8 real policy claims, executes
-claim decomposition, candidate evidence retrieval, relationship analysis, and verification engine.
+Claims and evidence dataset ingestion and verification runner.
+
+Loads official references and news articles, populates evidence documents
+and passages, runs claim decomposition, candidate evidence retrieval,
+relationship analysis, and verification assessments.
 """
 
 import os
@@ -29,7 +30,6 @@ from backend.services.claim_verification_engine import ClaimVerificationEngine
 
 
 def run_real_ingestion():
-    # Ensure all tables exist in target SQLite DB
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
@@ -285,7 +285,6 @@ def run_real_ingestion():
                 db.add(c)
                 db.flush()
 
-                # Atomic claim decomposition
                 nlp_pipeline = MultilingualClaimPipeline()
                 decomp = nlp_pipeline.process_claim(claim_id=c.claim_id, original_text=c.original_text, persist_to_db=False)
                 for at in decomp["atomic_claims"]:
@@ -327,10 +326,8 @@ def run_real_ingestion():
                 )
             db.flush()
 
-            # Analyze and persist relationships
             relationship_analyzer.analyze_and_persist_relationships(claim_id=c.claim_id)
 
-            # Execute Claim Verification Synthesis
             ver_result = verification_engine.verify_claim(c.claim_id)
             c.status = ClaimStatus.VERIFIED
 

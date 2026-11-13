@@ -5,6 +5,7 @@ export interface PoliticalPromise {
   original_text?: string;
   status: 'Fulfilled' | 'In-Progress' | 'Broken' | 'Stalled' | 'Under Review' | string;
   category: string;
+  section?: string;
   target?: string;
   budget_allocation?: string | number;
   scheme_matches_count?: number;
@@ -157,6 +158,30 @@ export interface DetailedFinancials {
   notes?: string;
 }
 
+export interface RepresentativeWork {
+  id: string;
+  title: string;
+  title_ta?: string;
+  category: 'Healthcare' | 'Education' | 'Water & Sanitation' | 'Infrastructure' | 'Public Amenities' | 'Welfare' | 'Environment & Flood' | string;
+  description: string;
+  cost_lakhs?: number;
+  cost_cr?: number;
+  location?: string;
+  year?: string;
+  status: 'Completed' | 'Under Execution' | 'Sanctioned' | 'Inaugurated' | string;
+  source: string;
+  source_url?: string;
+}
+
+export interface AssemblyQuestion {
+  question_no: string;
+  date: string;
+  subject: string;
+  ministry: string;
+  summary: string;
+  status: 'Answered' | 'Tabled' | 'Written Reply' | 'Debated' | string;
+}
+
 export interface DetailedCivicRecord {
   id: string;
   category_key: 'scheme' | 'promise' | 'representative' | 'claim' | 'civic' | 'policy';
@@ -195,13 +220,18 @@ export interface DetailedCivicRecord {
   };
   representative_metrics?: {
     constituency: string;
+    district?: string;
     party: string;
+    role?: string;
     attendance_pct?: number;
     questions_count?: number;
     mlacds_allocated_cr?: number;
     mlacds_utilized_cr?: number;
     mlacds_utilization_pct?: number;
     active_terms?: string[];
+    works?: RepresentativeWork[];
+    assembly_questions?: AssemblyQuestion[];
+    key_achievements?: string[];
   };
 }
 

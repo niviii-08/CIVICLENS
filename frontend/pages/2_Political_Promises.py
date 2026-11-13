@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -11,9 +17,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---------------------------------------------------------------------------
-# TEST FIXTURES (For Dev/Test Mode exploration only)
-# ---------------------------------------------------------------------------
 FIXTURE_PROMISES = [
     {
         "promise_id": "TEST_FIXTURE_DMK_001",
@@ -118,9 +121,6 @@ FIXTURE_EVIDENCE_MATCHES = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# NON-ADVERSARIAL STATUS TAXONOMY & STYLING
-# ---------------------------------------------------------------------------
 STATUS_CONFIG = {
     "implemented": {"label": "Implemented", "color": "#28a745"},
     "partially_implemented": {"label": "Partially Implemented", "color": "#17a2b8"},
@@ -139,19 +139,14 @@ def render_status_badge(status_str: str) -> str:
     return f'<span style="background-color: {color}; color: white; padding: 4px 12px; border-radius: 14px; font-size: 13px; font-weight: bold;">{label}</span>'
 
 
-# ---------------------------------------------------------------------------
-# MAIN LAYOUT & HEADER
-# ---------------------------------------------------------------------------
 st.title("📜 Political Promise Tracker")
 st.markdown("### Tamil Nadu Election Manifestos vs Evidence-Based Implementation Tracking")
 
-# Sidebar Controls & Filters
 st.sidebar.header("🛠️ Pipeline & Data Controls")
 dev_mode = st.sidebar.toggle("🧪 Development / Test Mode (Fixture Data)", value=False)
 
 st.sidebar.subheader("Filter Real Dataset")
 
-# Dynamically fetch filter options from backend API or use full known taxonomy
 all_parties = ["All", "AIADMK", "Archives", "BJP", "DMK", "INC", "MDMK", "MNM", "NTK", "PMK", "TVK"]
 all_years = ["All", 2026, 2021, 2016, 2011, 2006, 2001, 1996]
 all_categories = [
@@ -177,9 +172,6 @@ page_num = st.sidebar.number_input("Page", min_value=1, value=1, step=1)
 page_limit = st.sidebar.selectbox("Promises per page", [10, 20, 50, 100], index=1)
 
 
-# ---------------------------------------------------------------------------
-# DATA FETCHING (API vs Fixture Mode)
-# ---------------------------------------------------------------------------
 promises_data: List[Dict[str, Any]] = []
 total_count = 0
 total_pages = 1
@@ -189,7 +181,6 @@ api_error = None
 if dev_mode:
     using_fixtures = True
     promises_data = FIXTURE_PROMISES
-    # Filter fixtures locally
     if filter_election != "All":
         promises_data = [p for p in promises_data if p.get("election_year") == filter_election]
     if filter_party != "All":
@@ -224,9 +215,6 @@ else:
             api_error = api_res.get("message", "Unknown backend error")
 
 
-# ---------------------------------------------------------------------------
-# TOP METRICS & STATS BAR
-# ---------------------------------------------------------------------------
 if not dev_mode and not api_error:
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
     with m_col1:
@@ -239,9 +227,6 @@ if not dev_mode and not api_error:
         st.metric("Current Page", f"{page_num} of {max(1, total_pages)}")
 
 
-# ---------------------------------------------------------------------------
-# ERROR AND EMPTY STATE HANDLING
-# ---------------------------------------------------------------------------
 if api_error:
     st.error(f"""
     ### 🔌 Backend Connection Error
@@ -262,9 +247,6 @@ if not promises_data:
     st.stop()
 
 
-# ---------------------------------------------------------------------------
-# MAIN MULTI-TAB INTERFACE
-# ---------------------------------------------------------------------------
 if using_fixtures:
     st.info("ℹ️ **Development / Test Mode Active**: Displaying temporary test fixtures for UI verification.")
 
@@ -277,9 +259,6 @@ tab_explorer, tab_detail, tab_timeline, tab_schemes, tab_sources = st.tabs([
 ])
 
 
-# ---------------------------------------------------------------------------
-# TAB 1: PROMISE EXPLORER
-# ---------------------------------------------------------------------------
 with tab_explorer:
     st.markdown(f"#### Displaying {len(promises_data)} Promises on Page {page_num} (Total Found: {total_count})")
     
@@ -317,9 +296,6 @@ with tab_explorer:
             """, unsafe_allow_html=True)
 
 
-# ---------------------------------------------------------------------------
-# TAB 2: PROMISE DETAIL & ASSESSMENT FLOW
-# ---------------------------------------------------------------------------
 with tab_detail:
     st.markdown("#### Structured Promise Provenance, Implementation & Rationale Flow")
     
@@ -332,7 +308,6 @@ with tab_detail:
         if p_obj:
             st.markdown("---")
             
-            # STEP 1: ORIGINAL PROMISE
             st.markdown("### 1️⃣ ORIGINAL PROMISE")
             st.markdown(f"""
             <div style="background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 14px; border-radius: 4px; margin-bottom: 16px;">
@@ -342,7 +317,6 @@ with tab_detail:
             </div>
             """, unsafe_allow_html=True)
             
-            # STEP 2: NORMALIZED PROMISE
             st.markdown("### 2️⃣ NORMALIZED PROMISE")
             col_norm1, col_norm2 = st.columns([2, 1])
             with col_norm1:
@@ -355,7 +329,6 @@ with tab_detail:
                 st.write(f"- **Proposed Action:** {meta.get('proposed_action', 'N/A')}")
                 st.write(f"- **Monetary Target:** {meta.get('monetary_target', 'N/A')}")
             
-            # STEP 3: CATEGORY
             st.markdown("### 3️⃣ CATEGORY & TAXONOMY")
             st.markdown(f"""
             <div style="background-color: #e2e3e5; padding: 10px 16px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
@@ -369,7 +342,6 @@ with tab_detail:
             """, unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # STEP 4: HISTORICAL SCHEME MATCHES
             st.markdown("### 4️⃣ HISTORICAL SCHEME MATCHES")
             st.caption("Matches promise against Phase 2 historical schemes using vector cosine similarity.")
             
@@ -399,7 +371,6 @@ with tab_detail:
             else:
                 st.info("ℹ️ No top-K historical scheme vector candidate matches found for this promise.")
             
-            # STEP 5: GOVERNMENT EVIDENCE
             st.markdown("### 5️⃣ GOVERNMENT EVIDENCE")
             ev_list = FIXTURE_EVIDENCE_MATCHES if using_fixtures else []
             if not using_fixtures:
@@ -422,7 +393,6 @@ with tab_detail:
             else:
                 st.info("ℹ️ No official government evidence documents linked to this promise currently.")
             
-            # STEP 6: CURRENT ASSESSMENT
             st.markdown("### 6️⃣ CURRENT ASSESSMENT")
             status = p_obj.get("current_status", "not_assessed")
             
@@ -456,7 +426,6 @@ with tab_detail:
             if status in ["no_evidence_found", "unclear"]:
                 st.caption("ℹ️ *Notice: Status 'No Evidence Found' or 'Insufficient Evidence' reflects current availability in indexed government databases and does NOT imply non-implementation.*")
             
-            # STEP 7: SOURCES
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("### 7️⃣ SOURCES & PROVENANCE")
             st.json({
@@ -469,9 +438,6 @@ with tab_detail:
             })
 
 
-# ---------------------------------------------------------------------------
-# TAB 3: EVIDENCE TIMELINE
-# ---------------------------------------------------------------------------
 with tab_timeline:
     st.markdown("#### ⏱️ Chronological Government Evidence Timeline")
     
@@ -501,9 +467,6 @@ with tab_timeline:
             st.info("No evidence timeline entries available for the selected promise.")
 
 
-# ---------------------------------------------------------------------------
-# TAB 4: HISTORICAL SCHEME MATCHES
-# ---------------------------------------------------------------------------
 with tab_schemes:
     st.markdown("#### 🏛️ Historical Scheme Intelligence Matches")
     st.caption("Matches promises against pre-existing historical schemes using Sentence-BERT & TF-IDF vector similarity.")
@@ -536,9 +499,6 @@ with tab_schemes:
             st.info("No historical scheme candidate matches found for the selected promise.")
 
 
-# ---------------------------------------------------------------------------
-# TAB 5: SOURCE PROVENANCE
-# ---------------------------------------------------------------------------
 with tab_sources:
     st.markdown("#### 📑 Manifesto Source Provenance & Document Metadata")
     

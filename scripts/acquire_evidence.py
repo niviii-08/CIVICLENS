@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def main():
     target_urls = sys.argv[1:] if len(sys.argv) > 1 else [
         "https://cms.tn.gov.in/sites/default/files/go/sw_e_2021.pdf",
-        "https://httpbin.org/get"  # TEST_FIXTURE endpoint in allowed_domains
+        "https://httpbin.org/get"
     ]
 
     db = SessionLocal()

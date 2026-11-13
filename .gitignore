@@ -67,3 +67,6 @@ ml/models/*
 ml/embeddings/*
 !ml/embeddings/.gitkeep
 scratch/
+*.tsbuildinfo
+.streamlit/
+data/backups/

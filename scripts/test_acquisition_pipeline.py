@@ -12,7 +12,6 @@ def main():
     
     os.makedirs(os.path.dirname(test_manifest_path), exist_ok=True)
     
-    # Create test fixtures
     test_data = [
         {
             "manifesto_id": "TEST_FIXTURE_1",

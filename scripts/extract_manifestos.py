@@ -35,7 +35,6 @@ def main():
         party = item.get("party", "Unknown_Party")
         year = item.get("election_year", "Unknown_Year")
         language = item.get("language", "Unknown")
-        # generate a simple ID
         manifesto_id = f"{year}_{party.replace(' ', '_')}"
         
         logger.info(f"Extracting manifesto: {manifesto_id} from {local_path}")
@@ -45,7 +44,6 @@ def main():
             segments.append(dataclasses.asdict(segment))
             
         if segments:
-            # Create output dir
             out_dir = os.path.join(processed_dir, str(year), party.replace(" ", "_"))
             os.makedirs(out_dir, exist_ok=True)
             
@@ -56,7 +54,6 @@ def main():
                     
             logger.info(f"Extracted {len(segments)} segments to {out_file}")
             
-            # Update extraction_status
             item["extraction_status"] = "extracted"
         else:
             logger.warning(f"No text extracted for {manifesto_id}")

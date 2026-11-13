@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date, timedelta
@@ -12,7 +18,6 @@ st.set_page_config(
 st.title("📰 Tamil News Bias & Political Coverage Analyzer")
 st.subheader("Multi-Dimensional Coverage Analysis across Tamil & English News Outlets")
 
-# Standardized tab navigation for Phase 4.9 Dashboard
 tab_explorer, tab_article, tab_source_comp, tab_event, tab_topics, tab_entities, tab_bias, tab_source_detail = st.tabs([
     "🔍 News Explorer",
     "📄 Article Detail",
@@ -24,7 +29,6 @@ tab_explorer, tab_article, tab_source_comp, tab_event, tab_topics, tab_entities,
     "🏢 Source Profile"
 ])
 
-# Shared helper function to load filters
 @st.cache_data(ttl=60)
 def load_filter_options():
     ok_src, sources_res = api_client.get_news_sources()
@@ -51,9 +55,6 @@ party_options = ["All"] + [e["entity_id"] for e in entities_list if e.get("entit
 event_options = ["All"] + [ev["event_id"] for ev in events_list]
 
 
-# =============================================================================
-# TAB 1: NEWS EXPLORER
-# =============================================================================
 with tab_explorer:
     st.markdown("### 🔍 Search & Filter News Articles")
 
@@ -74,7 +75,6 @@ with tab_explorer:
     date_from_str = date_range[0].isoformat() if isinstance(date_range, tuple) and len(date_range) > 0 else None
     date_to_str = date_range[1].isoformat() if isinstance(date_range, tuple) and len(date_range) > 1 else None
 
-    # Fetch filtered articles
     with st.spinner("Fetching articles..."):
         ok_arts, arts_data = api_client.get_news_articles(
             source_id=sel_source,
@@ -110,9 +110,6 @@ with tab_explorer:
         st.warning("No articles matched the specified filters. Try broadening your criteria.")
 
 
-# =============================================================================
-# TAB 2: ARTICLE DETAIL
-# =============================================================================
 with tab_article:
     st.markdown("### 📄 Article Analysis & Provenance")
 
@@ -139,17 +136,14 @@ with tab_article:
             with c_meta:
                 st.markdown("### Extracted Intelligence")
                 
-                # Entities
                 st.markdown("**Mentioned Entities:**")
                 for e in detail_data.get("entities", []):
                     st.markdown(f"- `{e['entity_id']}` (Mentions: {e['mention_count']}, Prominence: {e['prominence_score']})")
 
-                # Topics
                 st.markdown("**Policy Topics:**")
                 for t in detail_data.get("topics", []):
                     st.markdown(f"- `{t['topic_id']}` (Relevance: {t['relevance_score']})")
 
-                # Linguistic & Framing Signals
                 feats = detail_data.get("features") or {}
                 st.markdown("**Linguistic & Framing Signals:**")
                 st.metric("Headline Sentiment", feats.get("headline_sentiment", 0.0))
@@ -157,7 +151,6 @@ with tab_article:
                 st.metric("Quote Count", feats.get("quote_count", 0))
                 st.metric("Official Citations", feats.get("official_source_citation_count", 0))
 
-            # Explicit Provenance Block
             st.markdown("---")
             with st.expander("🛡️ Data Provenance & Verification Metadata", expanded=True):
                 prov = detail_data.get("provenance", {})
@@ -168,9 +161,6 @@ with tab_article:
         st.info("Select an article from the **News Explorer** tab or enter an Article ID above.")
 
 
-# =============================================================================
-# TAB 3: SOURCE COMPARISON
-# =============================================================================
 with tab_source_comp:
     st.markdown("### ⚖️ Side-by-Side News Outlet Comparison")
 
@@ -211,9 +201,6 @@ with tab_source_comp:
                 st.caption("Differences in metrics reflect variations in beat focus, quoting patterns, and topic prioritization. They do not constitute proof of partisan bias.")
 
 
-# =============================================================================
-# TAB 4: EVENT COVERAGE
-# =============================================================================
 with tab_event:
     st.markdown("### 📍 Ground-Truth Event Coverage Analysis")
 
@@ -251,9 +238,6 @@ with tab_event:
         st.info("No ground-truth events currently loaded in database.")
 
 
-# =============================================================================
-# TAB 5: TOPIC TRENDS
-# =============================================================================
 with tab_topics:
     st.markdown("### 📊 Policy Topic Distribution Trends")
 
@@ -264,9 +248,6 @@ with tab_topics:
         st.info("No topic taxonomy loaded.")
 
 
-# =============================================================================
-# TAB 6: POLITICAL ENTITY COVERAGE
-# =============================================================================
 with tab_entities:
     st.markdown("### 🏛️ Political Entity Coverage")
 
@@ -281,9 +262,6 @@ with tab_entities:
         st.info("No political entities found matching category.")
 
 
-# =============================================================================
-# TAB 7: OBSERVED COVERAGE INDICATORS (BIAS PAGE)
-# =============================================================================
 with tab_bias:
     st.markdown("### 📐 Observed Coverage Indicators")
 
@@ -316,9 +294,6 @@ with tab_bias:
         st.info(f"No calculated indicators found for `{bias_src_sel}`. Click the button above to calculate indicators.")
 
 
-# =============================================================================
-# TAB 8: SOURCE PROFILE
-# =============================================================================
 with tab_source_detail:
     st.markdown("### 🏢 News Source Registry Profile")
 
