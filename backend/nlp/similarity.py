@@ -11,15 +11,14 @@ logger = logging.getLogger(__name__)
 def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
     v1 = np.array(vec1)
     v2 = np.array(vec2)
-    
+
     norm1 = np.linalg.norm(v1)
     norm2 = np.linalg.norm(v2)
-    
+
     if norm1 == 0 or norm2 == 0:
         return 0.0
-        
-    return float(np.dot(v1, v2) / (norm1 * norm2))
 
+    return float(np.dot(v1, v2) / (norm1 * norm2))
 
 class SemanticSchemeSearcher:
     """
@@ -30,7 +29,7 @@ class SemanticSchemeSearcher:
     def __init__(self, db_session: Session, embedder: Optional[HistoricalSchemeEmbedder] = None):
         self.db = db_session
         self.embedder = embedder or HistoricalSchemeEmbedder()
-        
+
     def _get_sources_for_scheme(self, scheme_id: int) -> List[Dict[str, Any]]:
         rels = self.db.query(SchemeSourceRelationship).filter(SchemeSourceRelationship.historical_scheme_id == scheme_id).all()
         sources = []
@@ -56,18 +55,18 @@ class SemanticSchemeSearcher:
     def _rank_candidates(self, query_vector: List[float], candidate_schemes: List[HistoricalScheme], 
                          threshold: float, exclude_id: Optional[int] = None) -> List[Dict[str, Any]]:
         results = []
-        
+
         for scheme in candidate_schemes:
             if exclude_id and scheme.id == exclude_id:
                 continue
-                
+
             payload = scheme.embedding
             if not payload or not isinstance(payload, dict) or "vector" not in payload:
                 continue
-                
+
             target_vector = payload["vector"]
             score = cosine_similarity(query_vector, target_vector)
-            
+
             if score >= threshold:
                 dept_name = scheme.department.name if scheme.department else "Unknown"
                 results.append({
@@ -82,8 +81,7 @@ class SemanticSchemeSearcher:
                     "sources": self._get_sources_for_scheme(scheme.id),
                     "disclaimer": "Similarity score indicates topical overlap, not policy equivalence."
                 })
-                
-        # Sort descending by score
+
         results.sort(key=lambda x: x["similarity_score"], reverse=True)
         return results
 
@@ -96,15 +94,15 @@ class SemanticSchemeSearcher:
         query_vector = self.embedder.generate_embedding(query_text)
         if not query_vector:
             return {"query": query_text, "items": [], "total": 0, "page": page, "limit": top_k}
-            
+
         candidate_schemes = self._get_candidates(department_id, year, category_id)
         ranked = self._rank_candidates(query_vector, candidate_schemes, threshold)
-        
+
         total = len(ranked)
         start_idx = (page - 1) * top_k
         end_idx = start_idx + top_k
         items = ranked[start_idx:end_idx]
-        
+
         return {
             "query": query_text,
             "items": items,
@@ -112,7 +110,7 @@ class SemanticSchemeSearcher:
             "page": page,
             "limit": top_k
         }
-        
+
     def search_by_scheme_id(self, scheme_id: int, top_k: int = 5, threshold: float = 0.3, page: int = 1,
                             department_id: Optional[int] = None, year: Optional[str] = None, category_id: Optional[int] = None) -> Dict[str, Any]:
         """
@@ -121,21 +119,21 @@ class SemanticSchemeSearcher:
         source_scheme = self.db.query(HistoricalScheme).filter(HistoricalScheme.id == scheme_id).first()
         if not source_scheme:
             raise ValueError(f"Scheme ID {scheme_id} not found.")
-            
+
         payload = source_scheme.embedding
         if not payload or not isinstance(payload, dict) or "vector" not in payload:
             raise ValueError(f"Scheme ID {scheme_id} has no pre-calculated embeddings.")
-            
+
         query_vector = payload["vector"]
         candidate_schemes = self._get_candidates(department_id, year, category_id)
-        
+
         ranked = self._rank_candidates(query_vector, candidate_schemes, threshold, exclude_id=scheme_id)
-        
+
         total = len(ranked)
         start_idx = (page - 1) * top_k
         end_idx = start_idx + top_k
         items = ranked[start_idx:end_idx]
-        
+
         return {
             "query_scheme": {
                 "id": source_scheme.id,
@@ -147,3 +145,4 @@ class SemanticSchemeSearcher:
             "page": page,
             "limit": top_k
         }
+

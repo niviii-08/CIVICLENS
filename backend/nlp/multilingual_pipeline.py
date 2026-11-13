@@ -6,10 +6,8 @@ from backend.core.logger import setup_logger
 
 logger = setup_logger("civiclens.nlp.multilingual_pipeline")
 
-# NLP Pipeline Version Identifier
 NLP_PROCESSING_VERSION = "nlp_v1.0"
 
-# Predefined Stopwords Dictionary
 TAMIL_STOPWORDS = {
     "மற்றும்", "ஆனால்", "எனவே", "அல்லது", "என்று", "என", "ஒரு", "இந்த", "அந்த", "இது", "அது",
     "உள்ள", "ஆகிய", "குறித்து", "மேலும்", "கொண்டு", "மூலம்", "பற்றி", "இவர்", "அவர்", "இவர்கள்",
@@ -24,14 +22,11 @@ ENGLISH_STOPWORDS = {
     "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down"
 }
 
-# Common English Abbreviations (do NOT split sentences on these dots)
 ENGLISH_ABBREVIATIONS = {
     "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st", "govt", "dept", "inc", "ltd", "corp",
     "rs", "no", "vol", "vs", "etc", "i.e", "e.g", "m.k", "k.a", "c.m", "p.m", "a.m"
 }
 
-
-# Tamil Inflectional Suffixes for Rule-Based Stemming
 TAMIL_SUFFIXES = [
     "கொண்டிருக்கின்றது", "கொண்டிருந்தனர்", "கொண்டிருந்தன", "கொண்டிருக்கிறது",
     "பட்டது", "பட்டன", "பட்டான்", "பட்டாள்", "பட்டார்",
@@ -42,8 +37,6 @@ TAMIL_SUFFIXES = [
     "இலிருந்து", "உடன்", "ஆக", "இல்", "க்கு", "யை", "ஐ", "ஆல்", "இன்",
     "உம்", "ஏ", "ஓ"
 ]
-
-
 
 @dataclass
 class ProcessedArticlePayload:
@@ -78,7 +71,6 @@ class ProcessedArticlePayload:
             "stats": self.stats
         }
 
-
 class TextCleaner:
     """Strips HTML chrome, sanitizes entities, and standardizes whitespace."""
 
@@ -87,19 +79,14 @@ class TextCleaner:
         if not text or not isinstance(text, str):
             return ""
 
-        # Remove HTML scripts and style blocks
         cleaned = re.sub(r'<(script|style)[^>]*>.*?</\1>', '', text, flags=re.I | re.S)
-        # Remove HTML tags
         cleaned = re.sub(r'<[^>]+>', '', cleaned)
-        # Unescape basic HTML entities
         cleaned = cleaned.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
         cleaned = cleaned.replace("&quot;", '"').replace("&#39;", "'").replace("&nbsp;", " ")
-        # Collapse multi-spaces while preserving line breaks
         lines = [re.sub(r'[ \t]+', ' ', line).strip() for line in cleaned.splitlines()]
 
         cleaned = "\n".join(line for line in lines if line)
         return cleaned.strip()
-
 
 class MultilingualLanguageDetector:
     """High-precision script and character analyzer supporting Tamil (ta), English (en), and Mixed (mixed)."""
@@ -126,7 +113,6 @@ class MultilingualLanguageDetector:
         else:
             return "en"
 
-
 class TamilUnicodeNormalizer:
     """Performs Unicode NFKC normalization, zero-width stripping, and script standardization."""
 
@@ -135,20 +121,15 @@ class TamilUnicodeNormalizer:
         if not text or not isinstance(text, str):
             return ""
 
-        # NFKC Normalization
         norm = unicodedata.normalize("NFKC", text)
 
-        # Remove zero-width characters (\u200C, \u200D, \u200B, soft hyphen \u00AD)
         norm = re.sub(r'[\u200c\u200d\u200b\u00ad]', '', norm)
 
-        # Standardize smart quotes and dashes
         norm = norm.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
         norm = norm.replace("–", "-").replace("—", "-")
 
-        # Standardize whitespace
         norm = re.sub(r'\s+', ' ', norm).strip()
         return norm
-
 
 class SentenceSegmenter:
     """Language-aware sentence splitter supporting Tamil and English abbreviation safeguards."""
@@ -160,21 +141,17 @@ class SentenceSegmenter:
         if not text or not isinstance(text, str):
             return []
 
-        # Split into raw paragraphs first
         paragraphs = [p.strip() for p in text.splitlines() if p.strip()]
         sentences = []
 
         for p in paragraphs:
-            # Protect dots in known abbreviations (e.g., "M.K. Stalin" -> "M_K_ Stalin")
             protected = p
             for abbr in self.abbreviations:
                 pattern = r'\b(' + re.escape(abbr) + r')\.'
                 protected = re.sub(pattern, r'\1___DOT___', protected, flags=re.I)
 
-            # Protect decimal numbers (e.g., "Rs 500.50" -> "Rs 500___DOT___50")
             protected = re.sub(r'(\d+)\.(\d+)', r'\1___DOT___\2', protected)
 
-            # Split on Tamil/English sentence terminators (. ! ? | \n)
             raw_sents = re.split(r'(?<=[.!?|\n])\s+', protected)
 
             for sent in raw_sents:
@@ -184,7 +161,6 @@ class SentenceSegmenter:
 
         return sentences
 
-
 class ScriptTokenizer:
     """Script-aware tokenizer preserving Tamil compound script tokens and English word tokens."""
 
@@ -193,12 +169,9 @@ class ScriptTokenizer:
         if not text or not isinstance(text, str):
             return []
 
-        # Match Tamil script blocks or English/numeric alphanumeric tokens
-        # Tamil Unicode range: \u0B80-\u0BFF
         pattern = r'[\u0B80-\u0BFF]+|[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*'
         tokens = re.findall(pattern, text)
         return [t.strip() for t in tokens if t.strip()]
-
 
 class StopwordProcessor:
     """Filters Tamil and English stopwords based on language mode."""
@@ -220,7 +193,6 @@ class StopwordProcessor:
                     continue
             filtered.append(token)
         return filtered
-
 
 class StemmerLemmatizer:
     """Rule-based inflection stemmer for Tamil and English tokens."""
@@ -261,7 +233,6 @@ class StemmerLemmatizer:
                 stems.append(self.stem_english_word(t))
         return stems
 
-
 class MultilingualNewsNLPPipeline:
     """
     End-to-End Multilingual News NLP Pipeline implementing:
@@ -283,29 +254,21 @@ class MultilingualNewsNLPPipeline:
         """Executes full NLP processing pipeline while preserving original text completely intact."""
         raw_input = original_text if original_text is not None else ""
 
-        # Step 1: Cleaning
         cleaned = self.cleaner.clean(raw_input)
 
-        # Step 2: Language Detection
         detected_lang = self.lang_detector.detect(cleaned)
         language = override_language or detected_lang
 
-        # Step 3 & 4: Unicode & Tamil Normalization
         normalized = self.unicode_normalizer.normalize(cleaned)
 
-        # Step 5: Sentence Segmentation
         sentences = self.segmenter.segment(normalized, language=language)
 
-        # Step 6: Tokenization
         tokens = self.tokenizer.tokenize(normalized)
 
-        # Step 7: Stopword Processing
         filtered_tokens = self.stopword_processor.filter_stopwords(tokens, language=language)
 
-        # Step 8: Stemming / Lemmatization
         stems = self.stemmer.stem_tokens(filtered_tokens, language=language)
 
-        # Statistical Metrics
         tam_tokens = sum(1 for t in tokens if any('\u0B80' <= c <= '\u0BFF' for c in t))
         eng_tokens = sum(1 for t in tokens if any('a' <= c.lower() <= 'z' for c in t))
         unique_tokens = len(set(t.lower() for t in tokens))

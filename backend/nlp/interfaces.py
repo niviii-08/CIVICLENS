@@ -20,7 +20,7 @@ class BaseEmbeddingModel(ABC):
     def get_embedding(self, text: str) -> List[float]:
         """Convert text into a dense vector representation."""
         pass
-        
+
     @abstractmethod
     def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """Batch process texts into embeddings for efficient processing."""

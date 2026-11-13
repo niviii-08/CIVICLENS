@@ -20,7 +20,6 @@ logger = setup_logger("civiclens.ingestion.news_pipeline")
 
 RAW_ARTICLES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "scratch", "raw_articles")
 
-
 class RawStoreManager:
     """Manages raw source page HTML storage and raw reference generation."""
 
@@ -47,7 +46,6 @@ class RawStoreManager:
             logger.error(f"Failed to save raw HTML payload for {url}: {e}")
             return ""
 
-
 class DuplicateDetector:
     """
     Multi-tier duplicate detection engine enforcing:
@@ -73,7 +71,6 @@ class DuplicateDetector:
         Executes multi-tier duplicate checks against existing DB records.
         Returns (is_duplicate: bool, reason: str).
         """
-        # Tier 1: Canonical URL or Exact URL match
         canon_target = canonical_url or url
         existing_url = db.query(Article).filter(
             (Article.url == url) | (Article.canonical_url == canon_target) | (Article.url == canon_target)
@@ -81,12 +78,10 @@ class DuplicateDetector:
         if existing_url:
             return True, f"Tier 1 Duplicate: Matching URL/Canonical URL ({existing_url.article_id})"
 
-        # Tier 2: Content Hash Match
         existing_hash = db.query(Article).filter(Article.text_hash == text_hash).first()
         if existing_hash:
             return True, f"Tier 2 Duplicate: Matching SHA-256 content hash ({existing_hash.article_id})"
 
-        # Tier 3: Fuzzy Title + Date Window Similarity Check (within 48h)
         if pub_date:
             window_start = pub_date - timedelta(days=2)
             window_end = pub_date + timedelta(days=2)
@@ -101,7 +96,6 @@ class DuplicateDetector:
                     return True, f"Tier 3 Duplicate: High title similarity ({sim:.2f}) with article {cand.article_id}"
 
         return False, ""
-
 
 class FailureTracker:
     """Records and logs ingestion failures (prevents silent drops)."""
@@ -121,7 +115,6 @@ class FailureTracker:
         db.commit()
         db.refresh(failure)
         return failure
-
 
 class ProcessingQueueManager:
     """Manages downstream NLP processing task queue for ingested articles."""
@@ -160,7 +153,6 @@ class ProcessingQueueManager:
             item.error_message = error_msg
             db.commit()
 
-
 class MultilingualLanguageDetector:
     """Enhanced language detection supporting Tamil (ta), English (en), and Mixed (mixed)."""
 
@@ -168,7 +160,7 @@ class MultilingualLanguageDetector:
     def detect_language(text: str) -> str:
         if not text:
             return "en"
-        
+
         tamil_chars = sum(1 for c in text if '\u0B80' <= c <= '\u0BFF')
         english_chars = sum(1 for c in text if 'a' <= c.lower() <= 'z')
         total_alpha = sum(1 for c in text if c.isalpha())
@@ -185,7 +177,6 @@ class MultilingualLanguageDetector:
             return "ta"
         else:
             return "en"
-
 
 class NewsIngestionPipeline:
     """
@@ -205,7 +196,6 @@ class NewsIngestionPipeline:
 
     def process_url(self, source_id: str, url: str, is_test_fixture: bool = False) -> Optional[Article]:
         """Processes a single article URL through the full pipeline."""
-        # 1. Fetch Raw Page Content
         source_config = self.scraper.registry.get_source(source_id)
         if not source_config:
             self.failure_tracker.record_failure(self.db, source_id, url, "VALIDATION_ERROR", f"Source '{source_id}' not found.")
@@ -220,10 +210,8 @@ class NewsIngestionPipeline:
             self.failure_tracker.record_failure(self.db, source_id, url, "HTTP_ERROR", "Failed to fetch HTTP raw page payload.")
             return None
 
-        # 2. Save Raw Article Page to Store
         raw_ref_path = self.raw_store.save_raw_html(source_id, url, raw_html)
 
-        # 3. Article Extraction & Metadata Parsing
         parsed = self.scraper.parser.parse(raw_html, url, source_config=source_config)
         if not parsed or not parsed.get("article_text") or len(parsed["article_text"].split()) < 15:
             self.failure_tracker.record_failure(
@@ -238,7 +226,6 @@ class NewsIngestionPipeline:
         pub_date = parsed.get("publication_date", datetime.now(timezone.utc))
         text_hash = parsed.get("text_hash") or hashlib.sha256(body_text.encode('utf-8')).hexdigest()
 
-        # 4. Multi-Tier Duplicate Detection
         is_dupe, dupe_reason = self.dup_detector.check_duplicate(
             self.db, url, canonical_url, text_hash, title, pub_date
         )
@@ -246,12 +233,10 @@ class NewsIngestionPipeline:
             logger.info(f"Skipping duplicate article ({url}): {dupe_reason}")
             return None
 
-        # 5. Language Detection & Text Normalization
         lang = self.lang_detector.detect_language(body_text)
         normalized_text = self.analyzer.normalize_tamil_text(body_text) if lang in ["ta", "mixed"] else body_text
         normalized_title = self.analyzer.normalize_tamil_text(title) if lang in ["ta", "mixed"] else title
 
-        # 6. Database Persistence & Provenance Record
         article_id = f"art_{uuid.uuid4().hex[:10]}"
         article = Article(
             article_id=article_id,
@@ -272,7 +257,6 @@ class NewsIngestionPipeline:
         )
         self.db.add(article)
 
-        # Core Provenance: Unified Document and Evidence Records
         common_source = self.db.query(Source).filter(Source.name == source_config.source_name).first()
         common_doc = Document(
             source_id=common_source.id if common_source else None,
@@ -293,7 +277,6 @@ class NewsIngestionPipeline:
         )
         self.db.add(evidence)
 
-        # 7. Push to Processing Queue
         self.queue_manager.enqueue_article(self.db, article_id)
 
         self.db.commit()

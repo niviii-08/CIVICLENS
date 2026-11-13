@@ -31,8 +31,7 @@ class BudgetIngestor:
         scheme_name = raw_row.get('scheme_name') or raw_row.get('description') or 'Unknown Scheme'
         head_of_account = raw_row.get('head_of_account', '')
         financial_year = metadata.get('financial_year', '')
-        
-        # In our PDF reader, raw_row gives us actuals, revised_estimate, and budget_estimate natively!
+
         if raw_row.get('actuals'):
             try:
                 amt = float(raw_row['actuals'])
@@ -95,7 +94,7 @@ class BudgetIngestor:
     def ingest(self):
         """Reads the manifest and ingests all verified/collected datasets."""
         logger.info(f"Starting ingestion from manifest: {self.manifest_path}")
-        
+
         if not os.path.exists(self.manifest_path):
             logger.error("Manifest not found.")
             return
@@ -116,7 +115,7 @@ class BudgetIngestor:
             if status not in ['collected', 'verified']:
                 logger.info(f"Skipping {ds.get('dataset_id')} (Status: {status})")
                 continue
-            
+
             file_path = os.path.join(self.raw_dir, ds.get('original_filename', ''))
             if not os.path.exists(file_path):
                 logger.error(f"File {file_path} marked as {status} but not found on disk.")
@@ -127,16 +126,16 @@ class BudgetIngestor:
             except ValueError as e:
                 logger.error(str(e))
                 continue
-            
+
             logger.info(f"Extracting dataset {ds.get('dataset_id')}...")
             batch = []
             for raw_row in reader.extract_records(file_path):
                 records = self._map_raw_to_canonical(raw_row, ds)
                 batch.extend(records)
-                
+
             logger.info(f"Validating {len(batch)} records...")
             valid, invalid, val_report = self.validator.validate_batch(batch)
-            
+
             logger.info(f"Validation Report for {ds.get('dataset_id')}: {json.dumps(val_report, indent=2)}")
             if invalid:
                 logger.warning(f"Found {len(invalid)} invalid records. Sample rejection reasons: {list(val_report['rejection_reasons'].keys())[:3]}")
@@ -144,15 +143,13 @@ class BudgetIngestor:
             logger.info(f"Cleaning {len(valid)} valid records...")
             cleaner = BudgetCleaner()
             cleaned, unresolved, clean_report = cleaner.clean_batch(valid)
-            
+
             logger.info(f"Cleaning Report for {ds.get('dataset_id')}: {json.dumps(clean_report, indent=2)}")
             if unresolved:
                 logger.warning(f"Found {len(unresolved)} unresolved records after cleaning.")
 
-            # DB Insertion for Normalized Schema
             added, skipped = 0, 0
-            
-            # 1. Ensure Source Document exists
+
             doc = self.db.query(BudgetSourceDocument).filter_by(manifest_dataset_id=ds.get('dataset_id')).first()
             if not doc:
                 doc = BudgetSourceDocument(
@@ -163,20 +160,17 @@ class BudgetIngestor:
                 self.db.add(doc)
                 self.db.commit()
 
-            # 2. Get or Create Batch
             batch = BudgetImportBatch(notes=f"Ingesting {ds.get('dataset_id')}")
             self.db.add(batch)
             self.db.commit()
 
             for raw_record in cleaned:
-                # 3. Get or Create Department
                 dept = self.db.query(BudgetDepartment).filter_by(name=raw_record.department_name).first()
                 if not dept:
                     dept = BudgetDepartment(name=raw_record.department_name)
                     self.db.add(dept)
                     self.db.commit()
 
-                # 4. Get or Create Scheme
                 scheme = self.db.query(BudgetScheme).filter_by(
                     department_id=dept.id, 
                     name=raw_record.scheme_name,
@@ -191,7 +185,6 @@ class BudgetIngestor:
                     self.db.add(scheme)
                     self.db.commit()
 
-                # 5. Insert Record
                 record = BudgetRecord(
                     scheme_id=scheme.id,
                     source_document_id=doc.id,
@@ -203,7 +196,7 @@ class BudgetIngestor:
                     source_page_number=raw_record.source_page_number,
                     original_category_text=raw_record.original_category
                 )
-                
+
                 self.db.add(record)
                 try:
                     self.db.commit()
@@ -211,16 +204,15 @@ class BudgetIngestor:
                 except IntegrityError:
                     self.db.rollback()
                     skipped += 1
-            
+
             batch.records_added = added
             batch.records_skipped = skipped
             self.db.commit()
 
-            
             logger.info(f"Dataset {ds.get('dataset_id')} -> Inserted: {added}, Duplicates Skipped: {skipped}")
             total_records_added += added
             total_records_skipped += skipped
-                    
+
         logger.info(f"Total Ingestion Complete. Inserted: {total_records_added}, Skipped (Duplicates): {total_records_skipped}")
 
 def run_ingestion():

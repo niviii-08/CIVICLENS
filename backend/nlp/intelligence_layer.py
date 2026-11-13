@@ -5,9 +5,6 @@ from backend.core.logger import setup_logger
 
 logger = setup_logger("civiclens.nlp.intelligence_layer")
 
-# ---------------------------------------------------------------------------
-# TOPIC TAXONOMY DEFINITION (14 TARGET POLICY AREAS)
-# ---------------------------------------------------------------------------
 TOPIC_TAXONOMY_14 = {
     "elections": {
         "name": "Elections & Campaigning",
@@ -70,12 +67,7 @@ TOPIC_TAXONOMY_14 = {
     }
 }
 
-
-# ---------------------------------------------------------------------------
-# GAZETTEER DATABASE FOR EXTRACTING POLITICAL ENTITIES
-# ---------------------------------------------------------------------------
 ENTITY_GAZETTEER = [
-    # --- PEOPLE / LEADERS ---
     {
         "entity_id": "ent_person_mkstalin",
         "name": "M.K. Stalin",
@@ -126,7 +118,6 @@ ENTITY_GAZETTEER = [
         "aliases": ["Thol. Thirumavalavan", "Thirumavalavan", "தொல். திருமாவளவன்", "திருமாவளவன்"]
     },
 
-    # --- POLITICAL PARTIES ---
     {
         "entity_id": "ent_party_dmk",
         "name": "DMK",
@@ -170,7 +161,6 @@ ENTITY_GAZETTEER = [
         "aliases": ["VCK", "Viduthalai Chiruthaigal Katchi", "விடுதலை சிறுத்தைகள் கட்சி"]
     },
 
-    # --- GOVERNMENT DEPARTMENTS ---
     {
         "entity_id": "ent_dept_finance",
         "name": "Department of Finance",
@@ -193,7 +183,6 @@ ENTITY_GAZETTEER = [
         "aliases": ["Department of Health", "Health Department", "மக்கள் நல்வாழ்வுத் துறை", "சுகாதாரத்துறை"]
     },
 
-    # --- LOCATIONS ---
     {
         "entity_id": "ent_loc_chennai",
         "name": "Chennai",
@@ -223,7 +212,6 @@ ENTITY_GAZETTEER = [
         "aliases": ["Tamil Nadu", "TN", "தமிழ்நாடு", "தமிழகம்"]
     },
 
-    # --- CONSTITUENCIES ---
     {
         "entity_id": "ent_const_kolathur",
         "name": "Kolathur Assembly Constituency",
@@ -239,7 +227,6 @@ ENTITY_GAZETTEER = [
         "aliases": ["Edappadi Constituency", "எடப்பாடி தொகுதி"]
     },
 
-    # --- ORGANIZATIONS ---
     {
         "entity_id": "ent_org_madras_hc",
         "name": "Madras High Court",
@@ -256,10 +243,6 @@ ENTITY_GAZETTEER = [
     }
 ]
 
-
-# ---------------------------------------------------------------------------
-# GROUND-TRUTH EVENT PATTERNS
-# ---------------------------------------------------------------------------
 KNOWN_EVENT_PATTERNS = [
     {
         "event_id": "evt_tn_budget_2026",
@@ -272,7 +255,6 @@ KNOWN_EVENT_PATTERNS = [
         "keywords": ["assembly session", "legislative assembly debate", "சட்டமன்றக் கூட்டம்", "சட்டமன்ற விவாதம்"]
     }
 ]
-
 
 class EntityRecognizer:
     """Multi-granular named entity recognizer for political leaders, parties, depts, locations, constituencies, and orgs."""
@@ -300,12 +282,10 @@ class EntityRecognizer:
 
             for alias in entity["aliases"]:
                 alias_lower = alias.lower()
-                
-                # Check headline presence
+
                 if headline_lower and alias_lower in headline_lower:
                     found_in_headline = True
 
-                # Check body text matches
                 matches = [m.start() for m in re.finditer(re.escape(alias_lower), text_lower)]
                 if matches:
                     mention_count += len(matches)
@@ -329,7 +309,6 @@ class EntityRecognizer:
 
         return extracted
 
-
 class EntityProminenceCalculator:
     """
     Calculates numerical entity prominence score P_entity in range [0.0, 1.0]:
@@ -345,7 +324,6 @@ class EntityProminenceCalculator:
 
         prominence = round(title_score + lead_score + freq_score, 3)
         return min(1.0, prominence)
-
 
 class TopicClassifier:
     """Multi-label topic classifier categorizing news text across 14 policy areas."""
@@ -376,7 +354,6 @@ class TopicClassifier:
                     "match_count": matches
                 })
 
-        # Fallback to "other" topic if no specific policy areas matched
         if not topic_results:
             topic_results.append({
                 "topic_id": "other",
@@ -385,10 +362,8 @@ class TopicClassifier:
                 "match_count": 0
             })
 
-        # Sort by relevance descending
         topic_results.sort(key=lambda x: x["relevance_score"], reverse=True)
         return topic_results
-
 
 class EventIdentifier:
     """Ground-truth event identifier linking news text to confirmed political events."""
@@ -415,7 +390,6 @@ class EventIdentifier:
 
         return matched_events
 
-
 class IntelligenceLayerService:
     """
     Unified Intelligence Layer coordinator running entity extraction, prominence scoring,
@@ -433,7 +407,6 @@ class IntelligenceLayerService:
         Runs intelligence analysis on headline and body text.
         Strictly separates entity detection from sentiment and bias analysis.
         """
-        # 1. Entity Extraction & Prominence Scoring
         raw_mentions = self.entity_recognizer.extract_mentions(body_text, headline=headline)
         analyzed_entities = []
 
@@ -442,13 +415,10 @@ class IntelligenceLayerService:
             ment["prominence_score"] = prominence
             analyzed_entities.append(ment)
 
-        # 2. 14-Category Topic Classification
         classified_topics = self.topic_classifier.classify(body_text, headline=headline)
 
-        # 3. Ground-Truth Event Identification
         identified_events = self.event_identifier.identify_events(body_text, headline=headline)
 
-        # Entity Breakdown Summary
         entity_counts_by_type = {}
         for ent in analyzed_entities:
             etype = ent["entity_type"]

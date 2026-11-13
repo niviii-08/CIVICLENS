@@ -26,7 +26,6 @@ def remove_punctuation(text: str) -> str:
     if not isinstance(text, str):
         return ""
     translator = str.maketrans('', '', string.punctuation)
-    # Removing extra whitespace that might result from stripping punctuation
     return re.sub(r'\s+', ' ', text.translate(translator)).strip()
 
 def normalize_tamil_text(text: str) -> str:
@@ -36,7 +35,7 @@ def normalize_tamil_text(text: str) -> str:
     """
     if not text:
         return ""
-    
+
     text = normalize_unicode(text)
     text = remove_punctuation(text)
     text = normalize_whitespace(text)

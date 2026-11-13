@@ -4,7 +4,6 @@ from backend.core.logger import setup_logger
 
 logger = setup_logger("civiclens.nlp.news_analyzer")
 
-# Predefined political taxonomy keywords for topic classification
 TOPIC_TAXONOMY = {
     "TOPIC_BUDGET_ECONOMY": {
         "name": "Budget & Economy",
@@ -32,7 +31,6 @@ TOPIC_TAXONOMY = {
     }
 }
 
-# Predefined gazetteer of key political entities in Tamil Nadu
 POLITICAL_GAZETTEER = [
     {"entity_id": "ent_party_dmk", "name": "DMK", "normalized_name": "DMK", "type": "political_party", "aliases": ["DMK", "Dravida Munnetra Kazhagam", "திமுக", "திராவிட முன்னேற்றக் கழகம்"]},
     {"entity_id": "ent_party_aiadmk", "name": "AIADMK", "normalized_name": "AIADMK", "type": "political_party", "aliases": ["AIADMK", "ADMK", "All India Anna Dravida Munnetra Kazhagam", "அதிமுக", "அனைத்திந்திய அண்ணா திராவிட முன்னேற்றக் கழகம்"]},
@@ -44,7 +42,6 @@ POLITICAL_GAZETTEER = [
     {"entity_id": "ent_person_eps", "name": "Edappadi K. Palaniswami", "normalized_name": "Edappadi K. Palaniswami", "type": "person", "aliases": ["Edappadi K. Palaniswami", "EPS", "Palaniswami", "எடப்பாடி பழனிசாமி", "இபிஎஸ்"]},
     {"entity_id": "ent_dept_finance", "name": "Department of Finance", "normalized_name": "Department of Finance", "type": "government_department", "aliases": ["Finance Department", "Ministry of Finance", "நிதித்துறை", "நிதி அமைச்சகம்"]}
 ]
-
 
 class TamilNewsAnalyzer:
     """
@@ -70,9 +67,7 @@ class TamilNewsAnalyzer:
         if not text:
             return ""
         normalized = unicodedata.normalize("NFKC", text)
-        # Remove zero-width non-joiner (\u200C) and zero-width joiner (\u200D)
         normalized = re.sub(r'[\u200c\u200d\u200b]', '', normalized)
-        # Standardize multiple spaces
         normalized = re.sub(r'\s+', ' ', normalized).strip()
         return normalized
 
@@ -89,7 +84,6 @@ class TamilNewsAnalyzer:
             first_pos = -1
 
             for alias in entity["aliases"]:
-                # Match alias with word boundaries where appropriate
                 pattern = re.escape(alias.lower())
                 matches = [m.start() for m in re.finditer(pattern, text_lower)]
                 if matches:
@@ -98,7 +92,6 @@ class TamilNewsAnalyzer:
                         first_pos = matches[0]
 
             if mention_count > 0:
-                # Prominence score: Higher if mentioned early in the text and frequently
                 lead_bonus = 0.4 if (first_pos != -1 and first_pos < 200) else 0.1
                 freq_score = min(0.6, (mention_count / 5.0) * 0.6)
                 prominence_score = round(lead_bonus + freq_score, 3)
@@ -109,7 +102,7 @@ class TamilNewsAnalyzer:
                     "type": entity["type"],
                     "mention_count": mention_count,
                     "prominence_score": prominence_score,
-                    "sentiment_score": 0.0 # Neutral baseline signal
+                    "sentiment_score": 0.0
                 })
 
         return extracted
@@ -135,7 +128,6 @@ class TamilNewsAnalyzer:
                     "relevance_score": relevance
                 })
 
-        # Sort by relevance descending
         topic_scores.sort(key=lambda x: x["relevance_score"], reverse=True)
         return topic_scores
 
@@ -145,19 +137,15 @@ class TamilNewsAnalyzer:
         words = combined_text.split()
         word_count = len(words)
 
-        # Quote detection heuristics (matches "..." or “...”)
         quotes = re.findall(r'["“][^"”]{5,}[Wait"”]', combined_text)
         quote_count = len(quotes)
 
-        # Official source citations (matches "official statement", "press release", "DIPR", "அறிக்கை", "அரசாணை")
         official_citations = re.findall(r'(press release|official statement|dipr|government order|அறிக்கை|அரசாணை|செய்திக்குறிப்பு)', combined_text, re.I)
         official_citation_count = len(official_citations)
 
-        # Lexical diversity / vocabulary richness (unique word ratio)
         unique_words = set(w.lower() for w in words)
         vocab_richness = round(len(unique_words) / max(1, word_count), 3)
 
-        # Rule-based sentiment signals (Rule: non-subjective baseline scoring)
         headline_sentiment = 0.0
         body_sentiment = 0.0
 
