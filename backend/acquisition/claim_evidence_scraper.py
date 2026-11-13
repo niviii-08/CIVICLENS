@@ -1,17 +1,9 @@
 """
-Phase 7.3 — Reusable Evidence Acquisition & Web Scraping Framework.
+Evidence acquisition and web scraping pipeline for public claims.
 
-Provides an enterprise-grade, respectful, and transparent evidence acquisition pipeline:
-1. Configurable Source Registry across 8 permitted categories.
-2. Domain Whitelisting and URL Discovery.
-3. Polite HTML Retrieval with Robots.txt adherence and domain-level rate limiting.
-4. PDF & Document Downloader with cryptographic SHA-256 hashing.
-5. Article & Document Parser with passage extraction.
-6. Caching & Content Deduplication.
-7. Exponential Backoff Retry and Timeout Handling.
-8. Copyright Safeguards: Stores metadata and limited relevant excerpts for copyrighted media.
-9. Proposition-Aware Source Reliability Assessment (impartial credibility weighing).
-10. Comprehensive Failure Logging.
+Retrieves and archives documentary evidence across verified government sources,
+legislative portals, statistical repositories, and news publications.
+Supports polite domain-limited crawling, SHA-256 deduplication, and passage extraction.
 """
 
 import os
@@ -34,12 +26,8 @@ from backend.models.claim import (
 )
 from backend.core.logger import setup_logger
 
-logger = setup_logger("civiclens.phase7.acquisition")
+logger = setup_logger("civiclens.acquisition.evidence")
 
-
-# ---------------------------------------------------------------------------
-# 1. Permitted Source Registry Configuration
-# ---------------------------------------------------------------------------
 @dataclass
 class SourceRegistryEntry:
     domain: str
@@ -52,9 +40,7 @@ class SourceRegistryEntry:
     robots_policy_enabled: bool = True
     is_allowed: bool = True
 
-
 DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
-    # 1. Official Government Portals
     "tn.gov.in": SourceRegistryEntry(
         domain="tn.gov.in",
         source_name="Government of Tamil Nadu Official Portal",
@@ -79,7 +65,6 @@ DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
         source_tier=SourceTier.TIER_2_OFFICIAL_AGENCY,
         rate_limit_seconds=2.0
     ),
-    # 2. Legislative Records
     "sansad.in": SourceRegistryEntry(
         domain="sansad.in",
         source_name="Parliament of India Digital Sansad",
@@ -96,7 +81,6 @@ DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
         source_tier=SourceTier.TIER_1_STATUTORY,
         rate_limit_seconds=3.0
     ),
-    # 3. Official Statistical Datasets
     "data.gov.in": SourceRegistryEntry(
         domain="data.gov.in",
         source_name="Open Government Data Platform India",
@@ -113,7 +97,6 @@ DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
         source_tier=SourceTier.TIER_2_OFFICIAL_AGENCY,
         rate_limit_seconds=2.5
     ),
-    # 4. Election Records
     "eci.gov.in": SourceRegistryEntry(
         domain="eci.gov.in",
         source_name="Election Commission of India",
@@ -130,7 +113,6 @@ DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
         source_tier=SourceTier.TIER_1_STATUTORY,
         rate_limit_seconds=2.0
     ),
-    # 5. Scheme & Budget Documents
     "tnbudget.tn.gov.in": SourceRegistryEntry(
         domain="tnbudget.tn.gov.in",
         source_name="Tamil Nadu State Budget Portal",
@@ -147,7 +129,6 @@ DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
         source_tier=SourceTier.TIER_1_STATUTORY,
         rate_limit_seconds=3.0
     ),
-    # 6. Independent Fact-Checkers
     "altnews.in": SourceRegistryEntry(
         domain="altnews.in",
         source_name="Alt News Fact Check",
@@ -175,7 +156,6 @@ DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
         rate_limit_seconds=3.0,
         copyright_snippet_only=True
     ),
-    # 7. Public News Media
     "thehindu.com": SourceRegistryEntry(
         domain="thehindu.com",
         source_name="The Hindu",
@@ -203,7 +183,6 @@ DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
         rate_limit_seconds=4.0,
         copyright_snippet_only=True
     ),
-    # 8. Local Test Fixtures & Mock Endpoints
     "test-fixture.civiclens.internal": SourceRegistryEntry(
         domain="test-fixture.civiclens.internal",
         source_name="CivicLens Test Fixture Environment",
@@ -222,10 +201,6 @@ DEFAULT_PERMITTED_SOURCES: Dict[str, SourceRegistryEntry] = {
     )
 }
 
-
-# ---------------------------------------------------------------------------
-# 2. Rate Limiting, Caching, and Politeness Handlers
-# ---------------------------------------------------------------------------
 class RateLimiter:
     """Enforces per-domain rate limits to respect external server loads."""
     def __init__(self):
@@ -240,7 +215,6 @@ class RateLimiter:
             sleep_duration = delay_seconds - elapsed
             time.sleep(sleep_duration)
         self.last_call_timestamps[domain] = time.time()
-
 
 class RobotsPolicyChecker:
     """Checks whether URL paths are allowed under robots.txt conventions."""
@@ -260,13 +234,12 @@ class RobotsPolicyChecker:
                 return False
         return True
 
-
 class EvidenceCacheManager:
     """Disk and in-memory cache to guarantee deduplicated acquisition."""
     def __init__(self, cache_dir: str = "data/cache/phase7_evidence"):
         self.cache_dir = cache_dir
         os.makedirs(self.cache_dir, exist_ok=True)
-        self.memory_index: Dict[str, str] = {}  # url_hash -> file_path
+        self.memory_index: Dict[str, str] = {}
 
     @staticmethod
     def hash_url(url: str) -> str:
@@ -288,10 +261,6 @@ class EvidenceCacheManager:
         self.memory_index[url_hash] = cache_path
         return cache_path
 
-
-# ---------------------------------------------------------------------------
-# 3. Main Evidence Acquisition Pipeline
-# ---------------------------------------------------------------------------
 class EvidenceAcquisitionPipeline:
     """
     Core framework for discovering, acquiring, hashing, and parsing candidate evidence documents.
@@ -312,9 +281,6 @@ class EvidenceAcquisitionPipeline:
         self.user_agent = user_agent
         self.failure_logs: List[Dict[str, Any]] = []
 
-    # -----------------------------------------------------------------------
-    # 3.1 Domain Whitelist & URL Verification
-    # -----------------------------------------------------------------------
     def extract_domain(self, url: str) -> str:
         parsed = urllib.parse.urlparse(url)
         domain = (parsed.hostname or parsed.netloc).lower()
@@ -346,9 +312,6 @@ class EvidenceAcquisitionPipeline:
 
         return True, entry, None
 
-    # -----------------------------------------------------------------------
-    # 3.2 Fetch Content with Caching, Rate Limiting, Retries, and Timeouts
-    # -----------------------------------------------------------------------
     def fetch_url(
         self,
         url: str,
@@ -364,23 +327,19 @@ class EvidenceAcquisitionPipeline:
         if not allowed:
             return None, "RESTRICTED", "ROBOTS_OR_DOMAIN_DENIED"
 
-        # Check Cache
         cached = self.cache_manager.get_cached_content(url)
         if cached:
             logger.info(f"Retrieved {url} from local cache.")
             return cached, "200_CACHED", "CACHED_LOCAL"
 
-        # Use mock response if provided (test fixture mode)
         if mock_response is not None:
             self.cache_manager.store_cache(url, mock_response)
             return mock_response, "200_MOCK", "ACCESSIBLE_PUBLIC"
 
-        # Enforce Rate Limiting
         domain = self.extract_domain(url)
         delay = entry.rate_limit_seconds if entry else 2.0
         self.rate_limiter.wait_if_needed(domain, delay)
 
-        # Execute polite HTTP retrieval with retry loop
         import urllib.request
         from urllib.error import HTTPError, URLError
 
@@ -419,9 +378,6 @@ class EvidenceAcquisitionPipeline:
 
         return None, "MAX_RETRIES_EXCEEDED", "FAILED_RETRIES"
 
-    # -----------------------------------------------------------------------
-    # 3.3 Parse Document & Extract Relevant Excerpts
-    # -----------------------------------------------------------------------
     def parse_document_content(
         self,
         raw_bytes: bytes,
@@ -447,12 +403,10 @@ class EvidenceAcquisitionPipeline:
             except Exception:
                 decoded = raw_bytes.decode("latin-1", errors="replace")
 
-            # Extract Title
             title_match = re.search(r"<title[^>]*>(.*?)</title>", decoded, re.IGNORECASE | re.DOTALL)
             if title_match:
                 title = re.sub(r"\s+", " ", title_match.group(1)).strip()
 
-            # Extract Publication Date meta tag if present
             date_match = re.search(
                 r'<meta\s+(?:property|name)=["\'](?:article:published_time|date)["\']\s+content=["\']([^"\']+)["\']',
                 decoded,
@@ -461,20 +415,16 @@ class EvidenceAcquisitionPipeline:
             if date_match:
                 date_str = date_match.group(1)
 
-            # Strip script, style, and comments
             no_scripts = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", decoded, flags=re.DOTALL | re.IGNORECASE)
             no_comments = re.sub(r"<!--.*?-->", " ", no_scripts, flags=re.DOTALL)
-            # Delineate paragraphs by converting block tags to newlines
             with_breaks = re.sub(r"<(p|div|br|h[1-6]|li|tr)[^>]*>", "\n", no_comments, flags=re.IGNORECASE)
             with_breaks = re.sub(r"</(p|div|h[1-6]|li|tr)>", "\n", with_breaks, flags=re.IGNORECASE)
             clean_text = re.sub(r"<[^>]+>", " ", with_breaks)
             import html
             text_str = html.unescape(clean_text)
         else:
-            # Plaintext or raw text dump
             text_str = raw_bytes.decode("utf-8", errors="replace")
 
-        # Passage segmentation
         raw_paragraphs = []
         for line in text_str.split("\n"):
             clean_line = re.sub(r"[ \t]+", " ", line).strip()
@@ -482,18 +432,15 @@ class EvidenceAcquisitionPipeline:
                 raw_paragraphs.append(clean_line)
 
         if not raw_paragraphs:
-            # Fallback paragraph segmentation by punctuation
             raw_paragraphs = [p.strip() for p in re.split(r"(?<=[.!?])\s+", text_str) if len(p.strip()) > 20]
 
         passages = []
         if is_copyrighted:
-            # Copyright Fair Use: Select only top matching paragraphs relevant to claim keywords
             relevant_paragraphs = []
             keywords = claim_keywords or []
             for p in raw_paragraphs:
                 if any(kw.lower() in p.lower() for kw in keywords):
                     relevant_paragraphs.append(p)
-            # Cap at maximum 3 relevant excerpts
             selected = relevant_paragraphs[:3] if relevant_paragraphs else raw_paragraphs[:2]
             for idx, p in enumerate(selected):
                 passages.append({
@@ -502,8 +449,7 @@ class EvidenceAcquisitionPipeline:
                     "page_number": 1
                 })
         else:
-            # Open Government / Public Domain: Retain full paragraph blocks
-            for idx, p in enumerate(raw_paragraphs[:15]):  # Up to 15 paragraphs
+            for idx, p in enumerate(raw_paragraphs[:15]):
                 passages.append({
                     "passage_text": p,
                     "section_or_table": f"Section {idx+1}",
@@ -517,9 +463,6 @@ class EvidenceAcquisitionPipeline:
             "is_snippet_only": is_copyrighted
         }
 
-    # -----------------------------------------------------------------------
-    # 3.4 Ingest & Register Evidence Document
-    # -----------------------------------------------------------------------
     def acquire_and_register_evidence(
         self,
         document_id: str,
@@ -546,10 +489,8 @@ class EvidenceAcquisitionPipeline:
                 "error": f"Acquisition failed: {fetch_code} ({access_status})"
             }
 
-        # Compute cryptographic checksum
         file_hash = hashlib.sha256(data_bytes).hexdigest()
 
-        # Parse content
         content_type = "HTML" if (source_url.endswith(".html") or not source_url.endswith(".pdf")) else "TEXT"
         parsed = self.parse_document_content(
             raw_bytes=data_bytes,
@@ -563,7 +504,6 @@ class EvidenceAcquisitionPipeline:
         source_tier = entry.source_tier if entry else SourceTier.TIER_4_SECONDARY_CIVIC
         source_name = entry.source_name if entry else domain
 
-        # Save to database if session provided
         if self.db:
             existing_doc = self.db.query(EvidenceDocument).filter(
                 EvidenceDocument.document_id == document_id
@@ -578,7 +518,7 @@ class EvidenceAcquisitionPipeline:
                     document_type=document_type,
                     source_category=source_category,
                     title=parsed["title"],
-                    publication_date=datetime.now(timezone.utc),  # Or parsed date
+                    publication_date=datetime.now(timezone.utc),
                     retrieval_date=datetime.now(timezone.utc),
                     source_url=source_url,
                     file_hash_sha256=file_hash,
@@ -590,7 +530,6 @@ class EvidenceAcquisitionPipeline:
                 )
                 self.db.add(ev_doc)
 
-                # Store passages
                 for idx, p_info in enumerate(parsed["passages"]):
                     passage = EvidencePassage(
                         passage_id=f"EPASS-{document_id}-{idx+1:02d}",
@@ -622,9 +561,6 @@ class EvidenceAcquisitionPipeline:
             "is_snippet_only": parsed["is_snippet_only"]
         }
 
-    # -----------------------------------------------------------------------
-    # 3.5 Proposition-Specific Reliability Assessment
-    # -----------------------------------------------------------------------
     @staticmethod
     def calculate_proposition_reliability(
         document: EvidenceDocument,
@@ -646,13 +582,10 @@ class EvidenceAcquisitionPipeline:
         independence_score = 1.0
         reliability_notes = []
 
-        # Context 1: Contested political statements vs Government PR
         if is_contested_political_speech and document.source_category == "PRESS_RELEASE":
-            # Executive PR has partisan incentives in electoral disputes
             independence_score = 0.55
             reliability_notes.append("Executive press releases have lower institutional independence in contested partisan debates.")
 
-        # Context 2: Statutory audit reports have highest authority for budget expenditure
         if claim_category == "BUDGET_EXPENDITURE":
             if document.source_category in ["SCHEME_BUDGET", "STATISTICAL_DATASET"]:
                 independence_score = 0.95
@@ -661,7 +594,6 @@ class EvidenceAcquisitionPipeline:
                 base_tier_weight *= 0.80
                 reliability_notes.append("News reporting is secondary evidence for budget outlays; primary budget books required.")
 
-        # Context 3: Election returns
         if claim_category == "ELECTION_RESULTS":
             if document.source_category == "ELECTION_RECORD":
                 independence_score = 1.0
@@ -678,9 +610,6 @@ class EvidenceAcquisitionPipeline:
             "reliability_notes": " ".join(reliability_notes) or "Standard source reliability applies."
         }
 
-    # -----------------------------------------------------------------------
-    # Helper: Failure Logger
-    # -----------------------------------------------------------------------
     def _log_failure(self, url: str, failure_type: str, message: str):
         log_entry = {
             "url": url,

@@ -24,6 +24,15 @@ class SourceConfig:
     rss_urls: List[str] = field(default_factory=list)
     selectors: Dict[str, str] = field(default_factory=dict)
 
+    @property
+    def official_url(self) -> str:
+        """Returns normalized base URL for the source domain."""
+        if not self.domain:
+            return ""
+        if self.domain.startswith("http://") or self.domain.startswith("https://"):
+            return self.domain
+        return f"https://{self.domain}"
+
     @classmethod
     def from_dict(cls, data: dict) -> "SourceConfig":
         return cls(
@@ -56,7 +65,6 @@ class SourceConfig:
             "rss_urls": self.rss_urls,
             "selectors": self.selectors
         }
-
 
 class NewsSourceRegistry:
     """

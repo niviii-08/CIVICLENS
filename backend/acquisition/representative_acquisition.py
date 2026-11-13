@@ -1,12 +1,12 @@
 """
-Phase 6 — Public Representative Performance Data Acquisition Framework.
+Public representative performance and legislative data acquisition framework.
 
-Provides reusable, configurable acquisition components for public records regarding
-elected representatives (MLAs/MPs), assembly/parliamentary proceedings, local area
-development funds (MPLADS/MLACDS), constituency indicators, census datasets, and election returns.
+Provides acquisition components for public records regarding elected
+representatives (MLAs/MPs), assembly proceedings, local area development funds
+(MPLADS/MLACDS), constituency indicators, census datasets, and election returns.
 
-Supports PDF, HTML, CSV, XLS/XLSX, and JSON document formats with rate-limiting,
-checksum deduplication, retry logic, table extraction, OCR fallback, and provenance registration.
+Supports PDF, HTML, CSV, Excel, and JSON document formats with rate limiting,
+checksum deduplication, retry logic, table extraction, and OCR fallback.
 """
 
 import os
@@ -23,7 +23,6 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
-# Third-party format packages with graceful fallbacks
 try:
     from bs4 import BeautifulSoup
     BS4_AVAILABLE = True
@@ -42,10 +41,8 @@ try:
 except ImportError:
     PYPDF_AVAILABLE = False
 
-# Logger setup
-logger = logging.getLogger("civiclens.phase6.acquisition")
+logger = logging.getLogger("civiclens.acquisition.representative")
 logging.basicConfig(level=logging.INFO)
-
 
 class DocumentFormat:
     PDF = "PDF"
@@ -55,7 +52,6 @@ class DocumentFormat:
     JSON = "JSON"
     UNKNOWN = "UNKNOWN"
 
-
 class FileTypeDetector:
     """Detects document format using magic headers, content inspection, and file extension fallback."""
 
@@ -64,7 +60,6 @@ class FileTypeDetector:
         if not content_bytes:
             return DocumentFormat.UNKNOWN
 
-        # 1. Magic Bytes Check
         if content_bytes.startswith(b"%PDF"):
             return DocumentFormat.PDF
 
@@ -73,7 +68,6 @@ class FileTypeDetector:
                 return DocumentFormat.XLSX
             return DocumentFormat.XLSX
 
-        # 2. JSON check
         trimmed = content_bytes.strip()
         if (trimmed.startswith(b"{") and trimmed.endswith(b"}")) or (trimmed.startswith(b"[") and trimmed.endswith(b"]")):
             try:
@@ -82,12 +76,10 @@ class FileTypeDetector:
             except Exception:
                 pass
 
-        # 3. HTML check
         lowered_head = content_bytes[:1024].lower()
         if b"<html" in lowered_head or b"<!doctype html" in lowered_head or b"<head" in lowered_head:
             return DocumentFormat.HTML
 
-        # 4. Content-Type Header fallback
         ct = content_type_header.lower()
         if "application/pdf" in ct:
             return DocumentFormat.PDF
@@ -98,7 +90,6 @@ class FileTypeDetector:
         if "application/json" in ct:
             return DocumentFormat.JSON
 
-        # 5. Extension fallback
         ext = os.path.splitext(filename_or_url.split("?")[0])[1].lower()
         if ext == ".pdf":
             return DocumentFormat.PDF
@@ -111,7 +102,6 @@ class FileTypeDetector:
         if ext == ".json":
             return DocumentFormat.JSON
 
-        # 6. CSV heuristics
         try:
             sample_text = content_bytes[:2048].decode('utf-8', errors='ignore')
             lines = [line for line in sample_text.splitlines() if line.strip()]
@@ -121,7 +111,6 @@ class FileTypeDetector:
             pass
 
         return DocumentFormat.UNKNOWN
-
 
 class AcquisitionConfig:
     """Configuration settings for the Phase 6 acquisition pipeline."""
@@ -145,7 +134,6 @@ class AcquisitionConfig:
         self.backoff_factor = backoff_factor
         self.allowed_sources = allowed_sources
         self.user_agent = user_agent
-
 
 class SourceRegistry:
     """Official source registry for statutory and public representative document endpoints."""
@@ -229,7 +217,6 @@ class SourceRegistry:
         parsed = urllib.parse.urlparse(url)
         return src["allowed_domain"].lower() in parsed.netloc.lower()
 
-
 class URLDiscoveryEngine:
     """Discovers and filters target links from HTML or XML index payloads."""
 
@@ -251,7 +238,6 @@ class URLDiscoveryEngine:
                 full_url = urllib.parse.urljoin(base_url, href)
                 links.add(full_url)
         else:
-            # Basic regex fallback
             raw_hrefs = re.findall(r'href=["\'](.*?)["\']', html_content, re.IGNORECASE)
             for href in raw_hrefs:
                 full_url = urllib.parse.urljoin(base_url, href.strip())
@@ -270,7 +256,6 @@ class URLDiscoveryEngine:
             filtered_links = [link for link in filtered_links if pattern.search(link)]
 
         return sorted(filtered_links)
-
 
 class DownloadManifest:
     """Manages raw document inventory manifest (data/raw/representative_performance/manifest.json)."""
@@ -305,7 +290,7 @@ class DownloadManifest:
     def save(self) -> None:
         os.makedirs(os.path.dirname(self.manifest_path), exist_ok=True)
         self.data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        
+
         docs = self.data["documents"]
         unique_hashes = set(d["sha256_hash"] for d in docs.values() if d.get("sha256_hash"))
         duplicates = sum(1 for d in docs.values() if d.get("is_duplicate"))
@@ -344,7 +329,6 @@ class DownloadManifest:
         self.data["failed_downloads"].append(failure_entry)
         self.save()
 
-
 class HTMLExtractor:
     """Extracts text content and structured HTML tables from raw HTML pages."""
 
@@ -364,13 +348,11 @@ class HTMLExtractor:
             if soup.title and soup.title.string:
                 title = soup.title.string.strip()
 
-            # Remove script and style elements
             for element in soup(["script", "style", "head"]):
                 element.extract()
 
             text_content = soup.get_text(separator="\n").strip()
 
-            # Extract tables
             for table in soup.find_all("table"):
                 table_rows = []
                 for tr in table.find_all("tr"):
@@ -385,7 +367,6 @@ class HTMLExtractor:
                 title = title_match.group(1).strip()
             text_content = re.sub(r'<[^>]+>', ' ', html_str).strip()
 
-            # Regex fallback table extraction
             table_matches = re.findall(r'<table[^>]*>(.*?)</table>', html_str, re.IGNORECASE | re.DOTALL)
             for tbl_str in table_matches:
                 row_matches = re.findall(r'<tr[^>]*>(.*?)</tr>', tbl_str, re.IGNORECASE | re.DOTALL)
@@ -404,7 +385,6 @@ class HTMLExtractor:
             "word_count": len(text_content.split()),
             "tables": tables
         }
-
 
 class PDFTextExtractor:
     """Extracts text and layout pages from PDF content bytes."""
@@ -441,7 +421,6 @@ class PDFTextExtractor:
                 logger.warning(f"pypdf extraction encountered error: {e}")
 
         if not full_text:
-            # Fallback simple text search in PDF stream
             try:
                 raw_str = pdf_bytes.decode('utf-8', errors='ignore')
                 text_matches = re.findall(r'\((.*?)\)\s*Tj', raw_str)
@@ -456,7 +435,6 @@ class PDFTextExtractor:
             "pages": pages_text,
             "tables": extracted_tables
         }
-
 
 class OCRFallbackHandler:
     """Provides OCR fallback for scanned non-searchable PDF pages or images."""
@@ -475,7 +453,6 @@ class OCRFallbackHandler:
             "confidence_score": 0.85
         }
 
-
 class TableExtractor:
     """Parses tabular datasets across CSV, XLSX, JSON, HTML, and PDF formats."""
 
@@ -488,7 +465,6 @@ class TableExtractor:
     @staticmethod
     def parse_json(json_bytes: bytes) -> Union[Dict[str, Any], List[Any]]:
         return json.loads(json_bytes.decode('utf-8', errors='ignore'))
-
 
 class DocumentAcquisitionEngine:
     """Core engine for acquiring public representative performance documents."""
@@ -531,7 +507,6 @@ class DocumentAcquisitionEngine:
         if not src_info:
             raise ValueError(f"Unregistered source ID: {source_id}")
 
-        # Check Cache
         cached = self.manifest.is_cached_url(url)
         if cached and not force_redownload:
             logger.info(f"Cache hit for URL {url} -> {cached['file_path']}")
@@ -559,7 +534,6 @@ class DocumentAcquisitionEngine:
                 })
                 return {"status": "FAILED", "reason": err_msg}
 
-            # Download with Retry & Rate Limiting
             req = urllib.request.Request(url, headers={"User-Agent": self.config.user_agent})
             for attempt in range(1, self.config.max_retries + 1):
                 try:
@@ -587,16 +561,13 @@ class DocumentAcquisitionEngine:
             })
             return {"status": "FAILED", "reason": err_msg}
 
-        # Checksum & File Type Detection
         sha256_hash = self.compute_sha256(content_bytes)
         detected_format = FileTypeDetector.detect_format(content_bytes, url, content_type_hdr)
 
-        # Duplicate Detection
         existing_doc = self.manifest.find_by_hash(sha256_hash)
         is_duplicate = existing_doc is not None
         duplicate_of = existing_doc["document_id"] if existing_doc else None
 
-        # Storage Path Strategy
         cat_str = (category or "COMMON").upper()
         year_str = year_or_term or "GENERAL"
         dest_dir = os.path.join(self.config.raw_storage_dir, source_id, year_str)
@@ -610,11 +581,9 @@ class DocumentAcquisitionEngine:
 
         file_path = os.path.join(dest_dir, file_name)
 
-        # Write Raw File
         with open(file_path, "wb") as f:
             f.write(content_bytes)
 
-        # Text & Layout Extraction
         text_extraction = {}
         if detected_format == DocumentFormat.PDF:
             text_extraction = PDFTextExtractor.extract_text(content_bytes)
@@ -624,7 +593,6 @@ class DocumentAcquisitionEngine:
         elif detected_format == DocumentFormat.HTML:
             text_extraction = HTMLExtractor.extract_text(content_bytes)
 
-        # Create Manifest Entry
         doc_id = f"DOC_{source_id}_{cat_str}_{year_str}_{sha256_hash[:8]}"
         doc_entry = {
             "document_id": doc_id,
@@ -646,11 +614,9 @@ class DocumentAcquisitionEngine:
 
         self.manifest.add_document(doc_entry)
 
-        # Provenance Linkage in Database (if session provided)
         if db_session is not None:
             try:
                 from backend.models.common import Source, Document, ProcessingStatus
-                # Find or create source
                 db_src = db_session.query(Source).filter(Source.name == src_info["source_name"]).first()
                 if not db_src:
                     db_src = Source(

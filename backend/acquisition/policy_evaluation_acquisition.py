@@ -1,28 +1,15 @@
 """
-Phase 10.2 — Public Policy Evaluation Data Acquisition Pipeline.
-================================================================
+Public policy evaluation and administrative records acquisition pipeline.
 
-Provides an enterprise-grade, respectful, multi-format acquisition pipeline for:
+Retrieves and extracts data from official policy documents:
 - Government Orders (GOs) and Policy Notes
-- Budget Documents and Detailed Demands for Grants (DDG)
+- Budget Documents and Detailed Demands for Grants
 - Comptroller & Auditor General (CAG) Audit Reports
-- Structured Survey & Administrative Datasets (CSV, Excel, JSON)
-- Web Pages and HTML Tabular Records
-- Independent Evaluation Studies and Academic Reports
+- Structured administrative datasets (CSV, Excel, JSON) and tabular web data
+- Independent evaluation studies and academic surveys
 
-Key Architectural Features:
-1. Source Registry Integration with domain whitelists and politeness limits.
-2. Download & Manual-Import Interfaces (handling OTP/CAPTCHA gated resources).
-3. File Type Detection via magic byte signatures and MIME inspection.
-4. Layout-aware PDF text extraction and tabular extraction using pdfplumber.
-5. OCR Fallback for scanned/raster PDFs and document images.
-6. Structured dataset ingestion (CSV, JSON, Excel, HTML tables).
-7. SHA-256 cryptographic checksums and duplicate prevention.
-8. ISO-8601 UTC retrieval timestamps and provenance metadata tracking.
-9. Publication-date extraction heuristics (GO dates, CAG report years, fiscal years).
-10. Structured failure and processing audit logging.
-11. Automatic citizen privacy protection via DPDPA 2023 PII scrubbing.
-12. Zero-fabrication compliance: strictly preserves raw files and records source reality.
+Features layout-aware PDF and table parsing, hash-based deduplication,
+rate-limited retrieval, and PII scrubbing for citizen data privacy.
 """
 
 from __future__ import annotations
@@ -45,12 +32,7 @@ from typing import List, Dict, Any, Optional, Tuple, Set, Union
 from backend.models.civic_issue import sanitize_pii
 from backend.core.logger import setup_logger
 
-logger = setup_logger("civiclens.phase10.acquisition")
-
-
-# ===========================================================================
-# 1. Source Configuration & Registry
-# ===========================================================================
+logger = setup_logger("civiclens.acquisition.policy_evaluation")
 
 @dataclass
 class PolicySourceConfig:
@@ -59,7 +41,7 @@ class PolicySourceConfig:
     source_name: str
     publisher: str
     base_url: str
-    source_tier: int  # Tier 1 (Statutory) to Tier 5 (Unverified)
+    source_tier: int
     rate_limit_seconds: float = 2.0
     allowed_domains: List[str] = field(default_factory=list)
     disallowed_paths: List[str] = field(default_factory=list)
@@ -69,7 +51,6 @@ class PolicySourceConfig:
     timeout_seconds: float = 15.0
     max_retries: int = 3
     is_active: bool = True
-
 
 DEFAULT_POLICY_EVALUATION_SOURCES: Dict[str, PolicySourceConfig] = {
     "TN_BUDGET": PolicySourceConfig(
@@ -162,7 +143,6 @@ DEFAULT_POLICY_EVALUATION_SOURCES: Dict[str, PolicySourceConfig] = {
     ),
 }
 
-
 class PolicyEvaluationSourceRegistry:
     """Registry managing authorized public policy evaluation data sources."""
 
@@ -189,11 +169,6 @@ class PolicyEvaluationSourceRegistry:
                 if domain == allowed or domain.endswith("." + allowed):
                     return config
         return None
-
-
-# ===========================================================================
-# 2. File Type Detection
-# ===========================================================================
 
 class FileTypeDetector:
     """
@@ -231,16 +206,13 @@ class FileTypeDetector:
         if not raw_bytes:
             return "EMPTY", "application/x-empty"
 
-        # 1. Check Magic Byte Signatures
         for signature, fmt, mime in cls.MAGIC_SIGNATURES:
             if raw_bytes.startswith(signature):
                 return fmt, mime
 
-        # 2. Check Text Signatures (HTML, JSON, CSV)
         sample = raw_bytes[:1024].strip()
         sample_lower = sample.lower()
 
-        # HTML Detection
         if (
             sample_lower.startswith(b"<!doctype html")
             or sample_lower.startswith(b"<html")
@@ -249,7 +221,6 @@ class FileTypeDetector:
         ):
             return "HTML", "text/html"
 
-        # JSON Detection
         if sample.startswith(b"{") or sample.startswith(b"["):
             try:
                 json.loads(raw_bytes.decode("utf-8", errors="ignore"))
@@ -257,14 +228,12 @@ class FileTypeDetector:
             except Exception:
                 pass
 
-        # 3. Filename Extension fallback
         if url_or_filename:
             parsed_path = urllib.parse.urlparse(url_or_filename).path
             _, ext = os.path.splitext(parsed_path.lower())
             if ext in cls.EXTENSION_MAP:
                 return cls.EXTENSION_MAP[ext]
 
-        # 4. Content-Type Header fallback
         if header_content_type:
             clean_ct = header_content_type.split(";")[0].strip().lower()
             if "pdf" in clean_ct:
@@ -278,7 +247,6 @@ class FileTypeDetector:
             if "sheet" in clean_ct or "excel" in clean_ct:
                 return "XLSX", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-        # 5. Fallback CSV detection (comma or tab delimited rows)
         try:
             sample_str = raw_bytes[:2048].decode("utf-8", errors="ignore")
             lines = [line.strip() for line in sample_str.splitlines() if line.strip()]
@@ -291,11 +259,6 @@ class FileTypeDetector:
             pass
 
         return "UNKNOWN", "application/octet-stream"
-
-
-# ===========================================================================
-# 3. Publication Date Extractor
-# ===========================================================================
 
 class PublicationDateExtractor:
     """
@@ -316,7 +279,6 @@ class PublicationDateExtractor:
         """
         search_corpus = f"{title or ''}\n{text[:4000]}"
 
-        # Pattern 1: Government Order format: G.O. (Ms.) No. 123 Dated: 15.09.2023 or 15/09/2023
         go_match = re.search(
             r'Dated\s*[:.-]?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{4})',
             search_corpus,
@@ -327,13 +289,11 @@ class PublicationDateExtractor:
             if 1 <= d <= 31 and 1 <= m <= 12 and 1990 <= y <= 2035:
                 return f"{y:04d}-{m:02d}-{d:02d}"
 
-        # Pattern 2: CAG Report Year: Report No. 3 of 2024
         cag_match = re.search(r'Report\s+No\.?\s*\d+\s+of\s+(20\d{2})', search_corpus, re.IGNORECASE)
         if cag_match:
             y = int(cag_match.group(1))
-            return f"{y}-03-31"  # Default to end of audit reporting cycle
+            return f"{y}-03-31"
 
-        # Pattern 3: DD Month YYYY (e.g., 20 March 2024 or 20th March, 2024)
         date_word_match = re.search(
             r'\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+),?\s+(\d{4})\b',
             search_corpus,
@@ -347,12 +307,10 @@ class PublicationDateExtractor:
                 m = cls.MONTH_MAP[m_str]
                 return f"{y:04d}-{m:02d}-{d:02d}"
 
-        # Pattern 4: Standard ISO date: YYYY-MM-DD
         iso_match = re.search(r'\b(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b', search_corpus)
         if iso_match:
             return iso_match.group(0)
 
-        # Pattern 5: Fiscal Year: 2023-2024 or 2023-24
         fy_match = re.search(r'\b(20\d{2})[-–](20\d{2}|\d{2})\b', search_corpus)
         if fy_match:
             start_yr = fy_match.group(1)
@@ -363,18 +321,13 @@ class PublicationDateExtractor:
 
         return None
 
-
-# ===========================================================================
-# 4. PDF Layout & Table Extractor with OCR Fallback
-# ===========================================================================
-
 class PolicyOCRFallbackHandler:
     """Detects scanned pages and invokes Tesseract OCR or records structured fallback."""
 
     @staticmethod
     def is_tesseract_available() -> bool:
         try:
-            import pytesseract  # type: ignore
+            import pytesseract
             pytesseract.get_tesseract_version()
             return True
         except Exception:
@@ -389,8 +342,8 @@ class PolicyOCRFallbackHandler:
         """Performs OCR if available; otherwise returns structured fallback marker."""
         if cls.is_tesseract_available() and image_bytes:
             try:
-                import pytesseract  # type: ignore
-                from PIL import Image  # type: ignore
+                import pytesseract
+                from PIL import Image
                 img = Image.open(io.BytesIO(image_bytes))
                 text = pytesseract.image_to_string(img, lang="eng+tam")
                 return {
@@ -402,14 +355,12 @@ class PolicyOCRFallbackHandler:
             except Exception as e:
                 logger.warning(f"OCR processing failed for page {page_index}: {e}")
 
-        # Graceful fallback metadata when OCR engine is absent or fails
         return {
             "ocr_used": False,
             "ocr_status": "OCR_REQUIRED_FALLBACK",
             "text": f"[SCANNED DOCUMENT PAGE {page_index + 1} — OCR REQUIRED: Raster page detected; manual transcription or Tesseract engine needed]",
             "page_index": page_index
         }
-
 
 class PolicyPDFExtractor:
     """Extracts text, structured tables, and handles raster pages using pdfplumber."""
@@ -427,7 +378,7 @@ class PolicyPDFExtractor:
         }
 
         try:
-            import pdfplumber  # type: ignore
+            import pdfplumber
             with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
                 result["page_count"] = len(pdf.pages)
                 result["metadata"] = dict(pdf.metadata or {})
@@ -437,8 +388,7 @@ class PolicyPDFExtractor:
 
                 for idx, page in enumerate(pdf.pages):
                     page_text = page.extract_text() or ""
-                    
-                    # Extract tables from page
+
                     page_tables = page.extract_tables()
                     if page_tables:
                         for table in page_tables:
@@ -458,7 +408,6 @@ class PolicyPDFExtractor:
                                 if dict_rows:
                                     all_tables.append(dict_rows)
 
-                    # Check for raster/scanned page (< 30 characters of extracted text)
                     if len(page_text.strip()) < 30:
                         scanned_pages_count += 1
                         ocr_res = PolicyOCRFallbackHandler.process_scanned_page(page_index=idx)
@@ -481,11 +430,6 @@ class PolicyPDFExtractor:
             result["ocr_status"] = "PDF_CORRUPT_OR_UNREADABLE"
 
         return result
-
-
-# ===========================================================================
-# 5. HTML Table Parser & Extractor
-# ===========================================================================
 
 class PolicyHTMLTableParser(HTMLParser):
     """Zero-dependency HTML table parser converting tables into row matrices."""
@@ -534,13 +478,11 @@ class PolicyHTMLTableParser(HTMLParser):
         if self._in_cell and self._current_cell is not None:
             self._current_cell += data
 
-
 class PolicyHTMLExtractor:
     """Extracts clean text and structured tables from HTML policy pages."""
 
     @staticmethod
     def extract(html_content: str) -> Dict[str, Any]:
-        # Extract tables
         parser = PolicyHTMLTableParser()
         parser.feed(html_content)
         extracted_tables: List[List[Dict[str, Any]]] = []
@@ -559,7 +501,6 @@ class PolicyHTMLExtractor:
             if table_rows:
                 extracted_tables.append(table_rows)
 
-        # Extract plain text removing tags and scripts
         clean_text = re.sub(r'<script.*?</script>', '', html_content, flags=re.DOTALL | re.IGNORECASE)
         clean_text = re.sub(r'<style.*?</style>', '', clean_text, flags=re.DOTALL | re.IGNORECASE)
         clean_text = re.sub(r'<[^>]+>', ' ', clean_text)
@@ -569,11 +510,6 @@ class PolicyHTMLExtractor:
             "text": sanitize_pii(clean_text),
             "tables": extracted_tables
         }
-
-
-# ===========================================================================
-# 6. Structured Tabular Ingestion (CSV, JSON, Excel)
-# ===========================================================================
 
 class StructuredDatasetIngestor:
     """Ingests structured datasets (CSV, JSON, Excel) into normalized records."""
@@ -608,15 +544,13 @@ class StructuredDatasetIngestor:
         tables = []
         try:
             with zipfile.ZipFile(io.BytesIO(xlsx_bytes), "r") as zf:
-                # Read shared strings if present
                 shared_strings = []
                 if "xl/sharedStrings.xml" in zf.namelist():
                     ss_xml = zf.read("xl/sharedStrings.xml").decode("utf-8", errors="ignore")
                     shared_strings = re.findall(r'<t[^>]*>(.*?)</t>', ss_xml)
 
-                # Process sheet1
                 sheet_files = [f for f in zf.namelist() if f.startswith("xl/worksheets/sheet")]
-                for sheet_file in sheet_files[:3]:  # Process up to 3 sheets
+                for sheet_file in sheet_files[:3]:
                     sheet_xml = zf.read(sheet_file).decode("utf-8", errors="ignore")
                     rows_xml = re.findall(r'<row[^>]*>(.*?)</row>', sheet_xml)
                     sheet_rows: List[List[str]] = []
@@ -647,17 +581,12 @@ class StructuredDatasetIngestor:
 
         return tables
 
-
-# ===========================================================================
-# 7. Checksums, Storage, and Duplicate Detection
-# ===========================================================================
-
 @dataclass
 class PolicyAcquisitionResult:
     """Comprehensive acquisition outcome and provenance record."""
     source_id: str
     url: str
-    status: str  # SUCCESS, CACHED, DUPLICATE, FAILED, OCR_FALLBACK, MANUAL_IMPORT_REQUIRED
+    status: str
     file_format: str
     mime_type: str
     retrieved_at: datetime
@@ -698,7 +627,6 @@ class PolicyAcquisitionResult:
             "error_message": self.error_message,
         }
 
-
 class PolicyStorageManager:
     """Manages raw payload storage, sidecar metadata, and deduplication."""
 
@@ -716,7 +644,6 @@ class PolicyStorageManager:
     def is_duplicate(self, sha256_hash: str) -> bool:
         if sha256_hash in self._seen_hashes:
             return True
-        # Check if file exists on disk
         sidecar_path = os.path.join(self.base_storage_dir, f"{sha256_hash}.meta.json")
         return os.path.exists(sidecar_path)
 
@@ -743,11 +670,6 @@ class PolicyStorageManager:
         self._seen_hashes.add(sha256_hash)
         return file_path
 
-
-# ===========================================================================
-# 8. Processing & Error Logging
-# ===========================================================================
-
 @dataclass
 class ProcessingErrorLog:
     source_id: str
@@ -757,7 +679,6 @@ class ProcessingErrorLog:
     error_message: str
     http_status: Optional[int] = None
     retry_count: int = 0
-
 
 class PolicyAcquisitionLogger:
     """Structured audit and failure logger for policy acquisition."""
@@ -794,11 +715,6 @@ class PolicyAcquisitionLogger:
 
     def clear(self):
         self._logs.clear()
-
-
-# ===========================================================================
-# 9. Unified Policy Evaluation Acquisition Pipeline
-# ===========================================================================
 
 class PolicyEvaluationAcquisitionPipeline:
     """
@@ -838,7 +754,6 @@ class PolicyEvaluationAcquisitionPipeline:
         """
         retrieved_at = datetime.now(timezone.utc)
 
-        # 1. Resolve Source Configuration
         config = self.registry.get(source_id) if source_id else self.registry.get_by_url(url_or_path)
         if not config:
             config = self.registry.get("LOCAL_FIXTURE") or PolicySourceConfig(
@@ -849,7 +764,6 @@ class PolicyEvaluationAcquisitionPipeline:
                 source_tier=4
             )
 
-        # 2. Acquire Raw Bytes
         raw_bytes: bytes = b""
         http_status: Optional[int] = None
         retry_count = 0
@@ -874,7 +788,6 @@ class PolicyEvaluationAcquisitionPipeline:
                     error_message=f"File read failed: {str(e)}"
                 )
         else:
-            # Check domain whitelist and robots policy
             parsed_url = urllib.parse.urlparse(url_or_path)
             domain = parsed_url.netloc.lower()
 
@@ -893,7 +806,6 @@ class PolicyEvaluationAcquisitionPipeline:
                     error_message=f"Domain {domain} is not whitelisted for source {config.source_id}"
                 )
 
-            # Check disallowed paths
             for disallowed in config.disallowed_paths:
                 if disallowed and disallowed.lower() in parsed_url.path.lower():
                     self.logger.record_error(config.source_id, url_or_path, "DISALLOWED_PATH", f"Path {parsed_url.path} is restricted by policy")
@@ -909,7 +821,6 @@ class PolicyEvaluationAcquisitionPipeline:
                         error_message="Access restricted: path is disallowed"
                     )
 
-            # Polite download with retries
             self._enforce_rate_limit(domain, config.rate_limit_seconds)
             headers = {"User-Agent": "CIVICLENS-TN-PolicyEvaluation/1.0 (Civic Research; +https://civiclens-tn.internal/bot)"}
             headers.update(config.custom_headers)
@@ -940,14 +851,11 @@ class PolicyEvaluationAcquisitionPipeline:
                         )
                     time.sleep(1.0 * (2 ** attempt))
 
-        # 3. Checksums and Deduplication
         sha256_hash = self.storage.compute_sha256(raw_bytes)
         is_dup = self.storage.is_duplicate(sha256_hash)
 
-        # 4. Detect File Type
         file_format, mime_type = FileTypeDetector.detect_type(raw_bytes, url_or_filename=url_or_path)
 
-        # 5. Extract Content & Tables Based on Format
         parsed_text = ""
         extracted_tables = []
         ocr_used = False
@@ -982,11 +890,9 @@ class PolicyEvaluationAcquisitionPipeline:
         else:
             parsed_text = sanitize_pii(raw_bytes.decode("utf-8", errors="replace"))
 
-        # 6. Extract Publication Date
         effective_title = document_title or os.path.basename(url_or_path)
         pub_date = PublicationDateExtractor.extract_date(parsed_text, title=effective_title)
 
-        # 7. Preserve Raw Payload & Provenance
         sidecar_meta = {
             "source_id": config.source_id,
             "url": url_or_path,

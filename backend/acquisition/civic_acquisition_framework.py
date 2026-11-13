@@ -1,21 +1,12 @@
 """
-Phase 8.2 — Civic Data Acquisition & Web Scraping Framework.
+Civic data acquisition and document ingestion framework.
 
-Provides an enterprise-grade, configurable, respectful acquisition framework for Phase 8:
-1. Configurable Source Registry with source-specific settings.
-2. URL Discovery adhering to whitelists, extensions, and robots policies.
-3. Download and Parsing Interfaces (HTML, PDF, CSV, Excel, JSON).
-4. HTML Table Extraction with structured row conversion.
-5. PDF Text & Table Extraction using pdfplumber.
-6. OCR Fallback for scanned/raster PDFs and document images.
-7. Caching and SHA-256 Cryptographic Checksums.
-8. Content Deduplication by hash and canonical URL.
-9. Exponential Backoff Retry and Timeout Handling.
-10. Per-Domain Rate Limiting.
-11. ISO-8601 UTC Retrieval Timestamps & Provenance Tracking.
-12. Structured Failure Logs.
-13. Manual Document Import Interface for OTP/CAPTCHA restricted portals.
-14. Automatic PII Scrubbing (DPDPA 2023 compliance).
+Collects and parses public records from statutory portals and municipal departments:
+- Multi-format ingestion (HTML, PDF, CSV, Excel, JSON).
+- Layout-aware PDF and tabular extraction with OCR fallback for scans.
+- Deduplication via content hashing (SHA-256) and canonical URL resolution.
+- Polite crawling with per-domain rate limiting, robots.txt compliance, and backoff.
+- Automatic PII redaction for citizen privacy protection.
 """
 
 import os
@@ -34,12 +25,8 @@ from html.parser import HTMLParser
 from backend.models.civic_issue import sanitize_pii
 from backend.core.logger import setup_logger
 
-logger = setup_logger("civiclens.phase8.acquisition")
+logger = setup_logger("civiclens.acquisition.civic")
 
-
-# ---------------------------------------------------------------------------
-# 1. Source Configuration & Registry
-# ---------------------------------------------------------------------------
 @dataclass
 class CivicSourceConfig:
     """Source-specific configuration profile."""
@@ -47,7 +34,7 @@ class CivicSourceConfig:
     source_name: str
     publisher: str
     base_url: str
-    source_tier: int  # Tier 1 to 5
+    source_tier: int
     rate_limit_seconds: float = 2.0
     allowed_domains: List[str] = field(default_factory=list)
     disallowed_paths: List[str] = field(default_factory=list)
@@ -57,7 +44,6 @@ class CivicSourceConfig:
     timeout_seconds: float = 10.0
     max_retries: int = 3
     is_active: bool = True
-
 
 DEFAULT_CIVIC_SOURCES: Dict[str, CivicSourceConfig] = {
     "TN_PORTAL": CivicSourceConfig(
@@ -92,7 +78,7 @@ DEFAULT_CIVIC_SOURCES: Dict[str, CivicSourceConfig] = {
         allowed_domains=["cmhelpline.tnega.org", "tnega.tn.gov.in"],
         disallowed_paths=["/portal/en/signin", "/portal/en/signup", "/support/"],
         supported_formats=["HTML", "PDF", "JSON"],
-        requires_manual_import=True  # Individual complaint filing/status requires Mobile OTP
+        requires_manual_import=True
     ),
     "GCC_CHENNAI": CivicSourceConfig(
         source_id="GCC_CHENNAI",
@@ -151,7 +137,6 @@ DEFAULT_CIVIC_SOURCES: Dict[str, CivicSourceConfig] = {
     )
 }
 
-
 class CivicSourceRegistry:
     """In-memory registry of authorized civic data sources."""
 
@@ -176,10 +161,6 @@ class CivicSourceRegistry:
                     return config
         return None
 
-
-# ---------------------------------------------------------------------------
-# 2. Rate Limiter & Politeness
-# ---------------------------------------------------------------------------
 class RateLimiter:
     """Enforces per-domain polite rate limiting."""
 
@@ -195,10 +176,6 @@ class RateLimiter:
             time.sleep(delay_seconds - elapsed)
         self._last_request_times[domain] = time.time()
 
-
-# ---------------------------------------------------------------------------
-# 3. Checksum & Cache Manager
-# ---------------------------------------------------------------------------
 class ChecksumCacheManager:
     """Calculates SHA-256 hashes and provides disk caching."""
 
@@ -238,10 +215,6 @@ class ChecksumCacheManager:
     def mark_seen(self, sha256_hash: str):
         self._seen_hashes.add(sha256_hash)
 
-
-# ---------------------------------------------------------------------------
-# 4. URL Discovery
-# ---------------------------------------------------------------------------
 class URLDiscoverer:
     """Discovers allowed document and page URLs from HTML content."""
 
@@ -252,12 +225,10 @@ class URLDiscoverer:
         raw_links = re.findall(href_pattern, html_content, flags=re.IGNORECASE)
 
         for link in raw_links:
-            # Normalize link
             full_url = urllib.parse.urljoin(base_url, link.strip())
             parsed = urllib.parse.urlparse(full_url)
             domain = parsed.netloc.lower()
 
-            # Check domain whitelist
             domain_allowed = False
             for allowed in config.allowed_domains:
                 if domain == allowed or domain.endswith("." + allowed):
@@ -266,7 +237,6 @@ class URLDiscoverer:
             if not domain_allowed:
                 continue
 
-            # Check disallowed paths
             path_disallowed = False
             for disallowed in config.disallowed_paths:
                 if disallowed and disallowed.lower() in parsed.path.lower():
@@ -275,16 +245,11 @@ class URLDiscoverer:
             if path_disallowed:
                 continue
 
-            # Include valid scheme
             if parsed.scheme in ("http", "https"):
                 discovered.add(full_url)
 
         return sorted(list(discovered))
 
-
-# ---------------------------------------------------------------------------
-# 5. HTML Table Extractor
-# ---------------------------------------------------------------------------
 class HTMLTableParser(HTMLParser):
     """Native Python HTML parser extracting tables into structured matrices."""
 
@@ -332,7 +297,6 @@ class HTMLTableParser(HTMLParser):
         if self._in_cell and self._current_cell is not None:
             self._current_cell += data
 
-
 class HTMLTableExtractor:
     """Extracts tables from HTML text and converts them to list of dict records."""
 
@@ -351,7 +315,6 @@ class HTMLTableExtractor:
                 row_dict = {}
                 for i, val in enumerate(row):
                     header = headers[i] if i < len(headers) else f"col_{i}"
-                    # Apply PII sanitization to table cell content
                     row_dict[header] = sanitize_pii(val)
                 table_rows.append(row_dict)
             if table_rows:
@@ -359,18 +322,13 @@ class HTMLTableExtractor:
 
         return extracted
 
-
-# ---------------------------------------------------------------------------
-# 6. PDF Extractor & OCR Fallback
-# ---------------------------------------------------------------------------
 class OCRFallbackHandler:
     """Detects scanned raster pages and executes or flags OCR fallback."""
 
     @staticmethod
     def is_tesseract_available() -> bool:
         try:
-            import pytesseract  # type: ignore
-            # Test if executable responds
+            import pytesseract
             pytesseract.get_tesseract_version()
             return True
         except Exception:
@@ -381,8 +339,8 @@ class OCRFallbackHandler:
         """Runs OCR if engine is available, else records structured fallback flag."""
         if cls.is_tesseract_available() and image_data:
             try:
-                import pytesseract  # type: ignore
-                from PIL import Image  # type: ignore
+                import pytesseract
+                from PIL import Image
                 img = Image.open(io.BytesIO(image_data))
                 text = pytesseract.image_to_string(img, lang="eng+tam")
                 return {
@@ -394,14 +352,12 @@ class OCRFallbackHandler:
             except Exception as e:
                 logger.warning(f"OCR processing failed on page {page_index}: {e}")
 
-        # Graceful fallback flag when OCR engine is absent or image processing fails
         return {
             "ocr_used": False,
             "ocr_status": "OCR_REQUIRED_ENGINE_UNAVAILABLE",
             "text": f"[SCANNED DOCUMENT PAGE {page_index} — OCR REQUIRED: Engine not configured or manual transcription needed]",
             "page_index": page_index
         }
-
 
 class PDFCivicParser:
     """Extracts text, tables, and flags OCR requirements for PDF reports."""
@@ -418,7 +374,7 @@ class PDFCivicParser:
         }
 
         try:
-            import pdfplumber  # type: ignore
+            import pdfplumber
             with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
                 result["page_count"] = len(pdf.pages)
                 full_text_pages = []
@@ -427,7 +383,6 @@ class PDFCivicParser:
 
                 for idx, page in enumerate(pdf.pages):
                     page_text = page.extract_text() or ""
-                    # Check if page has tables
                     page_tables = page.extract_tables()
                     if page_tables:
                         for table in page_tables:
@@ -443,7 +398,6 @@ class PDFCivicParser:
                                 if dict_rows:
                                     all_tables.append(dict_rows)
 
-                    # Check if page is raster/scanned (fewer than 20 text characters)
                     if len(page_text.strip()) < 20:
                         scanned_pages_count += 1
                         ocr_res = OCRFallbackHandler.process_scanned_page(page_index=idx)
@@ -467,10 +421,6 @@ class PDFCivicParser:
 
         return result
 
-
-# ---------------------------------------------------------------------------
-# 7. Tabular Data Parser (CSV, JSON, Excel)
-# ---------------------------------------------------------------------------
 class TabularDataParser:
     """Parses CSV, JSON, and TSV formats into structured tabular records."""
 
@@ -496,10 +446,6 @@ class TabularDataParser:
             return {k: sanitize_pii(str(v)) if isinstance(v, str) else v for k, v in data.items()}
         return data
 
-
-# ---------------------------------------------------------------------------
-# 8. Failure Logger
-# ---------------------------------------------------------------------------
 @dataclass
 class FailureLog:
     url: str
@@ -509,7 +455,6 @@ class FailureLog:
     status_code: Optional[int]
     retry_count: int
     error_message: str
-
 
 class FailureLogManager:
     """Thread-safe in-memory and disk failure log manager."""
@@ -549,15 +494,11 @@ class FailureLogManager:
     def clear(self):
         self._logs.clear()
 
-
-# ---------------------------------------------------------------------------
-# 9. Acquisition Result Model
-# ---------------------------------------------------------------------------
 @dataclass
 class AcquisitionResult:
     source_id: str
     url: str
-    status: str  # SUCCESS, CACHED, DUPLICATE, FAILED, MANUAL_IMPORT_REQUIRED, OCR_FALLBACK
+    status: str
     content_type: str
     file_format: str
     retrieved_at: datetime
@@ -574,10 +515,6 @@ class AcquisitionResult:
     ocr_used: bool = False
     ocr_status: Optional[str] = None
 
-
-# ---------------------------------------------------------------------------
-# 10. Manual Document Importer Interface
-# ---------------------------------------------------------------------------
 class ManualDocumentImporter:
     """
     Ingests authorized offline documents (PDF, CSV, JSON) from portals
@@ -655,10 +592,6 @@ class ManualDocumentImporter:
             ocr_status=ocr_status
         )
 
-
-# ---------------------------------------------------------------------------
-# 11. Central Civic Acquisition Engine
-# ---------------------------------------------------------------------------
 class CivicAcquisitionEngine:
     """
     Main acquisition coordinator for Phase 8.
@@ -690,7 +623,6 @@ class CivicAcquisitionEngine:
         """
         retrieved_at = datetime.now(timezone.utc)
 
-        # 1. Resolve source configuration
         config = None
         if source_id:
             config = self.registry.get(source_id)
@@ -716,12 +648,10 @@ class CivicAcquisitionEngine:
                 error_message="Domain not registered in CivicSourceRegistry."
             )
 
-        # 2. Check if portal requires manual import
         parsed_url = urllib.parse.urlparse(url)
         domain = parsed_url.netloc.lower()
 
         if config.requires_manual_import:
-            # Check if this specific URL is an unauthenticated public document or needs manual import
             is_disallowed = any(d.lower() in parsed_url.path.lower() for d in config.disallowed_paths)
             if is_disallowed:
                 self.failure_logger.record_failure(
@@ -742,7 +672,6 @@ class CivicAcquisitionEngine:
                     error_message="Portal is gated behind authentication; automated scraping prohibited. Use manual import."
                 )
 
-        # 3. Check robots disallowed paths
         for disallowed in config.disallowed_paths:
             if disallowed and disallowed.lower() in parsed_url.path.lower():
                 self.failure_logger.record_failure(
@@ -763,16 +692,13 @@ class CivicAcquisitionEngine:
                     error_message=f"Path {parsed_url.path} is disallowed by policy."
                 )
 
-        # 4. Enforce domain rate limit
         self.rate_limiter.wait_if_needed(domain, config.rate_limit_seconds)
 
-        # 5. Fetch content with retry and exponential backoff
         raw_bytes: Optional[bytes] = None
         http_status: Optional[int] = None
         content_type = "application/octet-stream"
         retries = 0
 
-        # Support local file/test schemes
         if parsed_url.scheme == "file":
             try:
                 local_path = urllib.request.url2pathname(parsed_url.path)
@@ -805,7 +731,7 @@ class CivicAcquisitionEngine:
             for attempt in range(config.max_retries):
                 retries = attempt
                 try:
-                    import requests  # type: ignore
+                    import requests
                     response = requests.get(url, headers=headers, timeout=config.timeout_seconds)
                     http_status = response.status_code
                     content_type = response.headers.get("Content-Type", "")
@@ -814,12 +740,10 @@ class CivicAcquisitionEngine:
                         raw_bytes = response.content
                         break
                     elif response.status_code in (429, 500, 502, 503, 504):
-                        # Transient error, apply exponential backoff
                         sleep_time = (2 ** attempt) * 1.0
                         logger.warning(f"HTTP {response.status_code} on {url}, retrying in {sleep_time}s...")
                         time.sleep(sleep_time)
                     else:
-                        # Permanent client error (401, 403, 404)
                         break
                 except Exception as e:
                     logger.warning(f"Connection exception on attempt {attempt + 1} for {url}: {e}")
@@ -848,7 +772,6 @@ class CivicAcquisitionEngine:
                     error_message="Fetch error or non-200 response."
                 )
 
-        # 6. Checksum and Caching
         sha256_hash = self.cache_manager.compute_sha256(raw_bytes)
         is_cached = self.cache_manager.is_cached(sha256_hash)
         is_dup = self.cache_manager.is_duplicate(sha256_hash)
@@ -858,7 +781,6 @@ class CivicAcquisitionEngine:
         else:
             self.cache_manager.mark_seen(sha256_hash)
 
-        # 7. Format routing and parsing
         detected_format = self._detect_format(url, content_type, raw_bytes)
         parsed_text = ""
         extracted_tables = []
@@ -868,7 +790,6 @@ class CivicAcquisitionEngine:
         if detected_format == "HTML":
             html_str = raw_bytes.decode("utf-8", errors="replace")
             extracted_tables = HTMLTableExtractor.extract_tables(html_str)
-            # Basic text clean
             clean_text = re.sub(r'<[^>]+>', ' ', html_str)
             clean_text = re.sub(r'\s+', ' ', clean_text).strip()
             parsed_text = sanitize_pii(clean_text)

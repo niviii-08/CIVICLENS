@@ -22,17 +22,17 @@ class PoliteHTTPClient:
     4. Records HTTP status, failures, and avoids silent infinite retries
     5. Checks local cache before fetching
     """
-    
+
     def __init__(self, cache_dir: str = "data/cache", user_agent: str = "CIVICLENS_TN_Bot/1.0 (Research Project; contact@civiclens.org)"):
         self.cache_dir = cache_dir
         self.user_agent = user_agent
         self.robot_parsers = {}
         self.last_request_time = {}
-        self.politeness_delay = 2.0  # seconds between requests to same domain
-        
+        self.politeness_delay = 2.0
+
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir, exist_ok=True)
-            
+
     def _get_domain(self, url: str) -> str:
         parsed = urllib.parse.urlparse(url)
         return f"{parsed.scheme}://{parsed.netloc}"
@@ -50,7 +50,7 @@ class PoliteHTTPClient:
                 logger.warning(f"Could not fetch robots.txt for {domain}: {e}")
                 rp.allow_all = True
             self.robot_parsers[domain] = rp
-        
+
         rp = self.robot_parsers[domain]
         if hasattr(rp, 'allow_all') and getattr(rp, 'allow_all'):
              return True
@@ -71,46 +71,45 @@ class PoliteHTTPClient:
             retrieval_status="pending",
             collection_date=datetime.now(timezone.utc)
         )
-        
+
         domain = self._get_domain(url)
-        
+
         if not self._can_fetch(url):
             logger.error(f"robots.txt disallows fetching {url}")
             metadata.retrieval_status = "blocked_by_robots"
             return None, metadata
 
         self._wait_for_politeness(domain)
-        
+
         req = urllib.request.Request(url, headers={'User-Agent': self.user_agent})
-        
+
         try:
             with urllib.request.urlopen(req, timeout=30) as response:
                 content = response.read()
                 status_code = response.getcode()
-                
-                # http_status isn't in SourceRecord, but we can store it in source_notes or implicitly handle it
+
                 metadata.source_notes = f"HTTP {status_code}"
-                
+
                 if status_code == 200:
                     metadata.retrieval_status = "success"
                     metadata.content_hash = hashlib.sha256(content).hexdigest()
-                    
+
                     parsed = urllib.parse.urlparse(url)
                     filename = os.path.basename(parsed.path)
                     if not filename:
                         filename = f"download_{int(time.time())}"
                     metadata.original_filename = filename
-                    
+
                     if url.lower().endswith(".pdf"):
                         metadata.document_format = "PDF"
                     elif url.lower().endswith(".html"):
                         metadata.document_format = "HTML"
-                        
+
                     return content, metadata
                 else:
                     metadata.retrieval_status = f"failed_http_{status_code}"
                     return None, metadata
-                    
+
         except HTTPError as e:
             metadata.retrieval_status = f"failed_http_{e.code}"
             logger.error(f"HTTP Error fetching {url}: {e.code}")

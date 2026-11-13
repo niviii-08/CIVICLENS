@@ -1,17 +1,9 @@
 """
-Government Implementation Evidence Acquisition Pipeline (Phase 3.9).
+Government implementation evidence acquisition pipeline.
 
-Acquires candidate government implementation evidence documents (GOs, Policy Notes,
-Budget documents, Press Releases, Department pages) from strict allowed domains.
-
-Pipeline:
-Promise / Search Query -> Allowed Source Domains -> Web Acquisition -> Candidate Documents -> Document Extraction -> Evidence Records
-
-Security & Politeness Rules:
-- Enforces strict domain whitelisting (config/evidence_sources.json). Arbitrary websites are blocked.
-- Uses PoliteHTTPClient (robots.txt, rate limits, politeness delays, User-Agent).
-- Never circumvents access controls, CAPTCHAs, or paywalls.
-- Does NOT perform implementation status assessment (ingestion pipeline only).
+Discovers and fetches candidate implementation documents (Government Orders,
+Policy Notes, Budget documents, and department releases) from verified domains
+using polite rate-limiting and domain whitelisting.
 """
 
 import os
@@ -30,7 +22,6 @@ from backend.models.common import Evidence
 logger = logging.getLogger(__name__)
 
 DEFAULT_EVIDENCE_CONFIG_PATH = os.path.join("config", "evidence_sources.json")
-
 
 class EvidenceAcquisitionPipeline:
     """
@@ -72,7 +63,7 @@ class EvidenceAcquisitionPipeline:
         Validates that the target URL belongs to an explicitly allowed domain.
         """
         parsed = urllib.parse.urlparse(url)
-        netloc = parsed.netloc.lower().split(":")[0]  # Remove port if present
+        netloc = parsed.netloc.lower().split(":")[0]
 
         for allowed in self.allowed_domains:
             allowed_lower = allowed.lower()
@@ -85,11 +76,9 @@ class EvidenceAcquisitionPipeline:
         parsed = urllib.parse.urlparse(url)
         netloc = parsed.netloc.lower().split(":")[0]
 
-        # 1. Check exact domain match first
         if netloc in self.source_metadata:
             return self.source_metadata[netloc]
 
-        # 2. Check suffix match by longest domain first
         sorted_domains = sorted(self.source_metadata.keys(), key=len, reverse=True)
         for domain in sorted_domains:
             if netloc.endswith("." + domain):

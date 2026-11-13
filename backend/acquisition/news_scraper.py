@@ -30,7 +30,6 @@ class RateLimiter:
                 time.sleep(delay - elapsed)
         self.last_fetch[domain] = time.time()
 
-
 class NewsScraper:
     """
     Modular, resilient web scraping engine supporting RSS discovery,
@@ -48,7 +47,7 @@ class NewsScraper:
         parsed = urlparse(url)
         domain = parsed.netloc
         robots_url = f"{parsed.scheme}://{domain}/robots.txt"
-        
+
         if domain not in self.robot_parsers:
             rp = urllib.robotparser.RobotFileParser()
             rp.set_url(robots_url)
@@ -57,8 +56,8 @@ class NewsScraper:
                 self.robot_parsers[domain] = rp
             except Exception as e:
                 logger.warning(f"Failed to fetch robots.txt for {domain}: {e}")
-                return True # Fail permissive for standard academic research bot if unreachable
-        
+                return True
+
         return self.robot_parsers[domain].can_fetch(self.user_agent, url)
 
     def compute_text_hash(self, text):
@@ -70,7 +69,7 @@ class NewsScraper:
         """Fetches raw page content with rate limiting and retry handling."""
         parsed = urlparse(url)
         domain = parsed.netloc
-        
+
         if not self.is_allowed_by_robots(url):
             logger.warning(f"URL disallowed by robots.txt: {url}")
             return None
@@ -95,12 +94,10 @@ class NewsScraper:
 
         if HAS_BS4:
             soup = BeautifulSoup(html_content, "html.parser")
-            
-            # 1. Canonical URL
+
             canonical_tag = soup.find("link", rel=lambda r: r and "canonical" in r.lower())
             canonical_url = canonical_tag["href"] if canonical_tag and canonical_tag.get("href") else url
 
-            # 2. Title / Headline
             title = ""
             if selector_config and "title" in selector_config:
                 title_el = soup.select_one(selector_config["title"])
@@ -110,7 +107,6 @@ class NewsScraper:
                 h1 = soup.find("h1")
                 title = h1.get_text(strip=True) if h1 else (soup.title.get_text(strip=True) if soup.title else "")
 
-            # 3. Article Body Text
             paragraphs = []
             if selector_config and "body" in selector_config:
                 p_els = soup.select(selector_config["body"])
@@ -121,7 +117,6 @@ class NewsScraper:
                     if len(txt.split()) > 5:
                         paragraphs.append(txt)
 
-            # 4. Author
             author = "Staff Reporter"
             if selector_config and "author" in selector_config:
                 author_el = soup.select_one(selector_config["author"])
@@ -132,7 +127,6 @@ class NewsScraper:
                 if meta_author and meta_author.get("content"):
                     author = meta_author["content"].strip()
         else:
-            # Fallback regex parsing when BeautifulSoup is unavailable
             canon_match = re.search(r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']+)["\']', html_content, re.I)
             canonical_url = canon_match.group(1) if canon_match else url
 
@@ -147,7 +141,6 @@ class NewsScraper:
         if not article_text or len(article_text.split()) < 15:
             logger.warning(f"Article text extraction yielded insufficient content for {url}")
 
-        # 5. Publication Date
         pub_date = datetime.now(timezone.utc)
         if HAS_BS4 and 'soup' in locals():
             meta_date = soup.find("meta", property=re.compile(r"(article:published_time|pubdate)", re.I))
@@ -165,7 +158,6 @@ class NewsScraper:
                     pub_date = datetime.strptime(dt_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
                 except Exception:
                     pass
-
 
         word_count = len(article_text.split())
         text_hash = self.compute_text_hash(article_text)

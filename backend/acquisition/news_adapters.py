@@ -14,7 +14,6 @@ except ImportError:
 
 logger = setup_logger("civiclens.acquisition.news_adapters")
 
-
 class BaseSourceAdapter(ABC):
     """
     Abstract Base Class for source-specific article parsing adapters.
@@ -46,7 +45,6 @@ class BaseSourceAdapter(ABC):
                 return canon_match.group(1)
         return fallback_url
 
-
 class GenericSourceAdapter(BaseSourceAdapter):
     """Fallback general-purpose adapter using standard HTML heuristics."""
 
@@ -61,8 +59,7 @@ class GenericSourceAdapter(BaseSourceAdapter):
 
         if HAS_BS4:
             soup = BeautifulSoup(html_content, "html.parser")
-            
-            # Selector-based or heuristic title
+
             if selector_config and "title" in selector_config:
                 el = soup.select_one(selector_config["title"])
                 if el:
@@ -71,7 +68,6 @@ class GenericSourceAdapter(BaseSourceAdapter):
                 h1 = soup.find("h1")
                 title = h1.get_text(strip=True) if h1 else (soup.title.get_text(strip=True) if soup.title else "")
 
-            # Selector-based or heuristic body paragraphs
             if selector_config and "body" in selector_config:
                 p_els = soup.select(selector_config["body"])
                 paragraphs = [p.get_text(strip=True) for p in p_els if p.get_text(strip=True)]
@@ -92,7 +88,6 @@ class GenericSourceAdapter(BaseSourceAdapter):
             p_matches = re.findall(r'<p[^>]*>(.*?)</p>', html_content, re.I | re.S)
             paragraphs = [re.sub(r'<[^>]+>', '', p).strip() for p in p_matches if len(re.sub(r'<[^>]+>', '', p).strip().split()) > 5]
 
-        # Clean title branding
         title = re.sub(r'\s*[\-|\|]\s*.*$', '', title)
         article_text = "\n\n".join(paragraphs)
 
@@ -107,7 +102,6 @@ class GenericSourceAdapter(BaseSourceAdapter):
             "text_hash": self.compute_text_hash(article_text)
         }
 
-
 class TheHinduAdapter(GenericSourceAdapter):
     """Source adapter specialized for The Hindu news pages."""
 
@@ -116,7 +110,6 @@ class TheHinduAdapter(GenericSourceAdapter):
         if parsed and parsed["title"]:
             parsed["title"] = re.sub(r'\s*-\s*The Hindu$', '', parsed["title"], flags=re.I)
         return parsed
-
 
 class DinamaniAdapter(GenericSourceAdapter):
     """Source adapter specialized for Dinamani Tamil news pages."""
@@ -127,7 +120,6 @@ class DinamaniAdapter(GenericSourceAdapter):
             parsed["title"] = re.sub(r'\s*-\s*தினமணி$', '', parsed["title"])
         return parsed
 
-
 class DinamalarAdapter(GenericSourceAdapter):
     """Source adapter specialized for Dinamalar Tamil news pages."""
 
@@ -137,7 +129,6 @@ class DinamalarAdapter(GenericSourceAdapter):
             parsed["title"] = re.sub(r'\s*-\s*தினமலர்$', '', parsed["title"])
         return parsed
 
-
 class AdapterRegistry:
     """
     Factory & Registry pattern for source-specific article parsing adapters.
@@ -146,7 +137,6 @@ class AdapterRegistry:
 
     def __init__(self):
         self._adapters: Dict[str, BaseSourceAdapter] = {}
-        # Register standard built-in adapters
         self.register_adapter("generic_adapter", GenericSourceAdapter())
         self.register_adapter("thehindu_adapter", TheHinduAdapter())
         self.register_adapter("dinamani_adapter", DinamaniAdapter())
@@ -161,6 +151,4 @@ class AdapterRegistry:
         """Retrieves adapter instance by name, falling back to generic adapter."""
         return self._adapters.get(adapter_name, self._adapters["generic_adapter"])
 
-
-# Global singleton instance
 adapter_registry = AdapterRegistry()
