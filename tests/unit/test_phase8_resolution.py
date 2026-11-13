@@ -58,7 +58,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Seed categories
     for cat_data in MOCK_CATEGORIES:
         cat = IssueCategory(
             code=IssueCategoryEnum(cat_data["code"]),
@@ -69,7 +68,6 @@ def db_session():
         )
         session.add(cat)
 
-    # Seed departments
     for dept_data in MOCK_DEPARTMENTS:
         dept = CivicDepartment(
             code=dept_data["code"],
@@ -82,7 +80,6 @@ def db_session():
         )
         session.add(dept)
 
-    # Seed administrative areas
     for area_data in MOCK_AREAS:
         area = AdministrativeArea(
             area_code=area_data["area_code"],
@@ -109,7 +106,7 @@ def sample_civic_issue(db_session):
     area = db_session.query(AdministrativeArea).filter_by(area_code="ADM-TN-GCC-WARD-174").first()
 
     reported_dt = datetime(2024, 3, 1, 10, 0, tzinfo=timezone.utc)
-    target_dt = reported_dt + timedelta(hours=48)  # 48h SLA
+    target_dt = reported_dt + timedelta(hours=48)
 
     issue = CivicIssue(
         issue_code="ISSUE-2024-TEST-001",
@@ -129,9 +126,6 @@ def sample_civic_issue(db_session):
     return issue
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Separation of All 9 Canonical Lifecycle States
-# ---------------------------------------------------------------------------
 def test_1_track_nine_canonical_lifecycle_states():
     assert CivicResolutionTrackerService.parse_reported_status("Submitted") == CivicTrackingState.SUBMITTED
     assert CivicResolutionTrackerService.parse_reported_status("Registered") == CivicTrackingState.ACKNOWLEDGED
@@ -145,9 +139,6 @@ def test_1_track_nine_canonical_lifecycle_states():
     assert CivicResolutionTrackerService.parse_reported_status(None) == CivicTrackingState.UNKNOWN
 
 
-# ---------------------------------------------------------------------------
-# Test 2: marked_resolved Does NOT Imply Independently Verified
-# ---------------------------------------------------------------------------
 def test_2_marked_resolved_does_not_imply_verified(db_session, sample_civic_issue):
     payload = ResolutionRecordPayload(
         issue_id=sample_civic_issue.id,
@@ -163,18 +154,12 @@ def test_2_marked_resolved_does_not_imply_verified(db_session, sample_civic_issu
     )
     db_session.commit()
 
-    # Reported status is marked_resolved
     assert response.reported_status == CivicTrackingState.MARKED_RESOLVED.value
-    # CRITICAL DIRECTIVE: Verification status must remain PENDING_VERIFICATION!
     assert response.verification_status == ResolutionVerificationStatus.PENDING_VERIFICATION
     assert sample_civic_issue.resolution_verification_status == ResolutionVerificationStatus.PENDING_VERIFICATION
-    # Issue status is marked as RESOLVED (source reports closure), but NOT VERIFIED_RESOLVED
     assert sample_civic_issue.status == CivicIssueStatus.RESOLVED
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Independent Verification with Corroborating Evidence
-# ---------------------------------------------------------------------------
 def test_3_independent_verification_with_corroborating_evidence(db_session, sample_civic_issue):
     payload = ResolutionRecordPayload(
         issue_id=sample_civic_issue.id,
@@ -189,7 +174,6 @@ def test_3_independent_verification_with_corroborating_evidence(db_session, samp
     )
     db_session.commit()
 
-    # Supply independent corroborating evidence (Work completion certificate)
     evidence, verified = CivicResolutionTrackerService.verify_resolution_with_evidence(
         db_session=db_session,
         response_id=response.id,
@@ -210,7 +194,6 @@ def test_3_independent_verification_with_corroborating_evidence(db_session, samp
     assert sample_civic_issue.resolution_verification_status == ResolutionVerificationStatus.VERIFIED
     assert sample_civic_issue.status == CivicIssueStatus.VERIFIED_RESOLVED
 
-    # Check audit event
     event = db_session.query(IssueEvent).filter_by(
         civic_issue_id=sample_civic_issue.id,
         event_type="INDEPENDENTLY_VERIFIED_RESOLVED"
@@ -218,9 +201,6 @@ def test_3_independent_verification_with_corroborating_evidence(db_session, samp
     assert event is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Contradicting Evidence Routes to Disputed Status
-# ---------------------------------------------------------------------------
 def test_4_contradicting_evidence_routes_to_disputed(db_session, sample_civic_issue):
     payload = ResolutionRecordPayload(
         issue_id=sample_civic_issue.id,
@@ -235,14 +215,13 @@ def test_4_contradicting_evidence_routes_to_disputed(db_session, sample_civic_is
     )
     db_session.commit()
 
-    # Supply contradicting evidence (Citizen field audit shows crater still exists)
     evidence, verified = CivicResolutionTrackerService.verify_resolution_with_evidence(
         db_session=db_session,
         response_id=response.id,
         evidence_type=EvidenceType.CITIZEN_AUDIT,
         title="Field Inspection Photograph",
         description="Pothole has NOT been repaired; water filled crater remains unaddressed.",
-        is_corroborating=False,  # Contradicts claimed resolution!
+        is_corroborating=False,
         verified_by="Ward 174 Residents Welfare Association",
         is_test_fixture=True
     )
@@ -255,11 +234,7 @@ def test_4_contradicting_evidence_routes_to_disputed(db_session, sample_civic_is
     assert sample_civic_issue.status == CivicIssueStatus.DISPUTED
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Unsupported Resolution Claim for Public Work Linkage is Rejected
-# ---------------------------------------------------------------------------
 def test_5_unsupported_resolution_claim_public_work_linkage_rejected(db_session, sample_civic_issue):
-    # Public work in unrelated area without matching tender reference
     work = PublicWork(
         work_code="PW-2024-UNRELATED-99",
         work_title="Bridge expansion in Tambaram",
@@ -272,7 +247,6 @@ def test_5_unsupported_resolution_claim_public_work_linkage_rejected(db_session,
     db_session.add(work)
     db_session.commit()
 
-    # Attempt to claim this public work resolved the Besant Nagar pothole without evidence
     success, reason = CivicResolutionTrackerService.validate_and_link_public_work(
         db_session=db_session,
         issue_id=sample_civic_issue.id,
@@ -282,12 +256,10 @@ def test_5_unsupported_resolution_claim_public_work_linkage_rejected(db_session,
     )
     db_session.commit()
 
-    # CRITICAL DIRECTIVE: Must be rejected!
     assert success is False
     assert "UNSUPPORTED_RESOLUTION_CLAIM" in reason
     assert work.civic_issue_id is None
 
-    # DataQualityIssue must be logged
     dq = db_session.query(DataQualityIssue).filter_by(
         civic_issue_id=sample_civic_issue.id,
         issue_type="UNSUPPORTED_RESOLUTION_CLAIM"
@@ -295,9 +267,6 @@ def test_5_unsupported_resolution_claim_public_work_linkage_rejected(db_session,
     assert dq is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 6: Supported Public Work Linkage with Evidentiary Tender Reference
-# ---------------------------------------------------------------------------
 def test_6_supported_public_work_linkage(db_session, sample_civic_issue):
     work = PublicWork(
         work_code="PW-2024-BESANT-01",
@@ -311,7 +280,6 @@ def test_6_supported_public_work_linkage(db_session, sample_civic_issue):
     db_session.add(work)
     db_session.commit()
 
-    # Link supported by explicit tender reference match
     success, reason = CivicResolutionTrackerService.validate_and_link_public_work(
         db_session=db_session,
         issue_id=sample_civic_issue.id,
@@ -323,7 +291,6 @@ def test_6_supported_public_work_linkage(db_session, sample_civic_issue):
     assert success is True
     assert work.civic_issue_id == sample_civic_issue.id
 
-    # Event logged
     ev = db_session.query(IssueEvent).filter_by(
         civic_issue_id=sample_civic_issue.id,
         event_type="PUBLIC_WORK_LINKED"
@@ -331,11 +298,7 @@ def test_6_supported_public_work_linkage(db_session, sample_civic_issue):
     assert ev is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Conflicting Status Detection (Reopened vs Marked Resolved)
-# ---------------------------------------------------------------------------
 def test_7_conflicting_status_detection(db_session, sample_civic_issue):
-    # 1. Citizen reopens grievance
     payload_reopen = ResolutionRecordPayload(
         issue_id=sample_civic_issue.id,
         response_date=datetime(2024, 3, 2, 10, 0, tzinfo=timezone.utc),
@@ -345,7 +308,6 @@ def test_7_conflicting_status_detection(db_session, sample_civic_issue):
     CivicResolutionTrackerService.record_official_response(db_session, payload_reopen, is_test_fixture=True)
     db_session.commit()
 
-    # 2. Portal attempts to log 'completed' without addressing the active reopening
     payload_conflict = ResolutionRecordPayload(
         issue_id=sample_civic_issue.id,
         response_date=datetime(2024, 3, 3, 11, 0, tzinfo=timezone.utc),
@@ -355,7 +317,6 @@ def test_7_conflicting_status_detection(db_session, sample_civic_issue):
     resp_conflict = CivicResolutionTrackerService.record_official_response(db_session, payload_conflict, is_test_fixture=True)
     db_session.commit()
 
-    # Must detect status conflict and route to DISPUTED
     assert resp_conflict.reported_status == CivicTrackingState.DISPUTED.value
     assert "Status Conflict" in (resp_conflict.review_notes or "")
 
@@ -366,14 +327,11 @@ def test_7_conflicting_status_detection(db_session, sample_civic_issue):
     assert dq is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Incomplete Response Record Handling
-# ---------------------------------------------------------------------------
 def test_8_incomplete_response_record_handling(db_session, sample_civic_issue):
     payload_empty = ResolutionRecordPayload(
         issue_id=sample_civic_issue.id,
         response_date=datetime(2024, 3, 2, 10, 0, tzinfo=timezone.utc),
-        response_summary="",  # Incomplete response!
+        response_summary="",
         reported_status="action taken"
     )
 
@@ -390,12 +348,7 @@ def test_8_incomplete_response_record_handling(db_session, sample_civic_issue):
     assert dq is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 9: SLA Turnaround & Breach Detection
-# ---------------------------------------------------------------------------
 def test_9_sla_turnaround_and_breach_detection(db_session, sample_civic_issue):
-    # SLA deadline was reported_date + 48h (2024-03-03 10:00:00 UTC)
-    # Action taken on 2024-03-05 10:00:00 UTC (48 hours late!)
     late_resp_dt = sample_civic_issue.reported_date + timedelta(hours=96)
 
     payload_late = ResolutionRecordPayload(
@@ -411,11 +364,7 @@ def test_9_sla_turnaround_and_breach_detection(db_session, sample_civic_issue):
     assert resp_late.delay_hours == 48.0
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Missing Response / Backlog Detection
-# ---------------------------------------------------------------------------
 def test_10_missing_response_detection(db_session):
-    # Issue reported 10 days ago with zero responses logged in DB
     cat = db_session.query(IssueCategory).filter_by(code=IssueCategoryEnum.STREETLIGHTS).first()
     dept = db_session.query(CivicDepartment).filter_by(code="DEPT_GCC").first()
 
@@ -426,18 +375,15 @@ def test_10_missing_response_detection(db_session):
         category_id=cat.id,
         department_id=dept.id,
         reported_date=datetime(2024, 3, 1, 10, 0, tzinfo=timezone.utc),
-        target_resolution_date=datetime(2024, 3, 2, 10, 0, tzinfo=timezone.utc),  # 24h SLA expired
+        target_resolution_date=datetime(2024, 3, 2, 10, 0, tzinfo=timezone.utc),
         status=CivicIssueStatus.OPEN,
         is_test_fixture=True
     )
     db_session.add(issue_backlog)
     db_session.commit()
 
-    # Query responses
     responses = db_session.query(ResponseRecord).filter_by(civic_issue_id=issue_backlog.id).all()
-    assert len(responses) == 0  # Missing response / pending action
+    assert len(responses) == 0
 
-    # Issue status remains OPEN
     assert issue_backlog.status == CivicIssueStatus.OPEN
-    # Past SLA
     assert datetime(2024, 3, 12, tzinfo=timezone.utc) > issue_backlog.target_resolution_date.replace(tzinfo=timezone.utc)

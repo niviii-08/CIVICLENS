@@ -8,11 +8,9 @@ labelled as test fixtures (`is_test_fixture = True`).
 
 from typing import Dict, Any, List
 
-# Explicit Test Fixture Metadata Marker
 IS_TEST_FIXTURE = True
 FIXTURE_VERSION = "6.0-test"
 
-# 1. Sample TN Legislative Assembly Proceeding (HTML)
 MOCK_TNLA_ASSEMBLY_HTML = b"""<!DOCTYPE html>
 <html>
 <head>
@@ -61,7 +59,6 @@ MOCK_TNLA_ASSEMBLY_HTML = b"""<!DOCTYPE html>
 </html>
 """
 
-# 2. Sample Parliamentary Question (JSON)
 MOCK_SANSAD_QUESTION_JSON = b"""{
   "house": "LOK_SABHA",
   "session": 17,
@@ -79,7 +76,6 @@ MOCK_SANSAD_QUESTION_JSON = b"""{
 }
 """
 
-# 3. Sample MPLADS Fund Release Statement (CSV)
 MOCK_MPLADS_WORK_CSV = b"""work_id,mp_name,constituency,scheme_type,financial_year,sanctioned_amount_inr,expenditure_inr,status,work_category
 W-101,Kalanidhi Veeraswamy,Chennai North,MPLADS,FY2022-23,2500000,2450000,COMPLETED,EDUCATION
 W-102,Kalanidhi Veeraswamy,Chennai North,MPLADS,FY2022-23,1500000,1480000,COMPLETED,HEALTH
@@ -87,7 +83,6 @@ W-103,Dayanidhi Maran,Chennai Central,MPLADS,FY2022-23,3000000,2800000,IN_PROGRE
 W-104,Kanimozhi Karunanidhi,Thoothukkudi,MPLADS,FY2022-23,4000000,3950000,COMPLETED,WATER
 """
 
-# 4. Sample Census Demographic Indicators (CSV)
 MOCK_CENSUS_DEMOGRAPHIC_CSV = b"""constituency_id,constituency_name,district,total_population,sc_pct,st_pct,literacy_rate_pct,urban_pct
 AC-011,Dr. Radhakrishnan Nagar,Chennai,245000,18.5,0.4,89.2,100.0
 AC-012,Perambur,Chennai,280000,21.2,0.5,88.4,100.0
@@ -96,7 +91,6 @@ AC-085,Mettupalayam,Coimbatore,230000,14.2,2.1,84.6,65.4
 AC-115,Edappadi,Salem,225000,12.5,0.8,81.3,42.1
 """
 
-# 5. Sample ECI Election Return (PDF Stream)
 MOCK_ECI_RESULT_PDF = b"""%PDF-1.4
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
@@ -137,7 +131,6 @@ startxref
 %%EOF
 """
 
-# Discovery Targets & Mock Payload Map for Testing
 MOCK_DISCOVERY_TARGETS: List[Dict[str, Any]] = [
     {
         "url": "https://www.assembly.tn.gov.in/proceedings/2023/session4.html",

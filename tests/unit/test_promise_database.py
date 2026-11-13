@@ -36,7 +36,6 @@ from backend.models.promise import (
 class TestPromiseDatabaseModels(unittest.TestCase):
 
     def setUp(self):
-        # Create SQLite in-memory database for testing
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
@@ -89,7 +88,6 @@ class TestPromiseDatabaseModels(unittest.TestCase):
         manifestos = self.db.query(Manifesto).all()
         self.assertEqual(len(manifestos), 3)
 
-        # Query by election year
         m_2026 = self.db.query(Manifesto).filter(Manifesto.election_year == 2026).first()
         self.assertIsNotNone(m_2026)
         self.assertEqual(m_2026.party, "Tamilaga Vettri Kazhagam")
@@ -216,7 +214,6 @@ class TestPromiseDatabaseModels(unittest.TestCase):
         self.db.add_all([m, p])
         self.db.commit()
 
-        # Initial assessment: NOT_ASSESSED
         assess = PromiseAssessment(
             promise_id="P_ASSESS_1",
             status=PromiseStatus.NOT_ASSESSED,
@@ -227,7 +224,6 @@ class TestPromiseDatabaseModels(unittest.TestCase):
         self.db.add(assess)
         self.db.commit()
 
-        # Audit history log entry 1
         h1 = PromiseAssessmentHistory(
             promise_id="P_ASSESS_1",
             assessment_id=assess.id,
@@ -239,7 +235,6 @@ class TestPromiseDatabaseModels(unittest.TestCase):
         self.db.add(h1)
         self.db.commit()
 
-        # Update assessment to PARTIALLY_IMPLEMENTED
         assess.status = PromiseStatus.PARTIALLY_IMPLEMENTED
         assess.confidence_score = 0.8
         assess.rationale = "Budget allocation found in FY2026 demands"
@@ -276,15 +271,12 @@ class TestPromiseDatabaseModels(unittest.TestCase):
         self.db.add(assess)
         self.db.commit()
 
-        # Verify items exist
         self.assertIsNotNone(self.db.query(PoliticalPromise).filter_by(promise_id="P_CASCADE").first())
         self.assertIsNotNone(self.db.query(PromiseAssessment).filter_by(promise_id="P_CASCADE").first())
 
-        # Delete Manifesto
         self.db.delete(m)
         self.db.commit()
 
-        # Promises and assessments should be deleted automatically via cascade
         self.assertIsNone(self.db.query(PoliticalPromise).filter_by(promise_id="P_CASCADE").first())
         self.assertIsNone(self.db.query(PromiseAssessment).filter_by(promise_id="P_CASCADE").first())
 

@@ -20,7 +20,6 @@ def test_theme_analyzer_keywords():
 def test_analyze_themes():
     mock_db = MagicMock()
     
-    # Mock schemas
     mock_scheme1 = MagicMock()
     mock_scheme1.id = 1
     mock_scheme1.scheme_name = "Agri 1"
@@ -44,7 +43,6 @@ def test_analyze_themes():
     mock_db.query().all.return_value = [mock_scheme1, mock_scheme2, mock_scheme3, mock_scheme4]
     
     analyzer = ThemeAnalyzer(mock_db)
-    # Mock text generation so tfidf doesn't crash on empty
     analyzer.preprocessor.generate_semantic_text = MagicMock(return_value="sample text agriculture education")
     
     results = analyzer.analyze_themes(n_clusters=2)
@@ -56,4 +54,4 @@ def test_analyze_themes():
     
 if __name__ == "__main__":
     test_theme_analyzer_keywords()
-    test_analyze_themes()
+    test_analyze_themes()

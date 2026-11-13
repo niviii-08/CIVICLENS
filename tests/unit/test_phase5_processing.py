@@ -144,34 +144,28 @@ class TestFinancialDocumentProcessor:
         assert res["total_records_extracted"] == 7
 
         records = res["records"]
-        # Record 1: 50,00,000 -> VALID_NUMERIC
         r1 = records[0]
         assert r1["normalized_amount_inr"] == 5000000.0
         assert r1["amount_status"] == AmountStatus.VALID_NUMERIC.value
         assert r1["donor_name"] == "Apex Enterprise Ltd"
         assert r1["page_number"] == 1
 
-        # Record 2: 25 Lakhs -> VALID_NUMERIC (2,500,000)
         r2 = records[1]
         assert r2["normalized_amount_inr"] == 2500000.0
         assert r2["amount_status"] == AmountStatus.VALID_NUMERIC.value
 
-        # Record 3: Nil -> ZERO (0.0)
         r3 = records[2]
         assert r3["normalized_amount_inr"] == 0.0
         assert r3["amount_status"] == AmountStatus.ZERO.value
 
-        # Record 4: Undisclosed -> NOT_DISCLOSED (None)
         r4 = records[3]
         assert r4["normalized_amount_inr"] is None
         assert r4["amount_status"] == AmountStatus.NOT_DISCLOSED.value
 
-        # Record 5: invalid#num -> EXTRACTION_FAILURE
         r5 = records[4]
         assert r5["normalized_amount_inr"] is None
         assert r5["amount_status"] == AmountStatus.EXTRACTION_FAILURE.value
 
-        # Record 6: 1.5 Crore -> VALID_NUMERIC (15,000,000)
         r6 = records[5]
         assert r6["normalized_amount_inr"] == 15000000.0
         assert r6["page_number"] == 2

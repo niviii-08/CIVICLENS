@@ -48,7 +48,7 @@ class TestRealManifestoProcessing(unittest.TestCase):
 
     def test_provenance_traceability_structure(self):
         """Verify document -> page -> section -> text hierarchy and required provenance fields."""
-        doc_path = os.path.join(PROCESSED_DIR, "MANIFESTO-FILE-006.json") # ADMK 2016
+        doc_path = os.path.join(PROCESSED_DIR, "MANIFESTO-FILE-006.json")
         with open(doc_path, "r", encoding="utf-8") as f:
             doc = json.load(f)
 
@@ -65,7 +65,6 @@ class TestRealManifestoProcessing(unittest.TestCase):
         self.assertEqual(doc["page_count"], 41)
         self.assertGreater(len(doc["extracted_text"]), 10000)
 
-        # Check page level traceability
         pages = doc["pages"]
         self.assertEqual(len(pages), 41)
         self.assertEqual(pages[0]["page_number"], 1)
@@ -86,7 +85,7 @@ class TestRealManifestoProcessing(unittest.TestCase):
 
     def test_no_fabricated_text_on_scanned_documents(self):
         """Verify text is not artificially fabricated when direct text extraction yields empty results."""
-        tvk_path = os.path.join(PROCESSED_DIR, "MANIFESTO-FILE-020.json") # TVK 2026 scanned PDF
+        tvk_path = os.path.join(PROCESSED_DIR, "MANIFESTO-FILE-020.json")
         with open(tvk_path, "r", encoding="utf-8") as f:
             doc = json.load(f)
 

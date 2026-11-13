@@ -5,9 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from backend.database.base_class import Base
 from backend.api.app import create_app
 from backend.models.common import Source, Document, ProcessingStatus
-import backend.models.policy_evaluation  # Ensure Phase 10 tables are registered in Base.metadata
+import backend.models.policy_evaluation
 
-# Use an in-memory SQLite database for blazing fast and isolated tests
 TEST_SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 @pytest.fixture(scope="session")

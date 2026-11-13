@@ -86,14 +86,13 @@ def get_sample_policy_html() -> str:
 def get_sample_scanned_pdf_bytes() -> bytes:
     """Generates valid PDF bytes without text layer (simulating scanned raster document)."""
     try:
-        import pypdfium2  # type: ignore
+        import pypdfium2
         pdf = pypdfium2.PdfDocument.new()
-        pdf.new_page(595, 842)  # A4 blank page
+        pdf.new_page(595, 842)
         buf = io.BytesIO()
         pdf.save(buf)
         return buf.getvalue()
     except Exception:
-        # Fallback minimal valid single-page PDF
         return (
             b"%PDF-1.4\n"
             b"1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n"

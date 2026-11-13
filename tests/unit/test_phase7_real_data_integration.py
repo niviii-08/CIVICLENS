@@ -73,7 +73,6 @@ class TestPhase7RealDataIntegration:
         ).all()
         assert len(official_docs) >= 35, f"Expected at least 35 official documents, found {len(official_docs)}"
         
-        # Check specific key statutory references
         prs_doc = db_session.query(EvidenceDocument).filter(EvidenceDocument.document_id == "EVD-CL-D-0001").first()
         assert prs_doc is not None
         assert "PRS Legislative Research" in prs_doc.publisher
@@ -96,7 +95,6 @@ class TestPhase7RealDataIntegration:
         real_claims = db_session.query(Claim).filter(Claim.claim_id.like("CLM-REAL-TN-%")).all()
         assert len(real_claims) >= 8, f"Expected 8 real claims, found {len(real_claims)}"
         
-        # Check Tamil preservation for Marie Wilson laptop claim
         c1 = db_session.query(Claim).filter(Claim.claim_id == "CLM-REAL-TN-001").first()
         assert c1 is not None
         assert "5.32 இலட்சம்" in c1.original_text
@@ -104,7 +102,6 @@ class TestPhase7RealDataIntegration:
         assert c1.party == "TVK"
         assert c1.language == "ta"
 
-        # Check English claim for Global Investors Meet
         c5 = db_session.query(Claim).filter(Claim.claim_id == "CLM-REAL-TN-005").first()
         assert c5 is not None
         assert "Global Investors Meet 2024" in c5.original_text
@@ -147,7 +144,6 @@ class TestPhase7RealDataIntegration:
         assert len(results) >= 8
 
         outcomes = {r.outcome.value for r in results}
-        # Check that diverse epistemic outcomes are produced based on evidence
         assert "insufficient_evidence" in outcomes
         assert "contradicted_by_available_evidence" in outcomes or "missing_important_context" in outcomes
 
@@ -164,7 +160,6 @@ class TestPhase7RealDataIntegration:
         assert data["total"] >= 1
         assert any(c["speaker_name"] == "N. Marie Wilson" for c in data["claims"])
 
-        # Check single claim verification profile
         ver_res = api_client.get("/api/claims/CLM-REAL-TN-001/verification")
         assert ver_res.status_code == 200
         ver_data = ver_res.get_json()["data"]

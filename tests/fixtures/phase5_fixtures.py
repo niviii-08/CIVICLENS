@@ -9,7 +9,6 @@ They do NOT represent real financial records or real political transactions.
 
 from typing import Dict, Any, List
 
-# Explicitly labelled mock political parties fixture
 MOCK_PARTIES_FIXTURE: List[Dict[str, Any]] = [
     {
         "party_id": "PARTY_TN_DMK",
@@ -40,7 +39,6 @@ MOCK_PARTIES_FIXTURE: List[Dict[str, Any]] = [
     }
 ]
 
-# Explicitly labelled mock financial documents fixture
 MOCK_FINANCIAL_DOCUMENTS_FIXTURE: List[Dict[str, Any]] = [
     {
         "document_id": "DOC_2021_DMK_24A",
@@ -68,7 +66,6 @@ MOCK_FINANCIAL_DOCUMENTS_FIXTURE: List[Dict[str, Any]] = [
     }
 ]
 
-# Explicitly labelled mock contributions fixture (Form 24A > 20k)
 MOCK_CONTRIBUTIONS_FIXTURE: List[Dict[str, Any]] = [
     {
         "contribution_id": "CONT_2021_001",
@@ -108,7 +105,6 @@ MOCK_CONTRIBUTIONS_FIXTURE: List[Dict[str, Any]] = [
     }
 ]
 
-# Explicitly labelled mock party financial statement fixture
 MOCK_FINANCIAL_STATEMENT_FIXTURE: Dict[str, Any] = {
     "statement_id": "STMT_2021_DMK",
     "party_id": "PARTY_TN_DMK",
@@ -125,7 +121,6 @@ MOCK_FINANCIAL_STATEMENT_FIXTURE: Dict[str, Any] = {
     "audit_date": "2022-10-25"
 }
 
-# Explicitly labelled mock transaction stream for Benford's Law testing
 MOCK_BENFORD_NORMAL_STREAM: List[float] = [
     124000.0, 185000.0, 192000.0, 245000.0, 290000.0, 310000.0, 350000.0,
     420000.0, 480000.0, 530000.0, 610000.0, 720000.0, 840000.0, 910000.0,

@@ -21,7 +21,6 @@ from backend.acquisition.evidence_pipeline import EvidenceAcquisitionPipeline
 class TestEvidenceAcquisition(unittest.TestCase):
 
     def setUp(self):
-        # Create in-memory SQLite database
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
@@ -42,7 +41,7 @@ class TestEvidenceAcquisition(unittest.TestCase):
             "https://tnsocialwelfare.tn.gov.in/schemes.html",
             "https://assembly.tn.gov.in/debates/2021.pdf",
             "https://dipr.tn.gov.in/pressrelease/pr_101.pdf",
-            "https://httpbin.org/get"  # Configured test fixture domain
+            "https://httpbin.org/get"
         ]
         for url in allowed_urls:
             self.assertTrue(self.pipeline.is_domain_allowed(url), f"Domain for {url} should be allowed.")
@@ -56,7 +55,6 @@ class TestEvidenceAcquisition(unittest.TestCase):
         ]
         for url in unallowed_urls:
             self.assertFalse(self.pipeline.is_domain_allowed(url), f"Domain for {url} should be rejected.")
-            # Pipeline fetch attempt must return empty list immediately
             records = self.pipeline.fetch_and_extract_evidence(url)
             self.assertEqual(records, [])
 
@@ -87,7 +85,6 @@ class TestEvidenceAcquisition(unittest.TestCase):
 
     def test_evidence_persistence_and_supporting_values(self):
         """Verify evidence records are persisted to DB with supporting metadata."""
-        # Using httpbin.org allowed test fixture endpoint
         test_url = "https://httpbin.org/get"
         records = self.pipeline.fetch_and_extract_evidence(url=test_url, result_id="PROMISE_TEST_101")
 
@@ -97,7 +94,6 @@ class TestEvidenceAcquisition(unittest.TestCase):
         self.assertEqual(rec["result_type"], "GovernmentEvidence")
         self.assertEqual(rec["result_id"], "PROMISE_TEST_101")
 
-        # Query database directly to confirm persistence
         db_ev = self.db.query(Evidence).filter_by(id=rec["id"]).first()
         self.assertIsNotNone(db_ev)
         self.assertEqual(db_ev.result_id, "PROMISE_TEST_101")

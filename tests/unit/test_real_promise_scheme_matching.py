@@ -15,7 +15,6 @@ class TestRealPromiseSchemeMatching(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Run scheme matching pipeline
         run_scheme_matching_pipeline()
 
     def test_database_scheme_links_persisted(self):

@@ -52,9 +52,6 @@ def db_session():
     session.close()
 
 
-# ---------------------------------------------------------------------------
-# Test 1: DARPG CPGRAMS Adapter & PII Redaction
-# ---------------------------------------------------------------------------
 def test_1_darpg_cpgrams_adapter():
     normalizer = GrievanceNormalizer()
     raw = MOCK_DARPG_RECORDS[0]
@@ -76,16 +73,12 @@ def test_1_darpg_cpgrams_adapter():
     assert record.submission_date == datetime(2024, 3, 14, 0, 0, 0, tzinfo=timezone.utc)
     assert record.resolution_date == datetime(2024, 3, 20, 0, 0, 0, tzinfo=timezone.utc)
 
-    # Verify PII scrubbing on description
     assert "9840234567" not in record.description_or_permitted_summary
     assert "Thiru R. Mani" not in record.description_or_permitted_summary
     assert "[PHONE REDACTED]" in record.description_or_permitted_summary
     assert "[CITIZEN]" in record.description_or_permitted_summary
 
 
-# ---------------------------------------------------------------------------
-# Test 2: GCC 1913 Adapter & Ward/Zone Hierarchy
-# ---------------------------------------------------------------------------
 def test_2_gcc_adapter_ward_zone_mapping():
     normalizer = GrievanceNormalizer()
     raw = MOCK_GCC_RECORDS[0]
@@ -106,16 +99,12 @@ def test_2_gcc_adapter_ward_zone_mapping():
     assert record.submission_date == datetime(2024, 3, 10, 0, 0, 0, tzinfo=timezone.utc)
     assert record.resolution_date == datetime(2024, 3, 12, 0, 0, 0, tzinfo=timezone.utc)
 
-    # PII scrubbing
     assert "9444123456" not in record.description_or_permitted_summary
     assert "Tmt Revathi" not in record.description_or_permitted_summary
     assert "[PHONE REDACTED]" in record.description_or_permitted_summary
     assert "[CITIZEN]" in record.description_or_permitted_summary
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Mudhalvarin Mugavari Adapter (Tamil Transliteration)
-# ---------------------------------------------------------------------------
 def test_3_cm_helpline_adapter_tamil_support():
     normalizer = GrievanceNormalizer()
     raw = MOCK_CM_HELPLINE_RECORDS[0]
@@ -137,12 +126,9 @@ def test_3_cm_helpline_adapter_tamil_support():
     assert record.resolution_date == datetime(2024, 2, 25, 0, 0, 0, tzinfo=timezone.utc)
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Missing Status Rule — Never Default to Resolved
-# ---------------------------------------------------------------------------
 def test_4_missing_status_never_defaults_to_resolved():
     normalizer = GrievanceNormalizer()
-    raw = MOCK_CM_HELPLINE_RECORDS[1]  # current_status is None
+    raw = MOCK_CM_HELPLINE_RECORDS[1]
 
     record, outcome = normalizer.normalize_single_record(
         raw_record=raw,
@@ -151,51 +137,37 @@ def test_4_missing_status_never_defaults_to_resolved():
 
     assert outcome == "VALID"
     assert record is not None
-    # Crucial Project Requirement: Never assume missing status is 'RESOLVED'
     assert record.status == "UNKNOWN"
     assert record.status != "RESOLVED"
     assert record.data_quality_status == "MISSING_STATUS"
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Date Normalization & Quality Checks
-# ---------------------------------------------------------------------------
 def test_5_date_normalization_variations_and_anomalies():
-    # 1. Standard Indian slash format
     dt, warn = DateNormalizer.parse_date("25/04/2023")
     assert warn is None
     assert dt == datetime(2023, 4, 25, 0, 0, 0, tzinfo=timezone.utc)
 
-    # 2. ISO format with time
     dt, warn = DateNormalizer.parse_date("2023-11-05T14:30:00Z")
     assert warn is None
     assert dt == datetime(2023, 11, 5, 14, 30, 0, tzinfo=timezone.utc)
 
-    # 3. Mon format (12-Oct-2023)
     dt, warn = DateNormalizer.parse_date("12-Oct-2023")
     assert warn is None
     assert dt == datetime(2023, 10, 12, 0, 0, 0, tzinfo=timezone.utc)
 
-    # 4. Future Date Check (Flagged as SUSPECT_DATE_IN_FUTURE)
     future_date_str = (datetime.now(timezone.utc) + timedelta(days=10)).strftime("%Y-%m-%d")
     dt, warn = DateNormalizer.parse_date(future_date_str)
     assert warn == "SUSPECT_DATE_IN_FUTURE"
 
-    # 5. Pre-2000 Date Check
     dt, warn = DateNormalizer.parse_date("15/08/1995")
     assert warn == "SUSPECT_DATE_PRE_2000"
 
-    # 6. Unparseable string
     dt, warn = DateNormalizer.parse_date("not-a-valid-date")
     assert dt is None
     assert warn == "SUSPECT_DATE_UNPARSEABLE"
 
 
-# ---------------------------------------------------------------------------
-# Test 6: Bilingual Category Normalization
-# ---------------------------------------------------------------------------
 def test_6_bilingual_category_normalization():
-    # English terms
     cat, _ = CategoryNormalizer.normalize_category("street light dark street")
     assert cat == "streetlights"
 
@@ -205,7 +177,6 @@ def test_6_bilingual_category_normalization():
     cat, _ = CategoryNormalizer.normalize_category("transformer burst low voltage")
     assert cat == "electricity"
 
-    # Tamil terms
     cat, _ = CategoryNormalizer.normalize_category("குடிநீர் குழாய் உடைப்பு")
     assert cat == "water_supply"
 
@@ -215,15 +186,11 @@ def test_6_bilingual_category_normalization():
     cat, _ = CategoryNormalizer.normalize_category("அரசு பள்ளி மேற்கூரை சேதம்")
     assert cat == "education_infrastructure"
 
-    # Unknown term fallback
     cat, warn = CategoryNormalizer.normalize_category("Unprecedented random request")
     assert cat == "other_documented_civic_issues"
     assert warn == "AMBIGUOUS_CATEGORY"
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Department Normalization
-# ---------------------------------------------------------------------------
 def test_7_department_normalization():
     dept, _ = DepartmentNormalizer.normalize_department("Chennai Metro Water Board")
     assert dept == "DEPT_MAWS"
@@ -242,9 +209,6 @@ def test_7_department_normalization():
     assert warn == "AMBIGUOUS_DEPARTMENT"
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Duplicate Detection
-# ---------------------------------------------------------------------------
 def test_8_duplicate_detection():
     detector = GrievanceDuplicateDetector()
 
@@ -256,24 +220,17 @@ def test_8_duplicate_detection():
 
     c_hash = detector.compute_content_hash(source, sub_dt, cat, desc)
 
-    # First check: not duplicate
     assert detector.is_duplicate(source, ref, c_hash) is False
     detector.mark_seen(source, ref, c_hash)
 
-    # Second check with same reference: duplicate!
     assert detector.is_duplicate(source, ref, c_hash) is True
 
-    # Check with different reference but identical content hash: duplicate!
     assert detector.is_duplicate(source, "DIFFERENT-REF", c_hash) is True
 
-    # Check with completely different content: not duplicate
     c_hash_2 = detector.compute_content_hash(source, sub_dt, "water_supply", "Pipe broken")
     assert detector.is_duplicate(source, "NEW-REF", c_hash_2) is False
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Database ORM Conversion & Persistence
-# ---------------------------------------------------------------------------
 def test_9_database_orm_persistence(db_session):
     normalizer = GrievanceNormalizer()
     raw = MOCK_GCC_RECORDS[1]
@@ -285,7 +242,6 @@ def test_9_database_orm_persistence(db_session):
     )
     assert outcome == "VALID"
 
-    # Convert to ORM entity
     orm_entity = record.to_orm(is_test_fixture=True)
     assert isinstance(orm_entity, GrievanceRecord)
     assert orm_entity.grievance_id == record.grievance_id
@@ -293,11 +249,9 @@ def test_9_database_orm_persistence(db_session):
     assert orm_entity.status == "IN_PROGRESS"
     assert orm_entity.is_test_fixture is True
 
-    # Persist in DB
     db_session.add(orm_entity)
     db_session.commit()
 
-    # Query back
     saved = db_session.query(GrievanceRecord).filter_by(grievance_id=record.grievance_id).first()
     assert saved is not None
     assert saved.issue_category == IssueCategoryEnum.WASTE_MANAGEMENT
@@ -305,18 +259,13 @@ def test_9_database_orm_persistence(db_session):
     assert saved.submission_date.date() == record.submission_date.date()
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Batch Ingestion & Report Metrics
-# ---------------------------------------------------------------------------
 def test_10_batch_ingestion_and_report():
     normalizer = GrievanceNormalizer()
 
     batch_input = [
         MOCK_DARPG_RECORDS[0],
         MOCK_DARPG_RECORDS[1],
-        # Add duplicate of record 0
         MOCK_DARPG_RECORDS[0],
-        # Add defective record with missing date
         {"Registration Number": "INVALID-1", "Received Date": None, "Category": "roads"}
     ]
 

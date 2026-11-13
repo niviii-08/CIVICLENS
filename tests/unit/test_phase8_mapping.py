@@ -58,7 +58,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Seed categories
     for cat_data in MOCK_CATEGORIES:
         cat = IssueCategory(
             code=IssueCategoryEnum(cat_data["code"]),
@@ -69,7 +68,6 @@ def db_session():
         )
         session.add(cat)
 
-    # Seed departments
     for dept_data in MOCK_DEPARTMENTS:
         dept = CivicDepartment(
             code=dept_data["code"],
@@ -82,7 +80,6 @@ def db_session():
         )
         session.add(dept)
 
-    # Seed administrative areas
     for area_data in MOCK_AREAS:
         area = AdministrativeArea(
             area_code=area_data["area_code"],
@@ -101,9 +98,6 @@ def db_session():
     session.close()
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Administrative Area Code Resolution
-# ---------------------------------------------------------------------------
 def test_1_administrative_area_code_resolution():
     res_chennai = CivicGeographicMapper.resolve_by_code("ADM-TN-DIST-003-CHENNAI")
     assert res_chennai is not None
@@ -122,9 +116,6 @@ def test_1_administrative_area_code_resolution():
     assert res_ward.is_imprecise is False
 
 
-# ---------------------------------------------------------------------------
-# Test 2: Bilingual Tamil & English Text Matching
-# ---------------------------------------------------------------------------
 def test_2_bilingual_district_and_locality_text_matching():
     res_ta = CivicGeographicMapper.resolve_by_text(district_text="செங்கல்பட்டு")
     assert res_ta.area_code == "ADM-TN-DIST-002-CHENGALPATTU"
@@ -138,27 +129,18 @@ def test_2_bilingual_district_and_locality_text_matching():
     assert "ZONE-13" in res_zone_text.area_code
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Missing Location Safeguard
-# ---------------------------------------------------------------------------
 def test_3_missing_location_safeguard():
-    # Empty or generic text without location
     res_missing = CivicGeographicMapper.resolve_by_text(district_text="", locality_text="")
     assert res_missing.area_code == "ADM-TN-STATE"
     assert res_missing.administrative_level == AdministrativeLevel.STATE
     assert res_missing.is_imprecise is True
     assert res_missing.warning_flag == "MISSING_LOCATION"
     assert res_missing.confidence < 0.50
-    # Crucial safeguard: Never invents a ward or district!
     assert "WARD" not in res_missing.area_code
     assert "DIST" not in res_missing.area_code
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Historical Boundary Reorganizations
-# ---------------------------------------------------------------------------
 def test_4_historical_boundary_reorganizations():
-    # Tambaram was in Kancheepuram prior to Nov 2019, now in Chengalpattu
     res_tambaram = CivicGeographicMapper.resolve_by_text(
         district_text="Kancheepuram",
         locality_text="Tambaram Sanatorium bus stand road"
@@ -168,17 +150,12 @@ def test_4_historical_boundary_reorganizations():
     assert res_tambaram.historical_context is not None
     assert "Kancheepuram" in res_tambaram.historical_context
 
-    # Arakkonam was in Vellore prior to Nov 2019, now in Ranipet
     res_arakkonam = CivicGeographicMapper.resolve_by_text(locality_text="Arakkonam railway station road")
     assert res_arakkonam.area_code == "ADM-TN-DIST-021-RANIPET"
     assert res_arakkonam.warning_flag == "HISTORICAL_BOUNDARY_SPLIT"
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Ambiguous Place Name Disambiguation
-# ---------------------------------------------------------------------------
 def test_5_ambiguous_place_name_disambiguation():
-    # 'Anna Nagar' without district context: Refuse to assume Chennai!
     res_ambiguous = CivicGeographicMapper.resolve_by_text(locality_text="Water leakage on 2nd avenue, Anna Nagar")
     assert res_ambiguous.area_code == "ADM-TN-STATE"
     assert res_ambiguous.warning_flag == "AMBIGUOUS_PLACE_NAME"
@@ -186,18 +163,14 @@ def test_5_ambiguous_place_name_disambiguation():
     assert len(res_ambiguous.candidate_areas) > 1
     assert "Madurai" in str(res_ambiguous.candidate_areas)
 
-    # 'Anna Nagar' WITH explicit Madurai district: Resolves cleanly to Madurai!
     res_disambiguated = CivicGeographicMapper.resolve_by_text(
         district_text="Madurai",
         locality_text="Anna Nagar, Madurai near bus stand"
     )
     assert res_disambiguated.area_code == "ADM-TN-DIST-013-MADURAI"
-    assert res_disambiguated.warning_flag == "COARSE_GEOGRAPHY"  # Mapped to district, not ambiguous
+    assert res_disambiguated.warning_flag == "COARSE_GEOGRAPHY"
 
 
-# ---------------------------------------------------------------------------
-# Test 6: GPS Coordinate Geodesic Resolution
-# ---------------------------------------------------------------------------
 def test_6_gps_coordinates_spatial_resolution():
     res_chn = CivicGeographicMapper.resolve_by_coordinates(lat=13.0827, lon=80.2707)
     assert res_chn.area_code == "ADM-TN-DIST-003-CHENNAI"
@@ -206,11 +179,7 @@ def test_6_gps_coordinates_spatial_resolution():
     assert res_mdu.area_code == "ADM-TN-DIST-013-MADURAI"
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Department Jurisdiction Routing
-# ---------------------------------------------------------------------------
 def test_7_department_jurisdiction_routing():
-    # Electricity statewide -> TANGEDCO
     res_elec = CivicDepartmentResolver.resolve_jurisdiction(
         category_code=IssueCategoryEnum.ELECTRICITY.value,
         area_code="ADM-TN-DIST-013-MADURAI"
@@ -220,20 +189,15 @@ def test_7_department_jurisdiction_routing():
     assert res_elec.department_status == "RESOLVED"
     assert "TANGEDCO" in (res_elec.responsible_local_authority or "")
 
-    # Patta delay statewide -> Revenue Department
     res_patta = CivicDepartmentResolver.resolve_jurisdiction(
         category_code=IssueCategoryEnum.GOVERNMENT_SERVICE_DELAYS.value,
         area_code="ADM-TN-DIST-028-TIRUCHIRAPPALLI"
     )
     assert res_patta.department_code == "DEPT_REVENUE"
-    assert res_patta.sla_hours == 360  # 15 days
+    assert res_patta.sla_hours == 360
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Shared Department Responsibility
-# ---------------------------------------------------------------------------
 def test_8_shared_department_responsibility():
-    # State Highway road passing within GCC limits
     res_shared = CivicDepartmentResolver.resolve_jurisdiction(
         category_code=IssueCategoryEnum.ROADS.value,
         area_code="ADM-TN-GCC-WARD-174",
@@ -246,11 +210,7 @@ def test_8_shared_department_responsibility():
     assert res_shared.responsible_local_authority is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Unclear / Disputed Department Responsibility
-# ---------------------------------------------------------------------------
 def test_9_unclear_or_disputed_department_responsibility():
-    # Disputed boundary or unclassified issue
     res_unclear = CivicDepartmentResolver.resolve_jurisdiction(
         category_code=IssueCategoryEnum.OTHER_CIVIC_ISSUES.value,
         description_text="Boundary dispute and disputed encroachment near public canal."
@@ -262,13 +222,9 @@ def test_9_unclear_or_disputed_department_responsibility():
     assert res_unclear.review_status == "PENDING_HUMAN_REVIEW"
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Citizen's Charter SLA Deadline Computation
-# ---------------------------------------------------------------------------
 def test_10_citizens_charter_sla_deadline_computation():
     sub_date = datetime(2024, 3, 1, 10, 0, tzinfo=timezone.utc)
 
-    # Streetlight (24-hour turnaround)
     res_light = CivicDepartmentResolver.resolve_jurisdiction(
         category_code=IssueCategoryEnum.STREETLIGHTS.value,
         area_code="ADM-TN-GCC-WARD-174",
@@ -277,7 +233,6 @@ def test_10_citizens_charter_sla_deadline_computation():
     assert res_light.sla_hours == 24
     assert res_light.target_resolution_date == sub_date + timedelta(hours=24)
 
-    # Pothole repair (48-hour turnaround)
     res_pothole = CivicDepartmentResolver.resolve_jurisdiction(
         category_code=IssueCategoryEnum.ROADS.value,
         area_code="ADM-TN-GCC-WARD-174",
@@ -287,9 +242,6 @@ def test_10_citizens_charter_sla_deadline_computation():
     assert res_pothole.target_resolution_date == sub_date + timedelta(hours=48)
 
 
-# ---------------------------------------------------------------------------
-# Test 11: Canonical CivicMappingRecord Serialization
-# ---------------------------------------------------------------------------
 def test_11_canonical_mapping_record_serialization(db_session):
     cat_road = db_session.query(IssueCategory).filter_by(code=IssueCategoryEnum.ROADS).first()
 
@@ -323,7 +275,6 @@ def test_11_canonical_mapping_record_serialization(db_session):
     )
     db_session.commit()
 
-    # All 8 mandatory fields from Phase 8.5 must be populated
     assert isinstance(mapping_record, CivicMappingRecord)
     assert mapping_record.issue_id == issue.id
     assert mapping_record.administrative_area_id == "ADM-TN-GCC-WARD-174"
@@ -334,7 +285,6 @@ def test_11_canonical_mapping_record_serialization(db_session):
     assert mapping_record.confidence >= 0.90
     assert mapping_record.review_status == "AUTOMATED_VERIFIED"
 
-    # Serializes to dictionary properly
     rec_dict = mapping_record.to_dict()
     assert rec_dict["issue_id"] == issue.id
     assert rec_dict["administrative_area_id"] == "ADM-TN-GCC-WARD-174"
@@ -342,9 +292,6 @@ def test_11_canonical_mapping_record_serialization(db_session):
     assert rec_dict["department_id"] == "DEPT_GCC"
 
 
-# ---------------------------------------------------------------------------
-# Test 12: Unified Database Entity Enrichment Integration
-# ---------------------------------------------------------------------------
 def test_12_unified_database_entity_enrichment_integration(db_session):
     cat_waste = db_session.query(IssueCategory).filter_by(code=IssueCategoryEnum.WASTE_MANAGEMENT).first()
 
@@ -379,5 +326,5 @@ def test_12_unified_database_entity_enrichment_integration(db_session):
 
     assert issue.department_id is not None
     assert issue.target_resolution_date is not None
-    assert issue.target_resolution_date.replace(tzinfo=timezone.utc) == datetime(2024, 3, 6, 8, 0, tzinfo=timezone.utc)  # 24h SLA
+    assert issue.target_resolution_date.replace(tzinfo=timezone.utc) == datetime(2024, 3, 6, 8, 0, tzinfo=timezone.utc)
     assert dept_res.department_code == "DEPT_GCC"

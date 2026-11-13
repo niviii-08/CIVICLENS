@@ -74,7 +74,6 @@ def api_test_db():
 @pytest.fixture
 def seed_graph_dataset(api_test_db):
     """Seed comprehensive cross-phase nodes, edges, proposals, conflicts, and records."""
-    # 1. Canonical Entity & Mappings
     canonical_dept = CanonicalEntity(
         entity_id="DEPT-MAWS-TN",
         canonical_name_en="Municipal Administration and Water Supply Department",
@@ -105,7 +104,6 @@ def seed_graph_dataset(api_test_db):
     )
     api_test_db.add(src_map)
 
-    # 2. Graph Nodes across Phases
     node_dept = GraphStorageService.create_or_get_node(
         api_test_db,
         node_id="NODE:DEPT:MAWS",
@@ -158,7 +156,6 @@ def seed_graph_dataset(api_test_db):
         is_test_fixture=True,
     )
 
-    # 3. Evidence Edges
     edge_implements = GraphStorageService.add_evidence_edge(
         api_test_db,
         source_node_id=node_dept.node_id,
@@ -189,7 +186,6 @@ def seed_graph_dataset(api_test_db):
         is_test_fixture=True,
     )
 
-    # Disputed Edge
     edge_disputed = GraphStorageService.add_evidence_edge(
         api_test_db,
         source_node_id=node_claim.node_id,
@@ -204,7 +200,6 @@ def seed_graph_dataset(api_test_db):
     )
     edge_disputed.provenance_status = GraphProvenanceStatus.DISPUTED
 
-    # 4. Candidate Proposal (Unresolved)
     proposal_unresolved = CandidateRelationshipProposal(
         proposal_id="PROP-CANDIDATE-001",
         source_node_id=node_scheme.node_id,
@@ -219,7 +214,6 @@ def seed_graph_dataset(api_test_db):
     )
     api_test_db.add(proposal_unresolved)
 
-    # 5. Persistent Civic Conflict Record
     conflict_rec = CivicConflictRecord(
         conflict_id="CONF-DESAL-OUTPUT-01",
         conflict_type=ConflictTypeEnum.CONTRADICTORY_CLAIM_EVIDENCE,
@@ -236,7 +230,6 @@ def seed_graph_dataset(api_test_db):
     )
     api_test_db.add(conflict_rec)
 
-    # 6. Original Phase Records for Cross-Phase Resolution
     manifesto = Manifesto(
         manifesto_id="MAN-DMK-2021",
         party="DMK",
@@ -302,7 +295,6 @@ def seed_graph_dataset(api_test_db):
 @pytest.fixture
 def test_client(api_test_db, monkeypatch):
     """Configures Flask test client with SessionLocal pointing to our in-memory SQLite DB."""
-    # Prevent db.close() in request handler from closing the shared api_test_db
     monkeypatch.setattr(api_test_db, "close", lambda: None)
     monkeypatch.setattr(api_graph_module, "SessionLocal", lambda: api_test_db)
 
@@ -310,12 +302,8 @@ def test_client(api_test_db, monkeypatch):
     return app.test_client()
 
 
-# ===========================================================================
-# 1. Searching Canonical Entities across Phases 1–8
-# ===========================================================================
 def test_1_search_canonical_entities_with_filters_and_pagination(test_client, seed_graph_dataset):
     """Validates Operation 1: Search canonical entities by query, type, phase, with pagination."""
-    # 1. Search by text query
     resp = test_client.get("/api/graph/entities/search?q=Nemmeli&limit=10&offset=0")
     assert resp.status_code == 200
     data = resp.get_json()["data"]
@@ -324,53 +312,40 @@ def test_1_search_canonical_entities_with_filters_and_pagination(test_client, se
     assert data["limit"] == 10
     assert data["offset"] == 0
 
-    # 2. Filter by entity_type
     resp_type = test_client.get("/api/graph/entities/search?entity_type=GOVERNMENT_DEPARTMENT")
     assert resp_type.status_code == 200
     data_t = resp_type.get_json()["data"]
     assert any(item["entity_type"] == "GOVERNMENT_DEPARTMENT" for item in data_t["items"])
 
-    # 3. Filter by source_phase
     resp_phase = test_client.get("/api/graph/entities/search?source_phase=PHASE_3")
     assert resp_phase.status_code == 200
     data_p = resp_phase.get_json()["data"]
     assert any(item["source_phase"] == "PHASE_3" for item in data_p["items"])
 
 
-# ===========================================================================
-# 2. Retrieving an Entity and its Source Records
-# ===========================================================================
 def test_2_retrieve_entity_profile_and_source_mappings(test_client, seed_graph_dataset):
     """Validates Operation 2: Retrieve entity node, canonical profile, aliases, and source mappings."""
     resp = test_client.get("/api/graph/nodes/NODE:DEPT:MAWS")
     assert resp.status_code == 200
     data = resp.get_json()["data"]
 
-    # Verify node details
     assert data["node"]["node_id"] == "NODE:DEPT:MAWS"
     assert data["node"]["canonical_id"] == "DEPT-MAWS-TN"
 
-    # Verify canonical registry profile
     assert data["canonical_profile"] is not None
     assert data["canonical_profile"]["canonical_name"] == "Municipal Administration and Water Supply Department"
     assert "நகராட்சி" in data["canonical_profile"]["tamil_name"]
 
-    # Verify aliases and source mappings
     assert any(a["alias_name"] == "MAWS" for a in data["aliases"])
     assert any(sm["source_system"] == "TNBudgetPortal" for sm in data["source_mappings"])
 
-    # Verify edge statistics
     assert "edge_statistics" in data
     assert data["edge_statistics"]["outbound_count"] >= 1
 
-    # Verify 404 for nonexistent node
     resp_404 = test_client.get("/api/graph/nodes/NODE:NONEXISTENT:999")
     assert resp_404.status_code == 404
 
 
-# ===========================================================================
-# 3. Retrieving Directly Connected Entities
-# ===========================================================================
 def test_3_retrieve_directly_connected_neighbor_entities(test_client, seed_graph_dataset):
     """Validates Operation 3: Retrieve connected entities with relationship metadata."""
     resp = test_client.get("/api/graph/nodes/NODE:DEPT:MAWS/neighbors?direction=outgoing")
@@ -390,12 +365,8 @@ def test_3_retrieve_directly_connected_neighbor_entities(test_client, seed_graph
     assert conn["neighbor_node"]["entity_type"] == "BUDGET_SCHEME"
 
 
-# ===========================================================================
-# 4. Traversing Evidence Paths
-# ===========================================================================
 def test_4_traverse_evidence_paths_and_investigation_walks(test_client, seed_graph_dataset):
     """Validates Operation 4: Depth-bounded traversal and structured investigation walks."""
-    # 1. POST /api/graph/traverse
     payload = {
         "start_node_id": "NODE:DEPT:MAWS",
         "direction": "outgoing",
@@ -408,11 +379,9 @@ def test_4_traverse_evidence_paths_and_investigation_walks(test_client, seed_gra
     assert "paths" in data_trav
     assert len(data_trav["paths"]) >= 1
 
-    # Input validation: start_node_id required
     bad_resp = test_client.post("/api/graph/traverse", json={})
     assert bad_resp.status_code == 400
 
-    # 2. GET /api/graph/investigate/<mode>
     resp_inv = test_client.get("/api/graph/investigate/promise?node_id=NODE:PROMISE:WATER_SUPPLY")
     assert resp_inv.status_code == 200
     data_inv = resp_inv.get_json()["data"]
@@ -420,9 +389,6 @@ def test_4_traverse_evidence_paths_and_investigation_walks(test_client, seed_gra
     assert "paths" in data_inv
 
 
-# ===========================================================================
-# 5. Filtering by Relationship Type and Source
-# ===========================================================================
 def test_5_filter_edges_by_relationship_and_source_document(test_client, seed_graph_dataset):
     """Validates Operation 5: Edge filtering by relationship_type, source document, and review status."""
     resp = test_client.get("/api/graph/edges?relationship_type=implements&limit=10")
@@ -438,9 +404,6 @@ def test_5_filter_edges_by_relationship_and_source_document(test_client, seed_gr
     assert data_doc["edges"][0]["source_document_id"] == "DOC-GO-TN-MAWS-2023-42"
 
 
-# ===========================================================================
-# 6. Retrieving Evidence for an Individual Relationship
-# ===========================================================================
 def test_6_retrieve_individual_edge_evidence_and_scorecard(test_client, seed_graph_dataset):
     """Validates Operation 6: Complete edge details, source/target, and 9-factor scorecard."""
     edge_id = seed_graph_dataset["edge_implements"].edge_id
@@ -456,14 +419,10 @@ def test_6_retrieve_individual_edge_evidence_and_scorecard(test_client, seed_gra
     assert data["quality_scorecard"]["composite_score"] >= 0.80
     assert "source_authenticity" in data["quality_scorecard"]["factor_breakdown"]
 
-    # Verify 404 for nonexistent edge
     resp_404 = test_client.get("/api/graph/edges/EDGE:NONEXISTENT:999")
     assert resp_404.status_code == 404
 
 
-# ===========================================================================
-# 7. Listing Unresolved Relationship Candidates
-# ===========================================================================
 def test_7_list_unresolved_relationship_candidates(test_client, seed_graph_dataset):
     """Validates Operation 7: Listing unreviewed relationship candidate proposals."""
     resp = test_client.get("/api/graph/proposals/unresolved")
@@ -479,9 +438,6 @@ def test_7_list_unresolved_relationship_candidates(test_client, seed_graph_datas
     assert prop["confidence_score"] == 0.74
 
 
-# ===========================================================================
-# 8. Retrieving Contradictory or Disputed Evidence
-# ===========================================================================
 def test_8_retrieve_contradictory_and_disputed_evidence(test_client, seed_graph_dataset):
     """Validates Operation 8: Retrieving persistent conflicts and disputed evidence edges."""
     resp = test_client.get("/api/graph/conflicts?node_id=NODE:CLAIM:DESAL_OUTPUT&conflict_type=CONTRADICTORY_CLAIM_EVIDENCE")
@@ -496,7 +452,6 @@ def test_8_retrieve_contradictory_and_disputed_evidence(test_client, seed_graph_
     assert "epistemic_weight_comparison" in conf
     assert "statutory_weight" in conf["epistemic_weight_comparison"]
 
-    # Verify disputed edges returned
     resp_disp = test_client.get("/api/graph/disputes")
     assert resp_disp.status_code == 200
     data_disp = resp_disp.get_json()["data"]
@@ -505,12 +460,8 @@ def test_8_retrieve_contradictory_and_disputed_evidence(test_client, seed_graph_
     assert data_disp["disputed_edges"][0]["provenance_status"] == "DISPUTED"
 
 
-# ===========================================================================
-# 9. Retrieving Graph Provenance and Review History
-# ===========================================================================
 def test_9_retrieve_graph_provenance_and_review_history(test_client, seed_graph_dataset, api_test_db):
     """Validates Operation 9: Immutable review ledger across proposals and entity mutations."""
-    # Create an entity audit record to simulate merge/split audit history
     audit_rec = EntityAuditRecord(
         audit_id="AUDIT-DEPT-001",
         primary_entity_id="DEPT-MAWS-TN",
@@ -534,12 +485,8 @@ def test_9_retrieve_graph_provenance_and_review_history(test_client, seed_graph_
     assert "Gazette No. 104" in item["notes"]
 
 
-# ===========================================================================
-# 10. Viewing Relevant Records from the Original Phase Modules
-# ===========================================================================
 def test_10_view_original_phase_records_without_data_duplication(test_client, seed_graph_dataset):
     """Validates Operation 10: Dynamic cross-phase record resolution across Phase 1–8 tables."""
-    # 1. Phase 3: Political Promise
     resp_prom = test_client.get("/api/graph/nodes/NODE:PROMISE:WATER_SUPPLY/original-record")
     assert resp_prom.status_code == 200
     data_prom = resp_prom.get_json()["data"]
@@ -547,7 +494,6 @@ def test_10_view_original_phase_records_without_data_duplication(test_client, se
     assert data_prom["module_data"]["promise_id"] == "PROM-DMK-2021-WATER"
     assert data_prom["module_data"]["classification"] == "water_infrastructure"
 
-    # 2. Phase 6: Public Claim
     resp_claim = test_client.get("/api/graph/nodes/NODE:CLAIM:DESAL_OUTPUT/original-record")
     assert resp_claim.status_code == 200
     data_claim = resp_claim.get_json()["data"]
@@ -555,7 +501,6 @@ def test_10_view_original_phase_records_without_data_duplication(test_client, se
     assert data_claim["module_data"]["claim_id"] == "CLAIM-DESAL-OUTPUT-2024"
     assert data_claim["module_data"]["status"] == "VERIFIED"
 
-    # 3. Phase 7: Civic Issue
     resp_issue = test_client.get("/api/graph/nodes/NODE:ISSUE:DRAIN_OVERFLOW/original-record")
     assert resp_issue.status_code == 200
     data_issue = resp_issue.get_json()["data"]
@@ -563,33 +508,25 @@ def test_10_view_original_phase_records_without_data_duplication(test_client, se
     assert data_issue["module_data"]["issue_code"] == "ISSUE-GCC-2024-4401"
 
 
-# ===========================================================================
-# 11. Security & Privacy: Automated PII Scrubbing and Internal Path Sanitization
-# ===========================================================================
 def test_11_privacy_and_security_sanitization(test_client, seed_graph_dataset):
     """
     Validates that:
     1. Phone numbers, emails, and citizen salutations are redacted from grievance text.
     2. Local server filesystem paths (e.g. C:\\CIVCLENS\\logs\\...) are redacted.
     """
-    # 1. Public retrieval of civic issue record
     resp = test_client.get("/api/graph/nodes/NODE:ISSUE:DRAIN_OVERFLOW/original-record")
     assert resp.status_code == 200
     mod_data = resp.get_json()["data"]["module_data"]
 
     desc = mod_data["description"]
-    # Phone number must be redacted
     assert "+91-9840123456" not in desc
     assert "[PHONE REDACTED]" in desc
 
-    # Email must be redacted
     assert "citizen@example.com" not in desc
     assert "[EMAIL REDACTED]" in desc
 
-    # Citizen name with salutation must be scrubbed
     assert "Thiru K. Murugesan" not in desc
 
-    # 2. Node properties path scrubbing
     resp_node = test_client.get("/api/graph/nodes/NODE:ISSUE:DRAIN_OVERFLOW")
     assert resp_node.status_code == 200
     props = resp_node.get_json()["data"]["node"]["properties"]
@@ -597,9 +534,6 @@ def test_11_privacy_and_security_sanitization(test_client, seed_graph_dataset):
     assert "[INTERNAL_PATH_REDACTED]" in props.get("file_path", "")
 
 
-# ===========================================================================
-# 12. Authorization: RBAC Enforcement on Review Mutations
-# ===========================================================================
 def test_12_role_based_authorization_for_review_mutations(test_client, seed_graph_dataset):
     """
     Validates RBAC enforcement:
@@ -608,12 +542,10 @@ def test_12_role_based_authorization_for_review_mutations(test_client, seed_grap
     """
     prop_id = seed_graph_dataset["proposal_unresolved"].proposal_id
 
-    # 1. Reject without authorization header
     resp_no_auth = test_client.post(f"/api/graph/proposals/{prop_id}/confirm", json={"reviewer_id": "ANON"})
     assert resp_no_auth.status_code == 403
     assert "Access Denied" in resp_no_auth.get_json()["message"]
 
-    # 2. Reject with unauthorized role
     resp_bad_role = test_client.post(
         f"/api/graph/proposals/{prop_id}/confirm",
         headers={"X-Reviewer-Role": "CITIZEN_GUEST"},
@@ -622,7 +554,6 @@ def test_12_role_based_authorization_for_review_mutations(test_client, seed_grap
     assert resp_bad_role.status_code == 403
     assert "Access Denied" in resp_bad_role.get_json()["message"]
 
-    # 3. Succeed with authorized reviewer role: LEAD_REVIEWER
     resp_auth = test_client.post(
         f"/api/graph/proposals/{prop_id}/confirm",
         headers={"X-Reviewer-Role": "LEAD_REVIEWER"},

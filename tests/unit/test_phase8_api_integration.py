@@ -64,7 +64,6 @@ def app_and_db(monkeypatch):
     Base.metadata.create_all(bind=engine)
     TestingSessionLocal = sessionmaker(bind=engine)
 
-    # Monkeypatch SessionLocal
     import backend.database.session
     import backend.api.civic
     monkeypatch.setattr(backend.database.session, "SessionLocal", TestingSessionLocal)
@@ -72,7 +71,6 @@ def app_and_db(monkeypatch):
 
     session = TestingSessionLocal()
 
-    # Prepopulate Phase 8 Entities
     cat_roads = IssueCategory(
         code=IssueCategoryEnum.ROADS,
         name_en="Roads & Footpaths",
@@ -209,8 +207,6 @@ def app_and_db(monkeypatch):
     )
     session.add(event1)
 
-    # Prepopulate Cross-Phase Mock Entities (Phases 1-7)
-    # Phase 2: Historical Scheme
     dept_b = BudgetDepartment(id=1, name="Highways and Minor Ports TN", code="DEMAND_15")
     hscheme = HistoricalScheme(
         id=201,
@@ -221,7 +217,6 @@ def app_and_db(monkeypatch):
     )
     session.add_all([dept_b, hscheme])
 
-    # Phase 3: Political Promise
     man = Manifesto(
         manifesto_id="MAN-2021-DMK",
         party="DMK",
@@ -237,7 +232,6 @@ def app_and_db(monkeypatch):
     )
     session.add_all([man, promise])
 
-    # Phase 4: News Article
     nsrc = NewsSource(source_id="NS-TH", source_name="The Hindu", domain="thehindu.com", language="en")
     art = Article(
         article_id="ART-2024-ROADS-01",
@@ -250,7 +244,6 @@ def app_and_db(monkeypatch):
     )
     session.add_all([nsrc, art])
 
-    # Phase 5: Financial Document
     findoc = FinancialDocument(
         document_id="FIN-PWD-2023-01",
         source_id="TN_BUDGET_PORTAL",
@@ -261,7 +254,6 @@ def app_and_db(monkeypatch):
     )
     session.add(findoc)
 
-    # Phase 6: Representative & Constituency
     con = Constituency(
         constituency_id="CON-TN-THOUSAND-LIGHTS",
         official_name="Thousand Lights",
@@ -279,7 +271,6 @@ def app_and_db(monkeypatch):
     )
     session.add_all([con, rep])
 
-    # Phase 7: Claim
     claim = Claim(
         claim_id="CLM-2024-ROADS-001",
         original_text="Over 95% of pothole complaints in Chennai are resolved within 48 hours.",
@@ -301,16 +292,12 @@ def app_and_db(monkeypatch):
     session.close()
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Model Serialization (to_dict) & Citizen Privacy Safeguards
-# ---------------------------------------------------------------------------
 def test_model_to_dict_and_privacy_safeguards(app_and_db):
     _, session, issue = app_and_db
 
     grievance = session.query(GrievanceRecord).first()
     g_dict = grievance.to_dict()
 
-    # Privacy check: no citizen name, phone, or address exposed
     assert "citizen_name" not in g_dict
     assert "phone" not in g_dict
     assert "aadhaar" not in g_dict
@@ -324,47 +311,35 @@ def test_model_to_dict_and_privacy_safeguards(app_and_db):
     assert issue_dict["repeat_count"] == 3
 
 
-# ---------------------------------------------------------------------------
-# Test 2: Issue Search & Filter API (GET /api/civic/issues)
-# ---------------------------------------------------------------------------
 def test_search_civic_issues_filters(app_and_db):
     client, _, _ = app_and_db
 
-    # 1. Search all issues
     res = client.get("/api/civic/issues")
     assert res.status_code == 200
     data = res.get_json()["data"]
     assert len(data["issues"]) >= 1
     assert data["pagination"]["total"] >= 1
 
-    # 2. Filter by keyword match
     res_kw = client.get("/api/civic/issues?q=Anna+Salai")
     assert res_kw.status_code == 200
     assert len(res_kw.get_json()["data"]["issues"]) == 1
 
-    # 3. Filter by keyword mismatch
     res_nomatch = client.get("/api/civic/issues?q=Coimbatore+Expressway")
     assert res_nomatch.status_code == 200
     assert len(res_nomatch.get_json()["data"]["issues"]) == 0
 
-    # 4. Filter by category
     res_cat = client.get("/api/civic/issues?category=roads")
     assert res_cat.status_code == 200
     assert len(res_cat.get_json()["data"]["issues"]) == 1
 
-    # 5. Filter by status
     res_stat = client.get("/api/civic/issues?status=open")
     assert res_stat.status_code == 200
     assert len(res_stat.get_json()["data"]["issues"]) == 1
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Issue Details API (GET /api/civic/issues/<issue_id>)
-# ---------------------------------------------------------------------------
 def test_get_civic_issue_details(app_and_db):
     client, _, issue = app_and_db
 
-    # Get by issue_code
     res = client.get(f"/api/civic/issues/{issue.issue_code}")
     assert res.status_code == 200
     data = res.get_json()["data"]
@@ -376,14 +351,10 @@ def test_get_civic_issue_details(app_and_db):
     assert data["responses_count"] == 1
     assert data["grievance_records_count"] == 1
 
-    # Non-existent issue returns 404
     res_404 = client.get("/api/civic/issues/NONEXISTENT-999")
     assert res_404.status_code == 404
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Categories & Service Standards API (GET /api/civic/categories)
-# ---------------------------------------------------------------------------
 def test_get_issue_categories(app_and_db):
     client, _, _ = app_and_db
 
@@ -398,9 +369,6 @@ def test_get_issue_categories(app_and_db):
     assert road_cat["service_standards"][0]["stipulated_time_hours"] == 48
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Administrative Areas API (GET /api/civic/areas)
-# ---------------------------------------------------------------------------
 def test_get_administrative_areas(app_and_db):
     client, _, _ = app_and_db
 
@@ -414,19 +382,14 @@ def test_get_administrative_areas(app_and_db):
     assert chennai["active_issues_count"] >= 1
 
 
-# ---------------------------------------------------------------------------
-# Test 6: Departments & Performance Summary (GET /api/civic/departments/...)
-# ---------------------------------------------------------------------------
 def test_get_department_and_summary(app_and_db):
     client, _, _ = app_and_db
 
-    # 1. Listing
     res_list = client.get("/api/civic/departments")
     assert res_list.status_code == 200
     depts = res_list.get_json()["data"]["departments"]
     assert len(depts) >= 2
 
-    # 2. Performance Summary
     res_sum = client.get("/api/civic/departments/DEPT-MAWS-001/summary")
     assert res_sum.status_code == 200
     summary = res_sum.get_json()["data"]
@@ -437,9 +400,6 @@ def test_get_department_and_summary(app_and_db):
     assert summary["sla_compliance_percentage"] == 100.0
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Response History API (GET /api/civic/issues/<issue_id>/responses)
-# ---------------------------------------------------------------------------
 def test_get_issue_responses_history(app_and_db):
     client, _, issue = app_and_db
 
@@ -453,9 +413,6 @@ def test_get_issue_responses_history(app_and_db):
     assert data["events"][0]["event_type"] == "CREATED"
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Resolution Evidence API (GET /api/civic/issues/<issue_id>/evidence)
-# ---------------------------------------------------------------------------
 def test_get_issue_resolution_evidence(app_and_db):
     client, _, issue = app_and_db
 
@@ -468,9 +425,6 @@ def test_get_issue_resolution_evidence(app_and_db):
     assert data["evidences"][0]["is_verified"] is True
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Recurring Issue Clusters (GET /api/civic/clusters)
-# ---------------------------------------------------------------------------
 def test_get_recurring_clusters(app_and_db):
     client, _, _ = app_and_db
 
@@ -482,9 +436,6 @@ def test_get_recurring_clusters(app_and_db):
     assert "caveats" in data
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Trend Analytics API (GET /api/civic/analytics/trends)
-# ---------------------------------------------------------------------------
 def test_get_trend_analytics(app_and_db):
     client, _, _ = app_and_db
 
@@ -498,9 +449,6 @@ def test_get_trend_analytics(app_and_db):
     assert "COMPLAINTS DO NOT EQUAL PREVALENCE" in data["general_disclaimer"]
 
 
-# ---------------------------------------------------------------------------
-# Test 11: Source Documents API (GET /api/civic/source-documents)
-# ---------------------------------------------------------------------------
 def test_get_source_documents(app_and_db):
     client, _, issue = app_and_db
 
@@ -513,27 +461,21 @@ def test_get_source_documents(app_and_db):
     assert len(res_issue.get_json()["data"]["source_documents"]) == 1
 
 
-# ---------------------------------------------------------------------------
-# Test 12: Cross-Phase Link Creation & Strict Anti-Causality Guard
-# ---------------------------------------------------------------------------
 def test_cross_phase_link_creation_and_anti_causality_guard(app_and_db):
     client, _, issue = app_and_db
 
-    # 1. Anti-causality guard test:
-    # Attempting to link merely because of shared geographic area must fail with 400
     bad_payload = {
         "target_phase": "PHASE_3_PROMISE",
         "entity_type": "POLITICAL_PROMISE",
         "entity_id": "PRM-2021-DMK-ROAD-01",
         "relationship_nature": "promised_remedy",
-        "matching_method": "same_area",  # FORBIDDEN METHOD
+        "matching_method": "same_area",
         "provenance_summary": "Both pertain to Chennai.",
     }
     res_bad = client.post(f"/api/civic/issues/{issue.issue_code}/cross-phase-link", json=bad_payload)
     assert res_bad.status_code == 400
     assert "Cannot create cross-phase links merely because records share a geographic area" in res_bad.get_json()["message"]
 
-    # 2. Legitimate link with documented tender reference / constituency mapping succeeds
     good_payload = {
         "target_phase": "PHASE_1_2_BUDGET_SCHEME",
         "entity_type": "HISTORICAL_SCHEME",
@@ -551,14 +493,9 @@ def test_cross_phase_link_creation_and_anti_causality_guard(app_and_db):
     assert link_data["entity_id"] == "201"
 
 
-# ---------------------------------------------------------------------------
-# Test 13: Cross-Phase Entity Resolution (GET /api/civic/issues/<issue_id>/cross-phase)
-# ---------------------------------------------------------------------------
 def test_cross_phase_entity_resolution(app_and_db):
     client, session, issue = app_and_db
 
-    # Add cross-phase relationships connecting issue to all earlier phases:
-    # Phase 2 Scheme, Phase 3 Promise, Phase 4 News, Phase 5 Funding, Phase 6 Rep, Phase 7 Claim
     links = [
         CivicCrossPhaseLink(
             link_id="CPL-TEST-001",
@@ -637,26 +574,20 @@ def test_cross_phase_entity_resolution(app_and_db):
     assert data["cross_phase_links_count"] == 6
     resolved = data["cross_phase_links"]
 
-    # Verify resolution of Phase 2 Historical Scheme
     hs_link = [l for l in resolved if l["target_phase"] == "PHASE_1_2_BUDGET_SCHEME"][0]
     assert hs_link["resolved_entity"]["scheme_name"] == "Chief Minister Road Development Programme (CMRDP)"
 
-    # Verify resolution of Phase 3 Promise
     p_link = [l for l in resolved if l["target_phase"] == "PHASE_3_PROMISE"][0]
     assert p_link["resolved_entity"]["promise_id"] == "PRM-2021-DMK-ROAD-01"
 
-    # Verify resolution of Phase 4 News
     news_link = [l for l in resolved if l["target_phase"] == "PHASE_4_NEWS"][0]
     assert "Corporation takes up urgent patchwork" in news_link["resolved_entity"]["title"]
 
-    # Verify resolution of Phase 5 Financial Document
     fin_link = [l for l in resolved if l["target_phase"] == "PHASE_5_FUNDING"][0]
     assert fin_link["resolved_entity"]["document_id"] == "FIN-PWD-2023-01"
 
-    # Verify resolution of Phase 6 Representative
     rep_link = [l for l in resolved if l["target_phase"] == "PHASE_6_REPRESENTATIVE"][0]
     assert rep_link["resolved_entity"]["official_name"] == "Dr. Ezhilan Naganathan"
 
-    # Verify resolution of Phase 7 Claim
     claim_link = [l for l in resolved if l["target_phase"] == "PHASE_7_CLAIM"][0]
     assert claim_link["resolved_entity"]["claim_id"] == "CLM-2024-ROADS-001"

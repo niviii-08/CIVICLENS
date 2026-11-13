@@ -63,8 +63,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Prepopulate Cross-Phase Mock Entities from Phases 2-6
-    # Phase 2: Historical Scheme
     dept = BudgetDepartment(id=1, name="Finance Department TN", code="DEMAND_01")
     bscheme = BudgetScheme(id=1, department_id=1, name="Kalaignar Magalir Urimai Thittam")
     hscheme = HistoricalScheme(
@@ -76,7 +74,6 @@ def db_session():
     )
     session.add_all([dept, bscheme, hscheme])
 
-    # Phase 3: Political Promise
     manifesto = Manifesto(
         manifesto_id="MAN-2021-DMK",
         party="DMK",
@@ -92,7 +89,6 @@ def db_session():
     )
     session.add_all([manifesto, promise])
 
-    # Phase 4: News Article
     news_src = NewsSource(
         source_id="NS-THE-HINDU",
         source_name="The Hindu Tamil",
@@ -110,7 +106,6 @@ def db_session():
     )
     session.add_all([news_src, article])
 
-    # Phase 5: Financial Document
     findoc = FinancialDocument(
         document_id="FIN-DMK-2023-01",
         source_id="ECI-TRANSPARENCY-PORTAL",
@@ -121,7 +116,6 @@ def db_session():
     )
     session.add(findoc)
 
-    # Phase 6: Representative & Constituency
     constituency = Constituency(
         constituency_id="CON-TN-KOLATHUR",
         official_name="Kolathur",
@@ -154,7 +148,6 @@ def api_client(db_session):
     from backend.database.session import engine
     Base.metadata.create_all(bind=engine)
 
-    # Re-insert the base cross-phase records into engine if not present
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -237,11 +230,7 @@ def api_client(db_session):
         yield client
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Model Serialization and Entity to_dict() Methods
-# ---------------------------------------------------------------------------
 def test_1_models_to_dict_and_cross_phase_columns(db_session):
-    # ClaimSource
     src = ClaimSource(
         source_id="SRC-INTAKE-01",
         source_type="PRESS_MEET",
@@ -256,7 +245,6 @@ def test_1_models_to_dict_and_cross_phase_columns(db_session):
     assert s_dict["source_id"] == "SRC-INTAKE-01"
     assert s_dict["source_type"] == "PRESS_MEET"
 
-    # Claim
     claim = Claim(
         claim_id="CLM-TEST-DICT-01",
         source_id=src.source_id,
@@ -277,7 +265,6 @@ def test_1_models_to_dict_and_cross_phase_columns(db_session):
     assert c_dict["cross_phase_identifiers"]["historical_scheme_id"] == 101
     assert c_dict["cross_phase_identifiers"]["representative_id"] == "REP-TN-MLA-001"
 
-    # ClaimVersion
     ver = ClaimVersion(
         version_id="VER-CLM-01",
         claim_id=claim.claim_id,
@@ -287,7 +274,6 @@ def test_1_models_to_dict_and_cross_phase_columns(db_session):
     )
     db_session.add(ver)
 
-    # AtomicClaim
     ac = AtomicClaim(
         atomic_claim_id="ATM-CLM-01",
         claim_id=claim.claim_id,
@@ -297,7 +283,6 @@ def test_1_models_to_dict_and_cross_phase_columns(db_session):
     )
     db_session.add(ac)
 
-    # EvidenceDocument & Passage
     edoc = EvidenceDocument(
         document_id="EDOC-STAT-01",
         title="Social Welfare Policy Note 2023-24",
@@ -317,7 +302,6 @@ def test_1_models_to_dict_and_cross_phase_columns(db_session):
     assert edoc.to_dict()["document_id"] == "EDOC-STAT-01"
     assert epass.to_dict()["passage_id"] == "EPASS-STAT-01"
 
-    # VerificationResult
     vres = VerificationResult(
         result_id="VRES-CLM-01",
         claim_id=claim.claim_id,
@@ -336,11 +320,7 @@ def test_1_models_to_dict_and_cross_phase_columns(db_session):
     assert len(vr_dict["supporting_evidence_ids"]) == 1
 
 
-# ---------------------------------------------------------------------------
-# Test 2: Cross-Phase Database Linkage with Existing Modules
-# ---------------------------------------------------------------------------
 def test_2_cross_phase_database_linkage_with_existing_modules(db_session):
-    # Create claim referencing Phase 2 Scheme, Phase 3 Promise, Phase 4 News, Phase 5 Funding, Phase 6 Rep
     claim = Claim(
         claim_id="CLM-CROSS-PHASE-01",
         original_text="State disbursed monthly assistance as promised in 2021 election manifesto.",
@@ -357,7 +337,6 @@ def test_2_cross_phase_database_linkage_with_existing_modules(db_session):
     )
     db_session.add(claim)
 
-    # Add ClaimCrossPhaseLink junction entries
     link1 = ClaimCrossPhaseLink(
         link_id="CPL-01",
         claim_id=claim.claim_id,
@@ -379,7 +358,6 @@ def test_2_cross_phase_database_linkage_with_existing_modules(db_session):
     db_session.add_all([link1, link2])
     db_session.commit()
 
-    # Query Claim and test ORM relationships
     loaded = db_session.query(Claim).filter(Claim.claim_id == "CLM-CROSS-PHASE-01").first()
     assert loaded.historical_scheme is not None
     assert loaded.historical_scheme.scheme_name == "Kalaignar Magalir Urimai Thittam"
@@ -396,11 +374,7 @@ def test_2_cross_phase_database_linkage_with_existing_modules(db_session):
     assert len(loaded.cross_phase_links) == 2
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Claims Search & Filtering API
-# ---------------------------------------------------------------------------
 def test_3_claims_search_and_filtering_api(api_client):
-    # Register claim via API
     payload = {
         "claim_id": "CLM-API-SEARCH-01",
         "original_text": "Tamil Nadu generated 45,000 new green energy jobs in 2023.",
@@ -413,33 +387,26 @@ def test_3_claims_search_and_filtering_api(api_client):
     post_res = api_client.post("/api/claims/ingest", json=payload)
     assert post_res.status_code == 200
 
-    # 1. Search with keyword 'green energy'
     search_res = api_client.get("/api/claims/search?q=green+energy")
     assert search_res.status_code == 200
     data = search_res.get_json()["data"]
     assert data["total"] >= 1
     assert any(c["claim_id"] == "CLM-API-SEARCH-01" for c in data["claims"])
 
-    # 2. Filter by category
     cat_res = api_client.get("/api/claims/search?category=GOVERNMENT_SCHEMES")
     assert cat_res.status_code == 200
     assert len(cat_res.get_json()["data"]["claims"]) >= 1
 
-    # 3. Filter by speaker_party
     party_res = api_client.get("/api/claims/search?party=DMK")
     assert party_res.status_code == 200
     assert len(party_res.get_json()["data"]["claims"]) >= 1
 
-    # 4. Pagination validation
     bad_skip = api_client.get("/api/claims/search?skip=-1")
     assert bad_skip.status_code == 400
     bad_limit = api_client.get("/api/claims/search?limit=150")
     assert bad_limit.status_code == 400
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Claim Details and Cross-Phase Resolution API
-# ---------------------------------------------------------------------------
 def test_4_claim_details_and_cross_phase_resolution_api(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
@@ -473,9 +440,6 @@ def test_4_claim_details_and_cross_phase_resolution_api(api_client):
     assert resolved["representative"]["official_name"] == "M.K. Stalin"
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Atomic Claim Details API
-# ---------------------------------------------------------------------------
 def test_5_atomic_claim_details_api(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
@@ -500,7 +464,6 @@ def test_5_atomic_claim_details_api(api_client):
     finally:
         db.close()
 
-    # Query atomic claim directly and through nested path
     res1 = api_client.get("/api/claims/atomic/ATM-API-001")
     assert res1.status_code == 200
     data1 = res1.get_json()["data"]
@@ -512,9 +475,6 @@ def test_5_atomic_claim_details_api(api_client):
     assert res2.status_code == 200
 
 
-# ---------------------------------------------------------------------------
-# Test 6: Evidence Search and Document Details API
-# ---------------------------------------------------------------------------
 def test_6_evidence_search_and_document_details_api(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
@@ -540,13 +500,11 @@ def test_6_evidence_search_and_document_details_api(api_client):
     finally:
         db.close()
 
-    # 1. Evidence Search
     search_res = api_client.get("/api/claims/evidence/search?q=CMDA")
     assert search_res.status_code == 200
     docs = search_res.get_json()["data"]["documents"]
     assert any(d["document_id"] == "EDOC-SEARCH-01" for d in docs)
 
-    # 2. Evidence Document Details
     doc_res = api_client.get("/api/claims/evidence/documents/EDOC-SEARCH-01")
     assert doc_res.status_code == 200
     doc_data = doc_res.get_json()["data"]
@@ -555,9 +513,6 @@ def test_6_evidence_search_and_document_details_api(api_client):
     assert "referencing_claim_ids" in doc_data
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Claim/Evidence Relationships API (Preserving Contradictions)
-# ---------------------------------------------------------------------------
 def test_7_claim_evidence_relationships_api(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
@@ -612,9 +567,6 @@ def test_7_claim_evidence_relationships_api(api_client):
     assert "epistemic_disclaimer" in data
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Verification Results and Audit History API
-# ---------------------------------------------------------------------------
 def test_8_verification_results_and_history_api(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
@@ -648,7 +600,6 @@ def test_8_verification_results_and_history_api(api_client):
     finally:
         db.close()
 
-    # 1. GET /verification
     v_res = api_client.get("/api/claims/CLM-API-HIST-01/verification")
     assert v_res.status_code == 200
     v_data = v_res.get_json()["data"]["verification"]
@@ -656,7 +607,6 @@ def test_8_verification_results_and_history_api(api_client):
     assert "methodology" in v_data
     assert "limitations" in v_data
 
-    # 2. GET /history and /audit-trail
     h_res = api_client.get("/api/claims/CLM-API-HIST-01/history")
     assert h_res.status_code == 200
     assert len(h_res.get_json()["data"]["verification_history"]) >= 1
@@ -665,9 +615,6 @@ def test_8_verification_results_and_history_api(api_client):
     assert at_res.status_code == 200
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Human Review Role-Based Access Control
-# ---------------------------------------------------------------------------
 def test_9_human_review_access_control(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
@@ -689,7 +636,6 @@ def test_9_human_review_access_control(api_client):
     finally:
         db.close()
 
-    # 1. Unauthorized role -> 403 Forbidden
     bad_payload = {
         "reviewer_id": "PUBLIC-USER-01",
         "reviewer_role": "PUBLIC_USER",
@@ -701,7 +647,6 @@ def test_9_human_review_access_control(api_client):
     assert bad_res.status_code == 403
     assert "Access Denied" in bad_res.get_json()["message"]
 
-    # 2. Authorized role (DOMAIN_EXPERT) -> 200 OK
     good_payload = {
         "reviewer_id": "EXPERT-REVIEWER-01",
         "reviewer_role": "DOMAIN_EXPERT",
@@ -713,9 +658,6 @@ def test_9_human_review_access_control(api_client):
     assert good_res.get_json()["data"]["review_status"] == "ACCEPTED"
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Source and Claim Provenance API
-# ---------------------------------------------------------------------------
 def test_10_source_and_claim_provenance_api(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
@@ -741,13 +683,11 @@ def test_10_source_and_claim_provenance_api(api_client):
     finally:
         db.close()
 
-    # 1. Source provenance
     s_res = api_client.get("/api/claims/sources/SRC-PROV-01")
     assert s_res.status_code == 200
     assert s_res.get_json()["data"]["source"]["source_id"] == "SRC-PROV-01"
     assert s_res.get_json()["data"]["associated_claims_count"] == 1
 
-    # 2. Claim provenance
     c_res = api_client.get("/api/claims/CLM-API-PROV-01/provenance")
     assert c_res.status_code == 200
     c_data = c_res.get_json()["data"]
@@ -755,9 +695,6 @@ def test_10_source_and_claim_provenance_api(api_client):
     assert c_data["content_fingerprint"] == "fingerprint-prov-01"
 
 
-# ---------------------------------------------------------------------------
-# Test 11: Cross-Phase Linking API and Filtered Lookups
-# ---------------------------------------------------------------------------
 def test_11_cross_phase_linking_api_and_filtered_queries(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
@@ -773,7 +710,6 @@ def test_11_cross_phase_linking_api_and_filtered_queries(api_client):
     finally:
         db.close()
 
-    # 1. Link to Promise
     link_res1 = api_client.post("/api/claims/CLM-API-CPLINK-01/cross-phase/link", json={
         "target_phase": "PHASE_3_PROMISE",
         "entity_type": "POLITICAL_PROMISE",
@@ -783,7 +719,6 @@ def test_11_cross_phase_linking_api_and_filtered_queries(api_client):
     })
     assert link_res1.status_code in [200, 201]
 
-    # 2. Link to Representative
     link_res2 = api_client.post("/api/claims/CLM-API-CPLINK-01/cross-phase/link", json={
         "target_phase": "PHASE_6_REPRESENTATIVE",
         "entity_type": "REPRESENTATIVE",
@@ -793,7 +728,6 @@ def test_11_cross_phase_linking_api_and_filtered_queries(api_client):
     })
     assert link_res2.status_code in [200, 201]
 
-    # 3. Fetch cross-phase details
     cp_res = api_client.get("/api/claims/CLM-API-CPLINK-01/cross-phase")
     assert cp_res.status_code == 200
     cp_data = cp_res.get_json()["data"]
@@ -801,7 +735,6 @@ def test_11_cross_phase_linking_api_and_filtered_queries(api_client):
     assert cp_data["resolved_entities"]["promise"]["promise_id"] == "PRM-2021-DMK-042"
     assert cp_data["resolved_entities"]["representative"]["official_name"] == "M.K. Stalin"
 
-    # 4. Filtered lookups: /by-representative and /by-promise
     rep_claims = api_client.get("/api/claims/by-representative/REP-TN-MLA-001")
     assert rep_claims.status_code == 200
     assert rep_claims.get_json()["data"]["total"] >= 1
@@ -811,14 +744,10 @@ def test_11_cross_phase_linking_api_and_filtered_queries(api_client):
     assert prm_claims.get_json()["data"]["total"] >= 1
 
 
-# ---------------------------------------------------------------------------
-# Test 12: Selective Association (Claims Without Cross-Phase Links)
-# ---------------------------------------------------------------------------
 def test_12_claims_without_cross_phase_links_graceful_handling(api_client):
     from backend.database.session import SessionLocal
     db = SessionLocal()
     try:
-        # A standalone claim that has NO links to promises, funding, or schemes
         standalone = Claim(
             claim_id="CLM-STANDALONE-01",
             original_text="General public assertion regarding rainfall in the Cauvery delta.",
@@ -830,13 +759,11 @@ def test_12_claims_without_cross_phase_links_graceful_handling(api_client):
     finally:
         db.close()
 
-    # Query details
     res = api_client.get("/api/claims/CLM-STANDALONE-01")
     assert res.status_code == 200
     data = res.get_json()["data"]
     assert data["claim_id"] == "CLM-STANDALONE-01"
 
-    # All cross-phase entities must gracefully be None
     resolved = data["resolved_cross_phase_entities"]
     assert resolved["historical_scheme"] is None
     assert resolved["promise"] is None
@@ -845,7 +772,6 @@ def test_12_claims_without_cross_phase_links_graceful_handling(api_client):
     assert resolved["representative"] is None
     assert resolved["constituency"] is None
 
-    # Query cross-phase endpoint
     cp_res = api_client.get("/api/claims/CLM-STANDALONE-01/cross-phase")
     assert cp_res.status_code == 200
     assert cp_res.get_json()["data"]["cross_phase_links_count"] == 0

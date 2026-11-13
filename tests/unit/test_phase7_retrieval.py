@@ -50,7 +50,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Prepopulate standard test evidence documents and passages
     doc1 = EvidenceDocument(
         document_id="EDOC-TN-BUDGET-2024",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -84,7 +83,6 @@ def db_session():
     )
     session.add_all([pass1, pass2])
 
-    # Doc 2: CAG Audit Report (Contradictory / Critical counter-evidence)
     doc2 = EvidenceDocument(
         document_id="EDOC-CAG-AUDIT-2024",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -111,7 +109,6 @@ def db_session():
     )
     session.add(pass3)
 
-    # Doc 3: Tamil Legislative Order (Tamil language evidence)
     doc3 = EvidenceDocument(
         document_id="EDOC-TN-GO-BUSES",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -138,7 +135,6 @@ def db_session():
     )
     session.add(pass4)
 
-    # Doc 4: Unrelated noise document (Tourism in Puducherry)
     doc4 = EvidenceDocument(
         document_id="EDOC-PUDU-TOURISM",
         source_tier=SourceTier.TIER_4_SECONDARY_CIVIC,
@@ -223,7 +219,6 @@ def test_2_paraphrase_retrieval_via_semantic_similarity(db_session):
     """
     engine = EvidenceRetrievalEngine(db=db_session)
     claim_id = "CLM-TEST-PARA-01"
-    # Paraphrased wording: "set aside thirteen thousand crore for women financial assistance"
     paraphrase_query = "State government set aside thirteen thousand seven hundred crore for women assistance scheme in budget."
 
     results = engine.retrieve_candidate_evidence(
@@ -234,7 +229,6 @@ def test_2_paraphrase_retrieval_via_semantic_similarity(db_session):
     )
 
     assert len(results) >= 1
-    # Should retrieve the budget or CAG passage
     passage_ids = [r["evidence_passage_id"] for r in results]
     assert "EPASS-BUDGET-01" in passage_ids
     matched = next(r for r in results if r["evidence_passage_id"] == "EPASS-BUDGET-01")
@@ -249,7 +243,6 @@ def test_3_contradictory_evidence_retrieval(db_session):
     """
     engine = EvidenceRetrievalEngine(db=db_session)
     claim_id = "CLM-TEST-CONTRA-01"
-    # Affirmative claim that everything was disbursed without issue
     affirmative_claim = "Kalaignar Magalir Urimai Thittam disbursed funds to all eligible women without any delay."
 
     results = engine.retrieve_candidate_evidence(
@@ -260,12 +253,10 @@ def test_3_contradictory_evidence_retrieval(db_session):
         top_k=5
     )
 
-    # Must retrieve both affirmative budget document and critical CAG audit report
     passage_ids = [r["evidence_passage_id"] for r in results]
     assert "EPASS-CAG-01" in passage_ids
 
     cag_result = next(r for r in results if r["evidence_passage_id"] == "EPASS-CAG-01")
-    # Verify that contradictory signal is flagged
     assert cag_result["is_potentially_contradictory"] is True
     assert "CAG audit reveals shortfall and delayed disbursements" in cag_result["passage_text"]
 
@@ -331,9 +322,7 @@ def test_6_irrelevant_results_filtered_out(db_session):
     )
 
     retrieved_doc_ids = [r["evidence_document_id"] for r in results]
-    # Fiscal passage should be retrieved
     assert "EDOC-TN-BUDGET-2024" in retrieved_doc_ids
-    # Unrelated beach guide should NOT be retrieved
     assert "EDOC-PUDU-TOURISM" not in retrieved_doc_ids
 
 
@@ -361,7 +350,6 @@ def test_8_stored_candidate_provenance_and_disclaimer(db_session):
     Verifies that all 11 required fields are recorded in the database
     and that the explicit verification disclaimer is attached.
     """
-    # Create parent Claim
     claim = Claim(
         claim_id="CLM-PROV-01",
         original_text="Outlay of Rs 13,720 crore for KMUT welfare scheme.",
@@ -384,7 +372,6 @@ def test_8_stored_candidate_provenance_and_disclaimer(db_session):
     assert len(results) >= 1
     top = results[0]
 
-    # Verify all 11 required fields
     assert "claim_id" in top
     assert "evidence_document_id" in top
     assert "evidence_passage_id" in top
@@ -397,11 +384,9 @@ def test_8_stored_candidate_provenance_and_disclaimer(db_session):
     assert "model_version" in top
     assert "retrieval_timestamp" in top
 
-    # Verify disclaimer
     assert top["disclaimer"] == RETRIEVAL_DISCLAIMER
     assert "Do not interpret retrieval rank as evidence of truth" in top["disclaimer"]
 
-    # Verify database persistence into claim_retrieval_candidates
     db_cands = db_session.query(ClaimRetrievalCandidate).filter(
         ClaimRetrievalCandidate.claim_id == claim.claim_id
     ).all()
@@ -416,7 +401,6 @@ def test_9_rest_api_retrieve_evidence_endpoint(api_client):
     """
     Verifies REST API endpoint: POST /api/claims/<claim_id>/retrieve-evidence.
     """
-    # 1. Ingest a claim
     ingest_resp = api_client.post("/api/claims/ingest", json={
         "claim_id": "CLM-API-RET-01",
         "original_text": "Tamil Nadu budget allocated Rs 13,720 crore for Kalaignar Magalir Urimai Thittam.",
@@ -426,7 +410,6 @@ def test_9_rest_api_retrieve_evidence_endpoint(api_client):
     })
     assert ingest_resp.status_code == 200
 
-    # 2. Add an evidence document and passage to the API's database
     from backend.database.session import SessionLocal
     db = SessionLocal()
     try:
@@ -454,7 +437,6 @@ def test_9_rest_api_retrieve_evidence_endpoint(api_client):
     finally:
         db.close()
 
-    # 3. Call retrieval endpoint
     ret_resp = api_client.post("/api/claims/CLM-API-RET-01/retrieve-evidence", json={
         "top_k": 5,
         "min_score_threshold": 0.20

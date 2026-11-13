@@ -25,7 +25,6 @@ def test_valid_record(base_valid_record):
 def test_missing_required_fields(base_valid_record):
     validator = BudgetValidator()
     
-    # Intentionally break the record
     base_valid_record.department_name = ""
     base_valid_record.financial_year = ""
     
@@ -40,21 +39,19 @@ def test_missing_required_fields(base_valid_record):
 def test_malformed_financial_year(base_valid_record):
     validator = BudgetValidator()
     
-    base_valid_record.financial_year = "2024" # Should be YYYY-YY
+    base_valid_record.financial_year = "2024"
     
     valid, invalid, report = validator.validate_batch([base_valid_record])
     assert len(invalid) == 1
     assert any("Malformed financial_year" in err for err in invalid[0]["errors"])
 
 def test_null_amounts_handling(base_valid_record):
-    # Null amounts are ALLOWED by default (so missing values aren't treated as 0)
     base_valid_record.amount = None
     
     validator = BudgetValidator()
     valid, invalid, _ = validator.validate_batch([base_valid_record])
     assert len(valid) == 1
     
-    # If we configure it to strictly require amounts:
     strict_validator = BudgetValidator(config={
         "require_department": True,
         "allow_null_amounts": False
@@ -64,7 +61,6 @@ def test_null_amounts_handling(base_valid_record):
     assert "amount is null and allow_null_amounts is False." in invalid[0]["errors"]
 
 def test_duplicate_detection_within_batch(base_valid_record):
-    # Two identical records
     validator = BudgetValidator()
     rec2 = RawBudgetRecord(
         record_id="test-2",

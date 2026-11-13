@@ -118,7 +118,6 @@ def test_8_sha256_checksum_and_deduplication(temp_acquisition_dir):
     config = AcquisitionConfig(raw_storage_dir=temp_acquisition_dir, rate_limit_seconds=0.01)
     engine = DocumentAcquisitionEngine(config=config)
 
-    # 1st Acquisition
     res1 = engine.acquire_document(
         url="https://mplads.gov.in/reports/tn/2023/mplads_works.csv",
         source_id="SRC-MPLADS-WORKS",
@@ -129,7 +128,6 @@ def test_8_sha256_checksum_and_deduplication(temp_acquisition_dir):
     assert res1["status"] == "SUCCESS"
     assert res1["is_duplicate"] is False
 
-    # 2nd Acquisition with identical content
     res2 = engine.acquire_document(
         url="https://mplads.gov.in/reports/tn/2023/mplads_works_copy.csv",
         source_id="SRC-MPLADS-WORKS",
@@ -156,7 +154,6 @@ def test_9_caching_mechanism(temp_acquisition_dir):
     )
     assert res1["status"] == "SUCCESS"
 
-    # Re-acquire same URL without force_redownload
     res2 = engine.acquire_document(
         url=url,
         source_id="SRC-SANSAD-QUESTIONS",

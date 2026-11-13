@@ -40,40 +40,31 @@ class TestPhase7DashboardFrontend:
             mock_get.return_value = mock_resp
             mock_post.return_value = mock_resp
 
-            # 1. Search claims
             ok, data = client.search_claims(q="GSDP", category="ECONOMIC_METRICS", outcome="supported_by_available_evidence")
             assert ok is True
             assert len(data["claims"]) == 1
 
-            # 2. Claim detail
             ok, data = client.get_claim_detail("CLM-TEST-001")
             assert ok is True
 
-            # 3. Atomic claim detail
             ok, data = client.get_atomic_claim_detail("CLM-TEST-001", "ATM-001")
             assert ok is True
 
-            # 4. Search evidence
             ok, data = client.search_evidence(q="budget", doc_type="PDF")
             assert ok is True
 
-            # 5. Evidence document detail
             ok, data = client.get_evidence_document("EVD-001")
             assert ok is True
 
-            # 6. Claim relationships
             ok, data = client.get_claim_relationships("CLM-TEST-001")
             assert ok is True
 
-            # 7. Verification outcome
             ok, data = client.get_claim_verification("CLM-TEST-001")
             assert ok is True
 
-            # 8. Verification history
             ok, data = client.get_claim_history("CLM-TEST-001")
             assert ok is True
 
-            # 9. Submit review
             ok, data = client.submit_claim_review(
                 "CLM-TEST-001",
                 {"action": "accept_assessment", "reviewed_by": "Senior Reviewer"},
@@ -81,15 +72,12 @@ class TestPhase7DashboardFrontend:
             )
             assert ok is True
 
-            # 10. Source registry
             ok, data = client.get_claim_source("SRC-001")
             assert ok is True
 
-            # 11. Claim provenance
             ok, data = client.get_claim_provenance("CLM-TEST-001")
             assert ok is True
 
-            # 12. Cross-phase links
             ok, data = client.get_claim_cross_phase("CLM-TEST-001")
             assert ok is True
 
@@ -103,7 +91,6 @@ class TestPhase7DashboardFrontend:
         module = importlib.util.module_from_spec(spec)
         assert module is not None
 
-        # Verify module imports and definitions can be loaded
         with open("frontend/pages/6_Claim_Verification.py", "r", encoding="utf-8") as f:
             code = f.read()
         compiled = compile(code, "frontend/pages/6_Claim_Verification.py", "exec")
@@ -121,7 +108,6 @@ class TestPhase7DashboardFrontend:
             c["verification"]["outcome"] for c in FIXTURE_CLAIMS if "verification" in c
         }
 
-        # Check all 8 required outcome labels
         required_outcomes = {
             "supported_by_available_evidence",
             "contradicted_by_available_evidence",
@@ -144,7 +130,6 @@ class TestPhase7DashboardFrontend:
         tamil_claims = [c for c in FIXTURE_CLAIMS if c.get("language") == "ta"]
         assert len(tamil_claims) >= 2
 
-        # Check exact Tamil substrings
         clm1 = next(c for c in tamil_claims if c["claim_id"] == "TEST_FIXTURE_CLM_01")
         assert "பொருளாதார வளர்ச்சி" in clm1["original_text"]
         assert "8.2 சதவீதமாக" in clm1["original_text"]
@@ -173,14 +158,12 @@ class TestPhase7DashboardFrontend:
         """Verify supporting vs contradicting evidence items are distinguished and visible."""
         from frontend.pages.six_claim_verification_test_helper import FIXTURE_CLAIMS
 
-        # Contradicted claim has explicit contradicting evidence
         clm2 = next(c for c in FIXTURE_CLAIMS if c["claim_id"] == "TEST_FIXTURE_CLM_02")
         contradicting = [r for r in clm2["relationships"] if r["relationship_type"] == "contradicts"]
         assert len(contradicting) >= 1
         assert "UDISE+" in contradicting[0]["evidence_title"]
         assert "1,28,450" in contradicting[0]["relevant_passage"]
 
-        # Supported claim has explicit supporting evidence
         clm1 = next(c for c in FIXTURE_CLAIMS if c["claim_id"] == "TEST_FIXTURE_CLM_01")
         supporting = [r for r in clm1["relationships"] if r["relationship_type"] == "supports"]
         assert len(supporting) >= 2
@@ -190,12 +173,10 @@ class TestPhase7DashboardFrontend:
         """Verify context and limitations highlighting differing baselines."""
         from frontend.pages.six_claim_verification_test_helper import FIXTURE_CLAIMS
 
-        # Missing context fixture
         clm5 = next(c for c in FIXTURE_CLAIMS if c["claim_id"] == "TEST_FIXTURE_CLM_05")
         assert clm5["verification"]["outcome"] == "missing_important_context"
         assert "MoUs" in clm5["verification"]["explanation"]
 
-        # Disputed evidence fixture
         clm6 = next(c for c in FIXTURE_CLAIMS if c["claim_id"] == "TEST_FIXTURE_CLM_06")
         assert clm6["verification"]["outcome"] == "disputed_evidence"
         rel_types = {r["relationship_type"] for r in clm6["relationships"]}
@@ -208,32 +189,26 @@ class TestPhase7DashboardFrontend:
             FIXTURE_CLAIMS, _filter_fixture_claims
         )
 
-        # 1. Filter by category
         res = _filter_fixture_claims(FIXTURE_CLAIMS, {"category": "ECONOMIC_METRICS"})
         assert all(c["claim_category"] == "ECONOMIC_METRICS" for c in res)
         assert len(res) >= 2
 
-        # 2. Filter by outcome
         res = _filter_fixture_claims(FIXTURE_CLAIMS, {"outcome": "contradicted_by_available_evidence"})
         assert len(res) == 1
         assert res[0]["claim_id"] == "TEST_FIXTURE_CLM_02"
 
-        # 3. Filter by language
         res = _filter_fixture_claims(FIXTURE_CLAIMS, {"language": "ta"})
         assert all(c["language"] == "ta" for c in res)
         assert len(res) >= 2
 
-        # 4. Filter by party
         res = _filter_fixture_claims(FIXTURE_CLAIMS, {"party": "AIADMK"})
         assert all(c["party"] == "AIADMK" for c in res)
         assert len(res) == 1
 
-        # 5. Filter by speaker
         res = _filter_fixture_claims(FIXTURE_CLAIMS, {"speaker": "Stalin"})
         assert len(res) == 1
         assert res[0]["claim_id"] == "TEST_FIXTURE_CLM_03"
 
-        # 6. Keyword search
         res = _filter_fixture_claims(FIXTURE_CLAIMS, {"q": "solar"})
         assert len(res) == 1
         assert res[0]["claim_id"] == "TEST_FIXTURE_CLM_08"

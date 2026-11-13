@@ -32,7 +32,6 @@ class MockEmbedder:
     """Mock embedder providing deterministic vectors for testing without sentence-transformers dependency."""
 
     def generate_embedding(self, text: str):
-        # Generate simple deterministic mock vectors based on text features
         text_lower = text.lower()
         v = [0.0] * 8
         if "school" in text_lower or "education" in text_lower or "student" in text_lower:
@@ -47,7 +46,6 @@ class MockEmbedder:
         if "hospital" in text_lower or "health" in text_lower or "doctor" in text_lower:
             v[5] = 1.0
             v[6] = 0.9
-        # Normalize
         norm = sum(x**2 for x in v)**0.5
         if norm > 0:
             v = [x / norm for x in v]
@@ -57,7 +55,6 @@ class MockEmbedder:
 class TestPromiseSchemeMatching(unittest.TestCase):
 
     def setUp(self):
-        # Create in-memory SQLite database
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
@@ -81,7 +78,6 @@ class TestPromiseSchemeMatching(unittest.TestCase):
         self.db.add_all([dept_edu, dept_agri, dept_health])
         self.db.commit()
 
-        # Scheme 1: Education
         text_1 = "Free Laptop Distribution Scheme for High School Students"
         vec_1 = self.embedder.generate_embedding(text_1)
         hs1 = HistoricalScheme(
@@ -96,7 +92,6 @@ class TestPromiseSchemeMatching(unittest.TestCase):
             }
         )
 
-        # Scheme 2: Agriculture
         text_2 = "Chief Minister Crop Insurance Assistance Scheme"
         vec_2 = self.embedder.generate_embedding(text_2)
         hs2 = HistoricalScheme(
@@ -111,7 +106,6 @@ class TestPromiseSchemeMatching(unittest.TestCase):
             }
         )
 
-        # Scheme 3: Healthcare
         text_3 = "Comprehensive Health Insurance Scheme"
         vec_3 = self.embedder.generate_embedding(text_3)
         hs3 = HistoricalScheme(
@@ -200,14 +194,11 @@ class TestPromiseSchemeMatching(unittest.TestCase):
         self.db.add_all([m, p])
         self.db.commit()
 
-        # High threshold (0.9)
         matches_high = self.matcher.match_promise(p, top_k=5, similarity_threshold=0.9, persist_links=False)
-        # Lower threshold (0.1)
         matches_low = self.matcher.match_promise(p, top_k=5, similarity_threshold=0.1, persist_links=False)
 
         self.assertLessEqual(len(matches_high), len(matches_low))
 
-        # Check descending order of similarity score
         scores = [m["similarity_score"] for m in matches_low]
         self.assertEqual(scores, sorted(scores, reverse=True))
 

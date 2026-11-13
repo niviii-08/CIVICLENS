@@ -40,7 +40,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Pre-populate sample constituency
     const = Constituency(
         constituency_id="AC-013",
         official_name="Kolathur",
@@ -91,7 +90,6 @@ def test_2_defensible_geographic_mapping_interpolation(db_session):
     """
     service = DevelopmentIndicatorService(db=db_session)
 
-    # 1. Record district-level indicator
     service.record_indicator(
         indicator_id="IND-DIST-CHN-WATER-2021",
         geographic_unit_id="DISTRICT-CHENNAI",
@@ -103,7 +101,6 @@ def test_2_defensible_geographic_mapping_interpolation(db_session):
         source_reference="DES TN District Statistical Handbook 2021"
     )
 
-    # 2. Record extensive count indicator at district level
     service.record_indicator(
         indicator_id="IND-DIST-CHN-SCHOOLS-2021",
         geographic_unit_id="DISTRICT-CHENNAI",
@@ -114,24 +111,21 @@ def test_2_defensible_geographic_mapping_interpolation(db_session):
         geographic_level=GeographicLevel.DISTRICT
     )
 
-    # 3. Register defensible geographic mapping for AC-013
     service.record_geographic_mapping(
         mapping_id="MAP-AC013-CHN",
         constituency_id="AC-013",
         district_name="Chennai",
         area_share_in_district=0.075,
-        population_share_in_district=0.08,  # AC-013 represents 8% of Chennai's population
+        population_share_in_district=0.08,
         delimitation_year=2008
     )
 
-    # Retrieve intensive rate (PERCENT): keeps rate, annotates population aggregation
     res_water = service.get_constituency_indicator("AC-013", "HOUSEHOLD_TAP_WATER_PCT", "2021")
     assert res_water is not None
     assert res_water["value"] == 84.5
     assert res_water["is_interpolated"] is True
     assert res_water["data_quality_status"] == IndicatorQualityStatus.INTERPOLATED
 
-    # Retrieve extensive count (COUNT): scales by population share 800 * 0.08 = 64.0
     res_schools = service.get_constituency_indicator("AC-013", "PRIMARY_SCHOOLS_COUNT", "2021")
     assert res_schools is not None
     assert res_schools["value"] == 64.0
@@ -145,7 +139,6 @@ def test_3_rejection_of_unmapped_district_data(db_session):
     """
     service = DevelopmentIndicatorService(db=db_session)
 
-    # Register another constituency without geographic mapping
     const2 = Constituency(
         constituency_id="AC-999-UNMAPPED",
         official_name="Unmapped Constituency",
@@ -170,7 +163,6 @@ def test_4_inconsistent_units_detection_raises_error(db_session):
     """
     service = DevelopmentIndicatorService(db=db_session)
 
-    # Period 1 in COUNT
     service.record_indicator(
         indicator_id="IND-COMP-01",
         geographic_unit_id="AC-013",
@@ -180,7 +172,6 @@ def test_4_inconsistent_units_detection_raises_error(db_session):
         reference_period="2011"
     )
 
-    # Period 2 in PERCENT
     service.record_indicator(
         indicator_id="IND-COMP-02",
         geographic_unit_id="AC-013",
@@ -292,7 +283,7 @@ def test_7_missing_observations_handling(db_session):
         geographic_unit_id="AC-013",
         indicator_name="FEMALE_LITERACY_RATE",
         start_period="2011",
-        end_period="2026"  # Missing
+        end_period="2026"
     )
 
     assert comp["status"] == IndicatorQualityStatus.MISSING

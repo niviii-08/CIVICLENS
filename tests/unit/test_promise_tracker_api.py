@@ -35,18 +35,15 @@ from backend.models.budget import BudgetDepartment, HistoricalScheme
 class TestPromiseTrackerAPI(unittest.TestCase):
 
     def setUp(self):
-        # Create Flask test client
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
 
-        # In-memory SQLite engine for API DB isolation
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         self.db = TestingSessionLocal()
 
-        # Patch SessionLocal in backend.api.promises to use in-memory test DB
         import backend.api.promises
         self._orig_get_db = backend.api.promises.get_db
         backend.api.promises.get_db = lambda: TestingSessionLocal()
@@ -97,13 +94,11 @@ class TestPromiseTrackerAPI(unittest.TestCase):
         self.db.add_all([m1, m2, m3])
         self.db.commit()
 
-        # Test parties
         res_parties = self.client.get("/api/promises/parties")
         self.assertEqual(res_parties.status_code, 200)
         data_p = json.loads(res_parties.data.decode("utf-8"))["data"]
         self.assertEqual(data_p["total"], 3)
 
-        # Test elections
         res_elections = self.client.get("/api/promises/elections")
         self.assertEqual(res_elections.status_code, 200)
         data_e = json.loads(res_elections.data.decode("utf-8"))["data"]
@@ -139,18 +134,15 @@ class TestPromiseTrackerAPI(unittest.TestCase):
         self.db.add(map1)
         self.db.commit()
 
-        # Test search filter
         res_search = self.client.get("/api/promises/?search=laptops")
         data_search = json.loads(res_search.data.decode("utf-8"))["data"]
         self.assertEqual(data_search["total"], 1)
         self.assertEqual(data_search["items"][0]["promise_id"], "P_EDU_01")
 
-        # Test category filter
         res_cat = self.client.get("/api/promises/?category=Education")
         data_cat = json.loads(res_cat.data.decode("utf-8"))["data"]
         self.assertEqual(data_cat["total"], 1)
 
-        # Test pagination
         res_page = self.client.get("/api/promises/?page=1&limit=1")
         data_page = json.loads(res_page.data.decode("utf-8"))["data"]
         self.assertEqual(len(data_page["items"]), 1)
@@ -205,13 +197,11 @@ class TestPromiseTrackerAPI(unittest.TestCase):
         self.db.add(assess)
         self.db.commit()
 
-        # Call GET /api/promises/<promise_id>/assessment
         res = self.client.get("/api/promises/P_CONTRACT_01/assessment")
         self.assertEqual(res.status_code, 200)
 
         data = json.loads(res.data.decode("utf-8"))["data"]
 
-        # Assert mandatory contract keys
         mandatory_keys = ["promise", "status", "confidence", "explanation", "supporting_evidence", "source_links"]
         for key in mandatory_keys:
             self.assertIn(key, data, f"Assessment payload must provide '{key}'.")
@@ -239,7 +229,6 @@ class TestPromiseTrackerAPI(unittest.TestCase):
         self.db.add(s_link)
         self.db.commit()
 
-        # Test scheme matches endpoint
         res_sm = self.client.get("/api/promises/P_MATCH_01/scheme-matches")
         self.assertEqual(res_sm.status_code, 200)
         data_sm = json.loads(res_sm.data.decode("utf-8"))["data"]

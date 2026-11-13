@@ -93,7 +93,7 @@ def test_2_evaluation_plans_and_zero_target_invention(real_data_db):
 
     kmut_plan = [p for p in plans if "KMUT" in p.policy_id][0]
     assert kmut_plan.target_provenance == TargetProvenanceType.OFFICIALLY_STATED
-    assert kmut_plan.target_value == 10000000.0  # 1 Crore target
+    assert kmut_plan.target_value == 10000000.0
     assert kmut_plan.unit == "BENEFICIARIES"
     assert kmut_plan.target_source_reference is not None
 
@@ -106,7 +106,6 @@ def test_3_indicator_registry_and_missing_data_discipline(real_data_db):
     observations = real_data_db.query(IndicatorObservation).filter_by(is_test_fixture=False).all()
     assert len(observations) >= 16
 
-    # Verify observations have legitimate float values or None (not arbitrary fakes)
     obs_with_vals = [o for o in observations if o.value is not None]
     assert len(obs_with_vals) > 0
     for o in observations:
@@ -119,7 +118,6 @@ def test_4_budget_execution_analysis_on_real_records(real_data_db):
     records = real_data_db.query(BudgetRecord).all()
     assert len(records) >= 20
 
-    # Test KMUT FY 2023-24 budget analysis
     analysis = PolicyBudgetExecutionAnalyticsService.analyze_allocation_vs_actual(
         records, financial_year="2023-24"
     )
@@ -138,11 +136,10 @@ def test_5_outcome_comparisons_and_zero_baseline_safety(real_data_db):
     f_obs = real_data_db.query(IndicatorObservation).filter_by(indicator_id=kmut_ind.indicator_id, stage="FOLLOW_UP").first()
 
     assert b_obs is not None
-    assert b_obs.value == 0.0  # Pre-launch zero baseline
+    assert b_obs.value == 0.0
 
     comp = PolicyOutcomeAnalysisService.analyze_baseline_vs_followup(kmut_ind, b_obs, f_obs)
     assert comp["absolute_change"] == f_obs.value
-    # Zero-baseline safety: percentage change must be None / mathematically undefined
     assert comp["percentage_change"] is None
     assert comp["percentage_change_validity"] == "UNDEFINED_ZERO_BASELINE"
     assert comp["causal_claim_permitted"] is False
@@ -184,7 +181,6 @@ def test_8_api_search_and_policy_details(test_client):
     assert data["total"] >= 1
     assert any("KMUT" in p["policy_id"] for p in data["policies"])
 
-    # Details
     res_det = test_client.get("/api/policy-evaluation/policies/POL-TN-KMUT")
     assert res_det.status_code == 200
     pol_det = res_det.get_json()["data"]

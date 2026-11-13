@@ -55,7 +55,6 @@ class TestFinancialCrossValidator:
         assert rec.difference_percentage > 5.0
 
     def test_form24a_vs_total_gross_income_scope_rule(self):
-        # Scope rule: Form 24A (6.013 Cr) <= Total Gross Income (30 Cr) -> NOT_COMPARABLE
         rec = FinancialCrossValidator.compare_form24a_vs_total_audited_income(
             party_id="PARTY_TN_DMK",
             financial_year="FY2021-22",
@@ -66,7 +65,6 @@ class TestFinancialCrossValidator:
         assert "Scope Difference" in rec.difference_explanation
 
     def test_form24a_vs_total_gross_income_impossible_excess(self):
-        # Impossible statutory state: Form 24A (6.013 Cr) > Total Gross Income (4 Cr) -> MATERIAL_DIFFERENCE
         rec = FinancialCrossValidator.compare_form24a_vs_total_audited_income(
             party_id="PARTY_TN_DMK",
             financial_year="FY2021-22",
@@ -77,7 +75,6 @@ class TestFinancialCrossValidator:
         assert "Statutory Scope Discrepancy" in rec.difference_explanation
 
     def test_election_expenditure_vs_annual_audit_window_rule(self):
-        # Window rule: Campaign Spending (19 Cr) <= Annual Operating Exp (22 Cr) -> NOT_COMPARABLE
         rec = FinancialCrossValidator.compare_election_expenditure_vs_annual_audit_expenditure(
             party_id="PARTY_TN_DMK",
             election_name="TN Legislative Assembly 2021",
@@ -89,7 +86,6 @@ class TestFinancialCrossValidator:
         assert "Reporting Window Scope Difference" in rec.difference_explanation
 
     def test_election_expenditure_vs_annual_audit_excess(self):
-        # Window rule anomaly: Campaign Spending (25 Cr) > Annual Operating Exp (22 Cr) -> REQUIRES_MANUAL_REVIEW
         rec = FinancialCrossValidator.compare_election_expenditure_vs_annual_audit_expenditure(
             party_id="PARTY_TN_DMK",
             election_name="TN Legislative Assembly 2021",
@@ -101,7 +97,6 @@ class TestFinancialCrossValidator:
         assert "Reporting Window Discrepancy" in rec.difference_explanation
 
     def test_electoral_trust_report_vs_party_disclosure(self):
-        # Matched Trust payout vs party grant disclosure
         rec_match = FinancialCrossValidator.compare_electoral_trust_report_vs_party_disclosure(
             party_id="PARTY_TN_DMK",
             financial_year="FY2021-22",
@@ -110,7 +105,6 @@ class TestFinancialCrossValidator:
         )
         assert rec_match.validation_status == ValidationStatus.MATCHED
 
-        # Discrepant Trust payout vs party grant disclosure
         rec_mismatch = FinancialCrossValidator.compare_electoral_trust_report_vs_party_disclosure(
             party_id="PARTY_TN_DMK",
             financial_year="FY2021-22",
@@ -122,7 +116,6 @@ class TestFinancialCrossValidator:
     def test_human_review_workflow(self):
         workflow = HumanReviewWorkflow()
 
-        # Step 1: Comparison with MATCHED status should NOT generate a ticket
         rec_matched = FinancialCrossValidator.compare_form24a_vs_audited_schedule_20k(
             party_id="PARTY_TN_DMK",
             financial_year="FY2021-22",
@@ -132,7 +125,6 @@ class TestFinancialCrossValidator:
         ticket1 = workflow.create_ticket_if_needed(rec_matched)
         assert ticket1 is None
 
-        # Step 2: Comparison with REQUIRES_MANUAL_REVIEW status MUST generate a ticket
         rec_discrepant = FinancialCrossValidator.compare_form24a_vs_audited_schedule_20k(
             party_id="PARTY_TN_DMK",
             financial_year="FY2021-22",
@@ -144,7 +136,6 @@ class TestFinancialCrossValidator:
         assert ticket2.review_status == ReviewQueueStatus.QUEUED_FOR_AUDIT
         assert ticket2.discrepancy_amount == rec_discrepant.difference
 
-        # Step 3: Auditor resolves ticket with notes
         updated_ticket = workflow.update_audit_notes(
             ticket_id=ticket2.ticket_id,
             auditor_name="Senior Financial Auditor A. Kumar",

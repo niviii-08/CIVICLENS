@@ -130,7 +130,6 @@ def get_phase10_sample_activities() -> List[Dict[str, Any]]:
 
 def get_phase10_sample_indicators() -> List[Dict[str, Any]]:
     return [
-        # INPUT
         {
             "indicator_id": "IND-TEST-PUDHUMAI-BUDGET",
             "objective_id": "OBJ-TEST-PUDHUMAI-PENN-01",
@@ -144,7 +143,6 @@ def get_phase10_sample_indicators() -> List[Dict[str, Any]]:
             "description": "Total budget provision sanctioned in State Budget Demands for Grants.",
             "is_test_fixture": True,
         },
-        # OUTPUT
         {
             "indicator_id": "IND-TEST-PUDHUMAI-BENEFICIARIES",
             "objective_id": "OBJ-TEST-PUDHUMAI-PENN-01",
@@ -158,7 +156,6 @@ def get_phase10_sample_indicators() -> List[Dict[str, Any]]:
             "description": "Verified count of girl students receiving monthly ₹1,000 credit in their bank accounts.",
             "is_test_fixture": True,
         },
-        # OUTCOME
         {
             "indicator_id": "IND-TEST-PUDHUMAI-GER-FEMALE",
             "objective_id": "OBJ-TEST-PUDHUMAI-PENN-01",
@@ -172,7 +169,6 @@ def get_phase10_sample_indicators() -> List[Dict[str, Any]]:
             "description": "Percentage of eligible female population aged 18-23 enrolled in tertiary education institutions in Tamil Nadu.",
             "is_test_fixture": True,
         },
-        # OUTCOME 2 (Transition rate)
         {
             "indicator_id": "IND-TEST-PUDHUMAI-TRANSITION-RATE",
             "objective_id": "OBJ-TEST-PUDHUMAI-PENN-01",
@@ -186,7 +182,6 @@ def get_phase10_sample_indicators() -> List[Dict[str, Any]]:
             "description": "Share of Class 12 government school female graduates progressing to recognized tertiary degree/diploma programs within 1 year.",
             "is_test_fixture": True,
         },
-        # IMPACT
         {
             "indicator_id": "IND-TEST-PUDHUMAI-LFPR-FEMALE",
             "objective_id": "OBJ-TEST-PUDHUMAI-PENN-01",
@@ -205,7 +200,6 @@ def get_phase10_sample_indicators() -> List[Dict[str, Any]]:
 
 def get_phase10_sample_observations() -> List[Dict[str, Any]]:
     return [
-        # Baseline GER observation (2018-19, prior to scheme)
         {
             "observation_id": "OBS-TEST-GER-BASE-2018",
             "indicator_id": "IND-TEST-PUDHUMAI-GER-FEMALE",
@@ -220,7 +214,6 @@ def get_phase10_sample_observations() -> List[Dict[str, Any]]:
             "data_quality_status": "VERIFIED",
             "is_test_fixture": True,
         },
-        # Intermediate GER observation (2021-22, transition year)
         {
             "observation_id": "OBS-TEST-GER-MID-2021",
             "indicator_id": "IND-TEST-PUDHUMAI-GER-FEMALE",
@@ -235,7 +228,6 @@ def get_phase10_sample_observations() -> List[Dict[str, Any]]:
             "data_quality_status": "VERIFIED",
             "is_test_fixture": True,
         },
-        # Follow-up GER observation (2023-24, post-rollout)
         {
             "observation_id": "OBS-TEST-GER-FOL-2023",
             "indicator_id": "IND-TEST-PUDHUMAI-GER-FEMALE",
@@ -250,7 +242,6 @@ def get_phase10_sample_observations() -> List[Dict[str, Any]]:
             "data_quality_status": "VERIFIED",
             "is_test_fixture": True,
         },
-        # Formal Target GER observation
         {
             "observation_id": "OBS-TEST-GER-TGT-2026",
             "indicator_id": "IND-TEST-PUDHUMAI-GER-FEMALE",
@@ -265,7 +256,6 @@ def get_phase10_sample_observations() -> List[Dict[str, Any]]:
             "data_quality_status": "VERIFIED",
             "is_test_fixture": True,
         },
-        # Baseline Transition Rate observation
         {
             "observation_id": "OBS-TEST-TRANS-BASE-2021",
             "indicator_id": "IND-TEST-PUDHUMAI-TRANSITION-RATE",
@@ -280,7 +270,6 @@ def get_phase10_sample_observations() -> List[Dict[str, Any]]:
             "data_quality_status": "VERIFIED",
             "is_test_fixture": True,
         },
-        # Follow-up Transition Rate observation
         {
             "observation_id": "OBS-TEST-TRANS-FOL-2023",
             "indicator_id": "IND-TEST-PUDHUMAI-TRANSITION-RATE",
@@ -295,7 +284,6 @@ def get_phase10_sample_observations() -> List[Dict[str, Any]]:
             "data_quality_status": "VERIFIED",
             "is_test_fixture": True,
         },
-        # Output count observation (2023-24)
         {
             "observation_id": "OBS-TEST-BEN-FOL-2023",
             "indicator_id": "IND-TEST-PUDHUMAI-BENEFICIARIES",
@@ -363,7 +351,6 @@ def get_phase10_sample_studies() -> List[Dict[str, Any]]:
             "document_hash": "33445566778899001122aabbccddeeff33445566778899001122aabbccddeeff",
             "is_test_fixture": True,
         },
-        # Flawed study with missing control group designed to trigger automatic downgrading
         {
             "study_id": "STD-TEST-FLAWED-CAUSAL-CLAIM-01",
             "scheme_id": "SCH-TEST-KMUT",
@@ -548,7 +535,7 @@ def get_phase10_sample_registry_entries() -> List[Dict[str, Any]]:
             "responsible_department": "Rural Development and Panchayat Raj Department",
             "objectives_summary": "Achieve world-class holistic transformation and seamless empowerment of rural communities.",
             "original_objective_wording": "To usher in a world-class holistic transformation and overall upliftment of rural life through seamless empowerment across villages.",
-            "is_objective_ambiguous": None,  # Will be automatically detected and flagged as ambiguous
+            "is_objective_ambiguous": None,
             "intended_beneficiaries": "Rural residents across village panchayats in Tamil Nadu.",
             "geographic_scope": "RURAL_ONLY",
             "covered_districts": ["Dharmapuri", "Ariyalur", "Ramanathapuram"],
@@ -568,7 +555,6 @@ def get_phase10_sample_registry_entries() -> List[Dict[str, Any]]:
 def get_phase10_sample_evaluation_plans() -> List[Dict[str, Any]]:
     """Phase 10.3 Policy Evaluation Plan test fixtures."""
     return [
-        # Plan 1: Officially stated target (Output delivery)
         {
             "plan_id": "PLAN-TEST-PUDHUMAI-OUTPUT-01",
             "policy_id": "POL-TEST-PUDHUMAI-PENN",
@@ -594,7 +580,6 @@ def get_phase10_sample_evaluation_plans() -> List[Dict[str, Any]]:
             "limitations": "Output count confirms stipend transfer but does not measure degree completion; CAG noted 8.3% NPCI seeding delays in 6 sampled districts.",
             "is_test_fixture": True,
         },
-        # Plan 2: Analyst-proposed benchmark (Outcome assessment)
         {
             "plan_id": "PLAN-TEST-PUDHUMAI-OUTCOME-02",
             "policy_id": "POL-TEST-PUDHUMAI-PENN",
@@ -620,7 +605,6 @@ def get_phase10_sample_evaluation_plans() -> List[Dict[str, Any]]:
             "limitations": "Before-and-after statewide trajectory reflects both Pudhumai Penn and secular educational growth; causal attribution requires DiD control group.",
             "is_test_fixture": True,
         },
-        # Plan 3: No published target (Descriptive evaluation of ambiguous policy)
         {
             "plan_id": "PLAN-TEST-RURAL-VISION-01",
             "policy_id": "POL-TEST-AMBIGUOUS-RURAL-VISION",

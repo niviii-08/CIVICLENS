@@ -62,7 +62,6 @@ def db_session():
 @pytest.fixture
 def seed_nodes(db_session):
     """Creates a standard set of labelled test nodes representing Phases 1-8."""
-    # Canonical entity
     canon_dept = CanonicalEntity(
         entity_id="CANON:DEPT:MAWS",
         entity_type=RegistryEntityType.GOVERNMENT_DEPARTMENT,
@@ -201,7 +200,6 @@ def seed_nodes(db_session):
 
 def test_1_referential_integrity_nonexistent_nodes(db_session, seed_nodes):
     """Rejects edges where either source or target node does not exist, or self-loops."""
-    # 1. Non-existent source node
     with pytest.raises(NodeNotFoundError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -214,7 +212,6 @@ def test_1_referential_integrity_nonexistent_nodes(db_session, seed_nodes):
         )
     assert "NODE:NON_EXISTENT_SRC" in str(exc_info.value)
 
-    # 2. Non-existent target node
     with pytest.raises(NodeNotFoundError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -227,7 +224,6 @@ def test_1_referential_integrity_nonexistent_nodes(db_session, seed_nodes):
         )
     assert "NODE:NON_EXISTENT_TGT" in str(exc_info.value)
 
-    # 3. Self-referential loop
     with pytest.raises(EpistemicRuleViolationError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -255,7 +251,6 @@ def test_2_missing_evidence_rejection(db_session, seed_nodes):
         )
     assert "lacks mandatory evidence reference or source document citation" in str(exc_info.value)
 
-    # Blank whitespace strings are also rejected
     with pytest.raises(InvalidEvidenceError):
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -286,7 +281,6 @@ def test_3_duplicate_edges_and_repeatable_imports(db_session, seed_nodes):
     )
     db_session.commit()
 
-    # Re-import identical edge (repeatable import simulation)
     edge2 = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:DEPT:MAWS",
@@ -301,10 +295,8 @@ def test_3_duplicate_edges_and_repeatable_imports(db_session, seed_nodes):
     )
     db_session.commit()
 
-    # Must be the exact same edge ID, not a duplicate row
     assert edge1.edge_id == edge2.edge_id
 
-    # Total edges between these nodes must be exactly 1
     edges_in_db = (
         db_session.query(CivicEvidenceEdge)
         .filter(
@@ -322,7 +314,6 @@ def test_4_epistemic_rule_1_response_to_civic_issue(db_session, seed_nodes):
     Rule 1: A response can relate to a civic issue only when supported by
     a source or reviewed matching decision. Automated heuristic candidates without proof are rejected.
     """
-    # 1. Reject automated candidate match with no official source document and no human review
     with pytest.raises(EpistemicRuleViolationError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -330,14 +321,13 @@ def test_4_epistemic_rule_1_response_to_civic_issue(db_session, seed_nodes):
             target_node_id="NODE:ISSUE:WATER_KOLATHUR",
             relationship_type=GraphRelationshipType.RESPONDS_TO,
             evidence_reference="Keyword match on 'water pipeline'",
-            source_document_id=None,  # Missing source document!
+            source_document_id=None,
             matching_method=MatchingMethod.AUTOMATED_CANDIDATE,
-            review_status=GraphReviewStatus.PENDING_REVIEW,  # Unreviewed!
+            review_status=GraphReviewStatus.PENDING_REVIEW,
             is_test_fixture=True,
         )
     assert "A response (NODE:RESP:MAWS_ACTION) can relate to a civic issue" in str(exc_info.value)
 
-    # 2. Allow when backed by official source document
     edge_doc = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:RESP:MAWS_ACTION",
@@ -352,7 +342,6 @@ def test_4_epistemic_rule_1_response_to_civic_issue(db_session, seed_nodes):
     assert edge_doc is not None
     assert edge_doc.provenance_status == GraphProvenanceStatus.VALID
 
-    # 3. Allow candidate when human-reviewed & verified
     edge_reviewed = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:RESP:MAWS_ACTION",
@@ -373,7 +362,6 @@ def test_5_epistemic_rule_2_promise_to_scheme_fulfillment_guardrail(db_session, 
     Rule 2: A promise can relate to a scheme without automatically proving fulfillment.
     'implements' / fulfillment claims are rejected without documentary proof.
     """
-    # 1. 'relates_to' is permitted without asserting fulfillment
     edge_relates = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:PROM:BREAKFAST",
@@ -385,7 +373,6 @@ def test_5_epistemic_rule_2_promise_to_scheme_fulfillment_guardrail(db_session, 
     )
     assert edge_relates.relationship_type == GraphRelationshipType.RELATES_TO
 
-    # 2. Reject asserting 'implements' without documentary proof of fulfillment
     with pytest.raises(EpistemicRuleViolationError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -400,7 +387,6 @@ def test_5_epistemic_rule_2_promise_to_scheme_fulfillment_guardrail(db_session, 
     assert "cannot be asserted as 'implements'" in str(exc_info.value)
     assert "A promise relating to a scheme does not prove fulfillment" in str(exc_info.value)
 
-    # 3. Allow 'implements' when supported by official Government Order & verified fulfillment proof
     edge_fulfilled = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:PROM:BREAKFAST",
@@ -423,7 +409,6 @@ def test_6_epistemic_rule_3_funding_disclosure_identity_support(db_session, seed
     Rule 3: A funding disclosure can relate to a party or donor only when
     the identity match is supported.
     """
-    # 1. Reject candidate match with low confidence (< 0.70) without review
     with pytest.raises(EpistemicRuleViolationError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -439,7 +424,6 @@ def test_6_epistemic_rule_3_funding_disclosure_identity_support(db_session, seed
         )
     assert "has insufficient confidence (0.45 < 0.70)" in str(exc_info.value)
 
-    # 2. Reject explicitly flagged unsupported match
     with pytest.raises(EpistemicRuleViolationError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -453,7 +437,6 @@ def test_6_epistemic_rule_3_funding_disclosure_identity_support(db_session, seed
         )
     assert "is explicitly flagged as unsupported match" in str(exc_info.value)
 
-    # 3. Allow when supported by deterministic ID or high-confidence match
     edge_funding = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:CONTRIB:EB_2023_01",
@@ -475,7 +458,6 @@ def test_7_epistemic_rule_4_claim_dialectical_supporting_and_contradicting_evide
     Rule 4: A claim can have supporting and contradicting evidence simultaneously.
     Both edges must coexist without throwing conflict errors.
     """
-    # 1. Edge providing supporting evidence
     edge_pro = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:DOC:DPI_REPORT",
@@ -488,7 +470,6 @@ def test_7_epistemic_rule_4_claim_dialectical_supporting_and_contradicting_evide
     )
     db_session.commit()
 
-    # 2. Edge providing contradicting evidence
     edge_con = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:DOC:CAG_AUDIT",
@@ -501,7 +482,6 @@ def test_7_epistemic_rule_4_claim_dialectical_supporting_and_contradicting_evide
     )
     db_session.commit()
 
-    # Both edges must exist simultaneously on the target claim node
     claim_incoming = GraphStorageService.get_node_edges(
         session=db_session,
         node_id="NODE:CLAIM:BREAKFAST_ATTENDANCE",
@@ -518,7 +498,6 @@ def test_8_epistemic_rule_5_civic_issue_geographic_association_guardrail(db_sess
     Rule 5: A civic issue's geographic association does not establish
     an individual representative's responsibility.
     """
-    # 1. Direct 'located_in' between civic issue and individual representative is rejected
     with pytest.raises(EpistemicRuleViolationError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -531,7 +510,6 @@ def test_8_epistemic_rule_5_civic_issue_geographic_association_guardrail(db_sess
         )
     assert "cannot have relationship 'located_in' directly to an individual representative" in str(exc_info.value)
 
-    # 2. Direct causal attribution or responsibility from mere geographic co-occurrence is rejected
     with pytest.raises(EpistemicRuleViolationError) as exc_info:
         GraphStorageService.add_evidence_edge(
             session=db_session,
@@ -545,7 +523,6 @@ def test_8_epistemic_rule_5_civic_issue_geographic_association_guardrail(db_sess
         )
     assert "geographic co-occurrence within a constituency does not establish individual representative" in str(exc_info.value)
 
-    # 3. Correct representation: Issue located in Constituency, Representative represents Constituency
     edge_issue_const = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:ISSUE:WATER_KOLATHUR",
@@ -591,12 +568,10 @@ def test_9_reversible_edge_corrections_and_soft_reversals(db_session, seed_nodes
     db_session.commit()
     edge_id = edge.edge_id
 
-    # 1. Verify initial audit record
     audit_records = GraphStorageService.get_edge_audit_records(db_session, edge_id)
     assert len(audit_records) == 1
     assert audit_records[0].operation_type == EdgeOperationType.CREATE
 
-    # 2. Correct edge metadata (e.g. adjust valid_to and confidence)
     corrected = GraphStorageService.correct_edge(
         session=db_session,
         edge_id=edge_id,
@@ -610,7 +585,6 @@ def test_9_reversible_edge_corrections_and_soft_reversals(db_session, seed_nodes
     assert corrected.confidence_score == 0.95
     assert corrected.valid_to == "2023-03-31"
 
-    # 3. Soft-reversal: Retract edge
     retracted = GraphStorageService.retract_edge(
         session=db_session,
         edge_id=edge_id,
@@ -620,7 +594,6 @@ def test_9_reversible_edge_corrections_and_soft_reversals(db_session, seed_nodes
     db_session.commit()
     assert retracted.provenance_status == GraphProvenanceStatus.RETRACTED
 
-    # Active query should now exclude this retracted edge
     active_edges = GraphStorageService.get_node_edges(
         session=db_session,
         node_id="NODE:DEPT:MAWS",
@@ -628,12 +601,10 @@ def test_9_reversible_edge_corrections_and_soft_reversals(db_session, seed_nodes
     )
     assert not any(e.edge_id == edge_id for e in active_edges)
 
-    # But row STILL EXISTS in database (never deleted!)
     edge_in_db = GraphStorageService.get_edge(db_session, edge_id)
     assert edge_in_db is not None
     assert edge_in_db.provenance_status == GraphProvenanceStatus.RETRACTED
 
-    # 4. Reversible restore: Restore edge back to VALID
     restored = GraphStorageService.restore_edge(
         session=db_session,
         edge_id=edge_id,
@@ -643,7 +614,6 @@ def test_9_reversible_edge_corrections_and_soft_reversals(db_session, seed_nodes
     db_session.commit()
     assert restored.provenance_status == GraphProvenanceStatus.VALID
 
-    # 5. Supersede edge with a new edge ID
     superseded = GraphStorageService.supersede_edge(
         session=db_session,
         old_edge_id=edge_id,
@@ -654,7 +624,6 @@ def test_9_reversible_edge_corrections_and_soft_reversals(db_session, seed_nodes
     db_session.commit()
     assert superseded.provenance_status == GraphProvenanceStatus.SUPERSEDED
 
-    # 6. Verify complete audit trail retains all 5 lifecycle operations
     audit_history = GraphStorageService.get_edge_audit_records(db_session, edge_id)
     assert len(audit_history) == 5
     op_sequence = [r.operation_type for r in audit_history]
@@ -679,7 +648,6 @@ def test_10_canonical_entity_linking_and_traversal(db_session, seed_nodes):
     node = GraphStorageService.get_node(db_session, "NODE:DEPT:MAWS")
     assert node.canonical_entity_id == "CANON:DEPT:MAWS"
 
-    # Add edges with temporal ranges
     e1 = GraphStorageService.add_evidence_edge(
         session=db_session,
         source_node_id="NODE:DEPT:MAWS",
@@ -704,15 +672,12 @@ def test_10_canonical_entity_linking_and_traversal(db_session, seed_nodes):
     )
     db_session.commit()
 
-    # Query outgoing
     outgoing = GraphStorageService.get_node_edges(db_session, "NODE:DEPT:MAWS", direction="outgoing")
     assert len(outgoing) == 2
 
-    # Query incoming on scheme
     incoming = GraphStorageService.get_node_edges(db_session, "NODE:SCHEME:BREAKFAST", direction="incoming")
     assert len(incoming) == 2
 
-    # Query specific relationship
     funds_only = GraphStorageService.get_node_edges(
         db_session,
         "NODE:DEPT:MAWS",

@@ -45,7 +45,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Pre-populate party, manifesto, and representative
     party = PoliticalParty(party_id="PARTY-DMK", party_name="DMK", party_code="DMK")
     session.add(party)
     session.flush()
@@ -67,7 +66,6 @@ def db_session():
     )
     session.add(rep)
 
-    # Pre-populate Phase 3 Political Promise
     promise = PoliticalPromise(
         promise_id="PROM-DMK-2021-042",
         manifesto_id="MAN-DMK-2021",
@@ -112,7 +110,7 @@ def test_2_rejection_of_non_existent_phase3_promise(db_session):
         service.link_promise_to_performance(
             link_id="LNK-FAIL",
             representative_id="REP-MLA-013",
-            promise_id="NON_EXISTENT_PROMISE_999",  # Not in Phase 3
+            promise_id="NON_EXISTENT_PROMISE_999",
             scheme_id="SOME_SCHEME"
         )
 
@@ -120,7 +118,6 @@ def test_2_rejection_of_non_existent_phase3_promise(db_session):
 def test_3_evidence_link_and_policy_action_advancement(db_session):
     service = PromiseCrossReferenceService(db=db_session)
 
-    # Create mock statutory evidence
     ev = Evidence(
         id=101,
         content="G.O. Ms. No. 45 - Sanction of Smart Classroom Equipment for Kolathur Schools",
@@ -144,7 +141,6 @@ def test_3_evidence_link_and_policy_action_advancement(db_session):
 def test_4_constituency_work_advancement_to_project_recorded(db_session):
     service = PromiseCrossReferenceService(db=db_session)
 
-    # Create constituency work
     work = ConstituencyWork(
         work_id="WORK-SMART-01",
         constituency_id="AC-013",
@@ -171,7 +167,6 @@ def test_4_constituency_work_advancement_to_project_recorded(db_session):
 def test_5_development_indicator_advancement_to_outcome_observed(db_session):
     service = PromiseCrossReferenceService(db=db_session)
 
-    # Create development indicator
     ind = DevelopmentIndicator(
         indicator_id="IND-DIGITAL-01",
         geographic_unit_id="AC-013",
@@ -207,8 +202,8 @@ def test_6_conflicting_dates_detection_and_insufficient_evidence(db_session):
         representative_id="REP-MLA-013",
         promise_id="PROM-DMK-2021-042",
         scheme_id="OLD_HISTORICAL_SCHEME",
-        promise_year=2021,  # 2021 Manifesto Promise
-        action_year=2018    # Historical action executed 3 years prior to promise!
+        promise_year=2021,
+        action_year=2018
     )
 
     assert link.has_conflicting_dates is True
@@ -218,7 +213,6 @@ def test_6_conflicting_dates_detection_and_insufficient_evidence(db_session):
 def test_7_representative_promise_scorecard_aggregation(db_session):
     service = PromiseCrossReferenceService(db=db_session)
 
-    # Create two links for representative
     service.link_promise_to_performance(
         link_id="LNK-SC-01",
         representative_id="REP-MLA-013",

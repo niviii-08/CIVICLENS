@@ -48,7 +48,6 @@ class TestFinancialRecordNormalizer:
         norm1 = DonorNameNormalizer.normalize_name(raw1)
         norm2 = DonorNameNormalizer.normalize_name(raw2)
 
-        # Asserts distinct normalized donor name representations
         assert norm1 != norm2
         assert norm1 == "APEX INFRASTRUCTURE PVT LTD"
         assert norm2 == "APEX INFRASTRUCTURE INDIA PVT LTD"
@@ -63,19 +62,14 @@ class TestValidationEngine:
         issues = ValidationEngine.validate_contribution_batch(canonical_contribs)
         rule_codes = [i.rule_code for i in issues]
 
-        # V-01 Missing Party flagged for REC_VAL_002
         assert "V-01_MISSING_PARTY" in rule_codes
 
-        # V-02 Negative Amount flagged for REC_VAL_003
         assert "V-02_NEGATIVE_AMOUNT" in rule_codes
 
-        # V-03 Invalid Currency flagged for REC_VAL_004
         assert "V-03_INVALID_CURRENCY" in rule_codes
 
-        # V-09 FY Date Mismatch flagged for REC_VAL_005 (Date in 2020 for FY2021-22)
         assert "V-09_FY_DATE_MISMATCH" in rule_codes
 
-        # V-05 Duplicate Row flagged for REC_VAL_006
         assert "V-05_DUPLICATE_ROW" in rule_codes
 
     def test_cross_source_statement_validation(self):
@@ -86,8 +80,6 @@ class TestValidationEngine:
         issues = ValidationEngine.validate_cross_source_statement(canonical_contribs, stmt)
         rule_codes = [i.rule_code for i in issues]
 
-        # V-07 Inconsistent Totals (Form 24A sum != Audited 20k schedule)
         assert "V-07_INCONSISTENT_TOTALS" in rule_codes
 
-        # V-10 Source Inconsistency (Form 24A sum > Audited total income)
         assert "V-10_SOURCE_INCONSISTENCY" in rule_codes

@@ -86,7 +86,6 @@ class TestPhase5Documentation:
         with open(doc_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Verify all 7 required datasets are explicitly documented
         required_datasets = [
             "ECI Political Party Contribution Reports",
             "ECI Annual Audited Accounts",
@@ -99,7 +98,6 @@ class TestPhase5Documentation:
         for ds in required_datasets:
             assert ds in content, f"Dataset '{ds}' is not documented in dataset_requirements.md"
 
-        # Verify all required source URLs are documented
         required_urls = [
             "https://www.eci.gov.in/contribution-reports",
             "https://www.eci.gov.in/annual-audit-reports",
@@ -116,7 +114,6 @@ class TestPhase5Documentation:
         with open(doc_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Check required ethical distinction keywords
         assert "DOES NOT prove corruption" in content or "does not prove corruption" in content.lower()
         assert "Observed Financial Facts" in content
         assert "Statistical Flags" in content
@@ -141,13 +138,12 @@ class TestPhase5CoreEntitiesFixture:
 
     def test_contributions_fixture(self):
         total_contributions = sum(c["amount_inr"] for c in MOCK_CONTRIBUTIONS_FIXTURE)
-        assert total_contributions == 18000000.0  # ₹1.8 Crore
+        assert total_contributions == 18000000.0
         for c in MOCK_CONTRIBUTIONS_FIXTURE:
             assert c["amount_inr"] >= 20000.0
 
     def test_financial_statement_integrity(self):
         stmt = MOCK_FINANCIAL_STATEMENT_FIXTURE
-        # Verify accounting equation: Total Income - Total Expenditure = Net Surplus
         computed_surplus = stmt["total_income"] - stmt["total_expenditure"]
         assert computed_surplus == stmt["net_surplus_deficit"]
 
@@ -156,26 +152,21 @@ class TestPhase5AnomalyAlgorithms:
     """Tests statistical algorithms using deterministic synthetic test streams."""
 
     def test_gini_coefficient_calculation(self):
-        # Equal contributions -> Gini = 0.0
         equal_vals = [100.0, 100.0, 100.0, 100.0]
         assert calculate_gini(equal_vals) == 0.0
 
-        # Highly concentrated contributions -> Gini > 0.6
         concentrated_vals = [10.0, 10.0, 10.0, 970.0]
         gini = calculate_gini(concentrated_vals)
         assert gini > 0.60
 
     def test_hhi_calculation(self):
-        # Monopoly (1 donor) -> HHI = 1.0
         monopoly = [1000.0]
         assert calculate_hhi(monopoly) == 1.0
 
-        # 4 equal donors -> HHI = 4 * (0.25^2) = 0.25
         equal_four = [100.0, 100.0, 100.0, 100.0]
         assert round(calculate_hhi(equal_four), 4) == 0.25
 
     def test_benford_chi_square_detection(self):
-        # Natural stream should have lower Chi-Square divergence than heavy digit-5 artificial stream
         chi_normal = calculate_benford_chi_square(MOCK_BENFORD_NORMAL_STREAM)
         chi_anomalous = calculate_benford_chi_square(MOCK_BENFORD_ANOMALOUS_STREAM)
         assert chi_anomalous > chi_normal

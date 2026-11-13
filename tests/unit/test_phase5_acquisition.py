@@ -93,7 +93,6 @@ class TestDocumentAcquisitionEngine:
         sample_pdf = b"%PDF-1.4 Cached test content for AIADMK"
         target_url = "https://www.eci.gov.in/files/Form24A_AIADMK_FY2021-22.pdf"
 
-        # First acquisition
         res1 = engine.acquire_document(
             url=target_url,
             source_id="SRC-ECI-24A",
@@ -103,7 +102,6 @@ class TestDocumentAcquisitionEngine:
         )
         assert res1["status"] == "SUCCESS"
 
-        # Second acquisition should hit cache
         res2 = engine.acquire_document(
             url=target_url,
             source_id="SRC-ECI-24A",
@@ -152,7 +150,6 @@ class TestDocumentAcquisitionEngine:
 
         sample_pdf = b"%PDF-1.4 Test content"
 
-        # Disallowed party (BJP) -> SKIPPED
         res1 = engine.acquire_document(
             url="https://www.eci.gov.in/files/BJP.pdf",
             source_id="SRC-ECI-24A",
@@ -162,7 +159,6 @@ class TestDocumentAcquisitionEngine:
         )
         assert res1["status"] == "SKIPPED"
 
-        # Disallowed year (FY2014-15) -> SKIPPED
         res2 = engine.acquire_document(
             url="https://www.eci.gov.in/files/DMK_2014.pdf",
             source_id="SRC-ECI-24A",
@@ -176,7 +172,6 @@ class TestDocumentAcquisitionEngine:
         config = AcquisitionConfig(raw_storage_dir=temp_acquisition_dir, max_retries=1)
         engine = DocumentAcquisitionEngine(config=config)
 
-        # Attempt downloading from invalid non-whitelisted domain
         unauthorized_url = "https://unauthorized-domain.org/malicious_report.pdf"
         res = engine.acquire_document(
             url=unauthorized_url,

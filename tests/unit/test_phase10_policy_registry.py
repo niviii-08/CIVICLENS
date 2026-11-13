@@ -101,7 +101,6 @@ def test_2_canonical_linkage_to_phase1_phase2_phase3_models(db_session):
     Verify that PolicyRegistryEntry integrates directly with existing Phase 1 (BudgetScheme),
     Phase 2 (HistoricalScheme), and Phase 3 (PoliticalPromise) models, and rejects unlinked records.
     """
-    # Seed Phase 1 BudgetDepartment and BudgetScheme
     dept = BudgetDepartment(name="Higher Education Department", code="DEMAND-20")
     db_session.add(dept)
     db_session.flush()
@@ -115,7 +114,6 @@ def test_2_canonical_linkage_to_phase1_phase2_phase3_models(db_session):
     db_session.add(b_scheme)
     db_session.flush()
 
-    # Seed Phase 2 HistoricalScheme
     h_scheme = HistoricalScheme(
         original_source_identifier="HIST-SCH-PUDHUMAI-2022",
         budget_scheme_id=b_scheme.id,
@@ -128,7 +126,6 @@ def test_2_canonical_linkage_to_phase1_phase2_phase3_models(db_session):
     db_session.add(h_scheme)
     db_session.commit()
 
-    # Register policy using Phase 1 & Phase 2 IDs — fields auto-populate from canonical entities
     policy = PolicyRegistryService.register_policy(
         db_session,
         policy_id="POL-TEST-CANONICAL-LINK-01",
@@ -145,7 +142,6 @@ def test_2_canonical_linkage_to_phase1_phase2_phase3_models(db_session):
     assert "500,000" in policy.original_objective_wording
     assert "Girl students" in policy.intended_beneficiaries
 
-    # Reject registration when no canonical scheme code or Phase 1-3 FK is provided
     with pytest.raises(ValueError, match="canonical scheme or policy entity"):
         PolicyRegistryService.register_policy(
             db_session,
@@ -181,16 +177,14 @@ def test_4_ambiguous_objective_wording_preservation_and_flagging(db_session):
     and the record is automatically flagged for human review.
     """
     entries = get_phase10_sample_registry_entries()
-    ambig_data = entries[1]  # POL-TEST-AMBIGUOUS-RURAL-VISION
+    ambig_data = entries[1]
 
     entry = PolicyRegistryService.register_policy(db_session, **ambig_data)
 
-    # Exact original wording must be preserved verbatim
     assert entry.original_objective_wording == (
         "To usher in a world-class holistic transformation and overall upliftment of rural life "
         "through seamless empowerment across villages."
     )
-    # Must be automatically flagged as ambiguous
     assert entry.is_objective_ambiguous is True
     assert entry.objective_review_status == ObjectiveReviewStatus.FLAGGED_AMBIGUOUS
     assert entry.evaluation_status == PolicyEvaluationStatus.FLAGGED_FOR_REVIEW
@@ -203,7 +197,6 @@ def test_5_target_provenance_and_zero_invention_guardrail():
     Verify that officially stated targets, analyst-proposed benchmarks, and
     un-targeted policies are strictly separated and invented targets are rejected.
     """
-    # 1. Valid OFFICIALLY_STATED target with documentary reference
     val, prov, ref = PolicyRegistryService.validate_target_provenance(
         target_value=500000.0,
         target_provenance="OFFICIALLY_STATED",
@@ -212,7 +205,6 @@ def test_5_target_provenance_and_zero_invention_guardrail():
     assert val == 500000.0
     assert prov == TargetProvenanceType.OFFICIALLY_STATED
 
-    # 2. Reject OFFICIALLY_STATED target without a documentary source reference (Never invent a target)
     with pytest.raises(ValueError, match="Never invent an official policy target"):
         PolicyRegistryService.validate_target_provenance(
             target_value=500000.0,
@@ -220,7 +212,6 @@ def test_5_target_provenance_and_zero_invention_guardrail():
             target_source_reference="",
         )
 
-    # 3. Reject numeric target_value when target_provenance is NO_PUBLISHED_TARGET
     with pytest.raises(ValueError, match="Never invent a policy target"):
         PolicyRegistryService.validate_target_provenance(
             target_value=75.0,
@@ -228,7 +219,6 @@ def test_5_target_provenance_and_zero_invention_guardrail():
             target_source_reference=None,
         )
 
-    # 4. Valid ANALYST_PROPOSED_BENCHMARK requires analytical basis
     val_b, prov_b, ref_b = PolicyRegistryService.validate_target_provenance(
         target_value=60.0,
         target_provenance="ANALYST_PROPOSED_BENCHMARK",
@@ -268,7 +258,6 @@ def test_6_evaluation_plan_builder_all_required_fields(db_session):
 
     assert len(created_plans) == 3
 
-    # Plan 1: Officially stated target
     p1 = created_plans[0]
     assert p1.plan_id == "PLAN-TEST-PUDHUMAI-OUTPUT-01"
     assert p1.target_provenance == TargetProvenanceType.OFFICIALLY_STATED
@@ -281,14 +270,12 @@ def test_6_evaluation_plan_builder_all_required_fields(db_session):
     assert "CAG noted 8.3%" in p1.limitations
     assert p1.plan_status == "ACTIVE"
 
-    # Plan 2: Analyst-proposed benchmark
     p2 = created_plans[1]
     assert p2.target_provenance == TargetProvenanceType.ANALYST_PROPOSED_BENCHMARK
     assert p2.target_value == 60.0
     assert p2.baseline_value == 48.2
     assert p2.actual_value == 54.1
 
-    # Plan 3: No published target on ambiguous objective
     p3 = created_plans[2]
     assert p3.target_provenance == TargetProvenanceType.NO_PUBLISHED_TARGET
     assert p3.target_value is None
@@ -311,7 +298,7 @@ def test_7_plan_assessment_summary_and_epistemic_notes(db_session):
     assert s1["is_analyst_benchmark"] is False
     assert s1["target_realization_pct"] == 96.4
     assert "OFFICIALLY STATED" in s1["epistemic_note"]
-    assert "results_chain_warning" in s1  # Because p1 is an OUTPUT indicator
+    assert "results_chain_warning" in s1
 
     s2 = PolicyRegistryService.compute_plan_assessment_summary(p2)
     assert s2["is_official_target"] is False

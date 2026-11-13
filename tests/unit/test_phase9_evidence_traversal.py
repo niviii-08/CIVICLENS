@@ -59,9 +59,6 @@ def traversal_fixture_graph(db_session):
     """
     Constructs a comprehensive cross-phase evidence graph covering all 5 investigation paths.
     """
-    # -----------------------------------------------------------------------
-    # Path 1 Entities: Promise -> Scheme -> Budget -> Implementation
-    # -----------------------------------------------------------------------
     node_prom = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:PROM:BREAKFAST_2021",
@@ -99,7 +96,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # Path 1 Edges
     GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_prom.node_id,
@@ -131,9 +127,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # -----------------------------------------------------------------------
-    # Path 2 Entities: Claim -> Supporting and Contradicting Evidence
-    # -----------------------------------------------------------------------
     node_claim = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:CLAIM:ATTENDANCE_18_PCT",
@@ -162,7 +155,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # Path 2 Edges: Supporting and Contradicting
     GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_doc_pro.node_id,
@@ -184,9 +176,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # -----------------------------------------------------------------------
-    # Path 3 Entities: Civic Issue -> Official Record -> Response -> Resolution
-    # -----------------------------------------------------------------------
     node_issue = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:ISSUE:WATER_WARD65",
@@ -224,7 +213,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # Path 3 Edges
     GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_issue.node_id,
@@ -257,9 +245,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # -----------------------------------------------------------------------
-    # Path 4 Entities: Representative -> Constituency -> Public Works
-    # -----------------------------------------------------------------------
     node_rep = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:REP:STALIN_MLA",
@@ -288,7 +273,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # Path 4 Edges
     GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_rep.node_id,
@@ -310,9 +294,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # -----------------------------------------------------------------------
-    # Path 5 Entities: Funding -> Disclosed Party -> Source Document
-    # -----------------------------------------------------------------------
     node_contrib = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:CONTRIB:EB_1042",
@@ -341,7 +322,6 @@ def traversal_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # Path 5 Edges
     GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_contrib.node_id,
@@ -400,16 +380,13 @@ def test_1_investigation_path_1_promise_scheme_budget_implementation(db_session,
     assert len(paths) >= 1
     p1 = paths[0]
 
-    # Verify intermediate entities and sequence
     node_ids = [n["node_id"] for n in p1["nodes"]]
     assert "NODE:PROM:BREAKFAST_2021" in node_ids
     assert "NODE:SCHEME:BREAKFAST_TN" in node_ids
 
-    # Verify epistemic caveats distinguish policy intent from statutory fulfillment proof
     assert len(p1["epistemic_caveats"]) >= 1
     assert any("Policy Intent Association" in c for c in p1["epistemic_caveats"])
 
-    # Verify edge metadata retention
     for edge in p1["edges"]:
         assert edge["relationship_type"] is not None
         assert edge["matching_method"] is not None
@@ -434,11 +411,9 @@ def test_2_investigation_path_2_claim_supporting_and_contradicting_evidence(db_s
         for e in p["edges"]:
             rel_types.add(e["relationship_type"])
 
-    # Both supporting and contradicting edges must be present in the discovered paths
     assert "provides_evidence_for" in rel_types
     assert "contradicts" in rel_types
 
-    # Verify conflicting evidence detection on the claim node
     has_conflict_flag = any(len(p["conflicting_evidence"]) > 0 for p in paths)
     assert has_conflict_flag
 
@@ -454,7 +429,6 @@ def test_3_investigation_path_3_civic_issue_response_resolution(db_session, trav
         max_depth=4,
     )
     assert len(paths) >= 1
-    # Check that response record is traversed
     all_traversed_nodes = {n["node_id"] for p in paths for n in p["nodes"]}
     assert "NODE:RESP:CMWSSB_ACTION" in all_traversed_nodes
 
@@ -472,11 +446,9 @@ def test_4_investigation_path_4_representative_constituency_works(db_session, tr
     )
     assert len(paths) >= 1
 
-    # Check that AC-013 constituency is an intermediate hop
     all_traversed = {n["node_id"] for p in paths for n in p["nodes"]}
     assert "NODE:CONST:KOLATHUR_AC" in all_traversed
 
-    # Verify caveat on spatial association
     for p in paths:
         if len(p["edges"]) > 1:
             assert any("Constituency Spatial Association" in c for c in p["epistemic_caveats"])
@@ -495,7 +467,6 @@ def test_5_investigation_path_5_funding_disclosure_lineage(db_session, traversal
     )
     assert len(paths) >= 1
 
-    # Disclosed party must be present
     all_traversed = {n["node_id"] for p in paths for n in p["nodes"]}
     assert "NODE:PARTY:DMK_HEADQUARTERS" in all_traversed or "NODE:DOC:ECI_AFFIDAVIT_2024" in all_traversed
 
@@ -506,7 +477,6 @@ def test_6_anti_fabrication_missing_intermediate_edges(db_session, traversal_fix
     When an intermediate edge is missing, the traversal engine MUST NEVER manufacture
     or bridge disconnected nodes.
     """
-    # Create an isolated budget record not connected to the breakfast scheme
     node_isolated_bud = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:BUD:ISOLATED_FOREST",
@@ -518,14 +488,12 @@ def test_6_anti_fabrication_missing_intermediate_edges(db_session, traversal_fix
     )
     db_session.commit()
 
-    # Search paths from Promise to Isolated Budget
     paths = EvidenceTraversalEngine.find_paths(
         session=db_session,
         start_node_id="NODE:PROM:BREAKFAST_2021",
         target_node_id=node_isolated_bud.node_id,
         max_depth=4,
     )
-    # MUST BE ZERO PATHS (No edge exists between them)
     assert len(paths) == 0
 
 
@@ -535,7 +503,6 @@ def test_7_cycle_prevention_safeguard(db_session):
     A cyclic graph topology (A -> B -> C -> A) terminates cleanly without
     infinite loops or repeating nodes in the same branch.
     """
-    # Create 3 cyclic nodes
     na = GraphStorageService.create_or_get_node(
         db_session, "NODE:CYCLE:A", GraphEntityType.PUBLIC_WORK, "CYC-A", "Cycle Node A", is_test_fixture=True
     )
@@ -560,7 +527,6 @@ def test_7_cycle_prevention_safeguard(db_session):
     )
     db_session.commit()
 
-    # Traverse starting from A
     paths = EvidenceTraversalEngine.find_paths(
         session=db_session,
         start_node_id=na.node_id,
@@ -568,7 +534,6 @@ def test_7_cycle_prevention_safeguard(db_session):
     )
     assert len(paths) > 0
 
-    # In EVERY path, node IDs must be strictly unique (no cycle repetition!)
     for p in paths:
         node_ids = [n["node_id"] for n in p["nodes"]]
         assert len(node_ids) == len(set(node_ids)), f"Cycle detected in path {node_ids}"
@@ -578,7 +543,6 @@ def test_8_depth_and_result_limits(db_session, traversal_fixture_graph):
     """
     Verifies that max_depth and max_paths strictly constrain the search space.
     """
-    # 1. Depth limit: max_depth=1 should return paths with length <= 1
     paths_d1 = EvidenceTraversalEngine.find_paths(
         session=db_session,
         start_node_id="NODE:PROM:BREAKFAST_2021",
@@ -587,7 +551,6 @@ def test_8_depth_and_result_limits(db_session, traversal_fixture_graph):
     for p in paths_d1:
         assert p["length"] <= 1
 
-    # 2. Result limit: max_paths=1
     paths_limit1 = EvidenceTraversalEngine.find_paths(
         session=db_session,
         start_node_id="NODE:CLAIM:ATTENDANCE_18_PCT",
@@ -601,7 +564,6 @@ def test_9_direct_vs_inferred_links_and_uncertain_edges(db_session, traversal_fi
     """
     Distinguishes direct documentary paths from paths containing candidate or unreviewed edges.
     """
-    # Add a candidate edge with low confidence and unreviewed status
     node_candidate_extra = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:EXTRA:CANDIDATE",
@@ -617,7 +579,7 @@ def test_9_direct_vs_inferred_links_and_uncertain_edges(db_session, traversal_fi
         target_node_id=node_candidate_extra.node_id,
         relationship_type=GraphRelationshipType.RELATES_TO,
         evidence_reference="NLP candidate overlap",
-        source_document_id=None,  # Missing source doc!
+        source_document_id=None,
         matching_method=MatchingMethod.AUTOMATED_CANDIDATE,
         confidence_score=0.60,
         review_status=GraphReviewStatus.PENDING_REVIEW,
@@ -649,7 +611,6 @@ def test_10_rest_api_traversal_and_investigation_endpoints(db_session, traversal
     app = create_app()
     client = app.test_client()
 
-    # 1. Test POST /api/graph/traverse
     resp_traverse = client.post(
         "/api/graph/traverse",
         json={
@@ -664,7 +625,6 @@ def test_10_rest_api_traversal_and_investigation_endpoints(db_session, traversal
     assert "paths" in data_t["data"]
     assert len(data_t["data"]["paths"]) >= 2
 
-    # 2. Test GET /api/graph/investigate/claim
     resp_inv = client.get(
         "/api/graph/investigate/claim?node_id=NODE:CLAIM:ATTENDANCE_18_PCT&max_depth=3"
     )
@@ -674,7 +634,6 @@ def test_10_rest_api_traversal_and_investigation_endpoints(db_session, traversal
     assert data_inv["data"]["mode"] == "claim"
     assert len(data_inv["data"]["paths"]) >= 2
 
-    # 3. Test 404 for non-existent node
     resp_404 = client.get(
         "/api/graph/investigate/claim?node_id=NODE:NON_EXISTENT_999"
     )

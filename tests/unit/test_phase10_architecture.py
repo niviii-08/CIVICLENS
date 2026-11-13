@@ -110,7 +110,6 @@ def test_3_epistemic_guardrail_expenditure_not_equal_to_outcome(db_session):
     """
     sample_indicators = get_phase10_sample_indicators()
     
-    # Locate input, output, and outcome indicators
     input_ind = next(ind for ind in sample_indicators if ind["indicator_type"] == "INPUT")
     output_ind = next(ind for ind in sample_indicators if ind["indicator_type"] == "OUTPUT")
     outcome_ind = next(ind for ind in sample_indicators if ind["indicator_type"] == "OUTCOME")
@@ -120,15 +119,12 @@ def test_3_epistemic_guardrail_expenditure_not_equal_to_outcome(db_session):
     assert output_ind["indicator_type"] != outcome_ind["indicator_type"]
     assert outcome_ind["indicator_type"] != impact_ind["indicator_type"]
     
-    # Financial budget allocation is strictly an INPUT
     assert "BUDGET" in input_ind["indicator_id"]
     assert input_ind["unit"] == "RUPEES_CRORE"
     
-    # Counting active stipend recipients is strictly an OUTPUT (delivery of benefit)
     assert output_ind["indicator_id"] == "IND-TEST-PUDHUMAI-BENEFICIARIES"
     assert output_ind["unit"] == "COUNT"
     
-    # Gross Enrollment Ratio is strictly an OUTCOME (actual behavioral/educational change)
     assert outcome_ind["indicator_id"] == "IND-TEST-PUDHUMAI-GER-FEMALE"
     assert outcome_ind["unit"] == "PERCENT"
 
@@ -162,17 +158,14 @@ def test_4_policy_objective_and_beneficiary_persistence(db_session):
 
 def test_5_indicator_observations_baseline_vs_followup(db_session):
     """Verify IndicatorObservation storage across BASELINE, INTERMEDIATE, FOLLOW_UP, TARGET stages."""
-    # Seed objective first
     for obj_data in get_phase10_sample_objectives():
         db_session.add(PolicyObjective(**obj_data))
     db_session.commit()
 
-    # Seed indicators
     for ind_data in get_phase10_sample_indicators():
         db_session.add(PolicyIndicator(**ind_data))
     db_session.commit()
 
-    # Seed observations
     sample_obs = get_phase10_sample_observations()
     for obs_data in sample_obs:
         db_session.add(IndicatorObservation(**obs_data))
@@ -197,11 +190,9 @@ def test_5_indicator_observations_baseline_vs_followup(db_session):
     assert followup_val == 54.1
     assert target_val == 60.0
 
-    # Test before-and-after percentage change computation
     pct_change = ((followup_val - baseline_val) / baseline_val) * 100
     assert pytest.approx(pct_change, 0.01) == 12.24
 
-    # Test distance-to-target metric
     distance_to_target = ((followup_val - baseline_val) / (target_val - baseline_val)) * 100
     assert pytest.approx(distance_to_target, 0.01) == 50.0
 
@@ -225,13 +216,11 @@ def test_6_evaluation_study_and_causal_downgrading_logic(db_session):
     assert valid_causal_study.is_causally_identified is True
     assert valid_causal_study.identification_strategy == "DID"
 
-    # Inspect the flawed causal study
     flawed_study = db_session.query(EvaluationStudy).filter_by(
         study_id="STD-TEST-FLAWED-CAUSAL-CLAIM-01"
     ).first()
     assert flawed_study is not None
     
-    # Automated downgrading check logic
     def check_and_apply_causal_downgrade(study: EvaluationStudy) -> EvaluationType:
         if study.evaluation_type == EvaluationType.CAUSAL_EVALUATION:
             if not study.is_causally_identified or study.identification_strategy in [None, "NONE"]:
@@ -247,7 +236,6 @@ def test_7_finding_evidence_link_and_contradiction_handling(db_session):
     Verify that EvaluationFindings link to primary evidence passages,
     and contradictory evidence (CAG audits) is preserved with proper stance.
     """
-    # Seed prerequisites
     for obj_data in get_phase10_sample_objectives():
         db_session.add(PolicyObjective(**obj_data))
     for ind_data in get_phase10_sample_indicators():
@@ -260,7 +248,6 @@ def test_7_finding_evidence_link_and_contradiction_handling(db_session):
         db_session.add(FindingEvidenceLink(**link_data))
     db_session.commit()
 
-    # Finding 1: DiD effect backed by supporting AISHE evidence
     did_finding = db_session.query(EvaluationFinding).filter_by(
         finding_id="FIND-TEST-PUDHUMAI-DID-EFFECT"
     ).first()
@@ -271,7 +258,6 @@ def test_7_finding_evidence_link_and_contradiction_handling(db_session):
     assert len(did_finding.evidence_links) == 1
     assert did_finding.evidence_links[0].stance == EvidenceStance.SUPPORTS
 
-    # Finding 2: CAG Audit with contradicting evidence
     cag_finding = db_session.query(EvaluationFinding).filter_by(
         finding_id="FIND-TEST-PUDHUMAI-CAG-IRREGULARITY"
     ).first()
@@ -316,7 +302,6 @@ def test_9_evidence_graph_interoperability_without_duplication(db_session):
     the Unified Civic Intelligence & Evidence Graph (CivicGraphNode & CivicEvidenceEdge)
     without duplicating the graph architecture.
     """
-    # 1. Verify enum registration in graph models
     assert "POLICY_OBJECTIVE" in [m.value for m in GraphEntityType]
     assert "POLICY_INDICATOR" in [m.value for m in GraphEntityType]
     assert "EVALUATION_FINDING" in [m.value for m in GraphEntityType]
@@ -324,7 +309,6 @@ def test_9_evidence_graph_interoperability_without_duplication(db_session):
     assert "measures" in [m.value for m in GraphRelationshipType]
     assert "targets" in [m.value for m in GraphRelationshipType]
 
-    # 2. Instantiate Phase 10 proxy nodes in CivicGraphNode
     objective_node = CivicGraphNode(
         node_id="NODE:POBJ:PUDHUMAI_PENN",
         entity_type=GraphEntityType.POLICY_OBJECTIVE,
@@ -349,7 +333,6 @@ def test_9_evidence_graph_interoperability_without_duplication(db_session):
     db_session.add(indicator_node)
     db_session.commit()
 
-    # 3. Create an evidence edge linking indicator to objective
     edge = CivicEvidenceEdge(
         edge_id="EDGE:MEASURES:OBJ-01:IND-01",
         source_node_id="NODE:IND:PUDHUMAI_GER",
@@ -367,7 +350,6 @@ def test_9_evidence_graph_interoperability_without_duplication(db_session):
     db_session.add(edge)
     db_session.commit()
 
-    # Verify bidirectional graph traversal
     saved_obj_node = db_session.query(CivicGraphNode).filter_by(node_id="NODE:POBJ:PUDHUMAI_PENN").first()
     assert len(saved_obj_node.incoming_edges) == 1
     assert saved_obj_node.incoming_edges[0].relationship_type == GraphRelationshipType.MEASURES
@@ -391,6 +373,5 @@ def test_10_zero_fabrication_compliance():
         assert len(fixture_list) > 0
         for item in fixture_list:
             assert item["is_test_fixture"] is True
-            # Verify primary key contains -TEST-
             pk_val = next(v for k, v in item.items() if k.endswith("_id"))
             assert "-TEST-" in pk_val

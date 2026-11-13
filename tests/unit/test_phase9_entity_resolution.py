@@ -62,7 +62,6 @@ def seeded_service(db_session):
     """Seeds test entities across representatives, places, schemes, and departments."""
     service = EntityResolutionService(db_session)
 
-    # 1. Representative: M. K. Stalin
     stalin = service.register_canonical_entity(
         entity_id="ENT:REP:MK-STALIN",
         entity_type=RegistryEntityType.REPRESENTATIVE,
@@ -82,7 +81,6 @@ def seeded_service(db_session):
         source_record_name="Thiru M.K. Stalin (Chief Minister)",
     )
 
-    # 2. Location with historical renaming: Chennai / Madras
     chennai = service.register_canonical_entity(
         entity_id="ENT:AREA:CHENNAI",
         entity_type=RegistryEntityType.ADMINISTRATIVE_AREA,
@@ -109,7 +107,6 @@ def seeded_service(db_session):
         valid_to="1996-07-17",
     )
 
-    # 3. Homonymous Locations: Anna Nagar in Chennai vs Anna Nagar in Madurai
     service.register_canonical_entity(
         entity_id="ENT:AREA:ANNA_NAGAR_CHN",
         entity_type=RegistryEntityType.ADMINISTRATIVE_AREA,
@@ -129,7 +126,6 @@ def seeded_service(db_session):
         is_test_fixture=True,
     )
 
-    # 4. Distinct Politicians with Similar Names (Murugesan)
     service.register_canonical_entity(
         entity_id="ENT:REP:MURUGESAN_R",
         entity_type=RegistryEntityType.REPRESENTATIVE,
@@ -147,7 +143,6 @@ def seeded_service(db_session):
         is_test_fixture=True,
     )
 
-    # 5. Department: MAWS
     maws = service.register_canonical_entity(
         entity_id="ENT:DEPT:MAWS-034",
         entity_type=RegistryEntityType.GOVERNMENT_DEPARTMENT,
@@ -190,7 +185,6 @@ def test_2_tamil_transliteration_and_aliases(seeded_service):
     assert res_ta["resolved"] is True
     assert res_ta["entity"]["entity_id"] == "ENT:REP:MK-STALIN"
 
-    # Department acronym and Tamil name
     res_acronym = seeded_service.resolve_entity("MAWS")
     assert res_acronym["resolved"] is True
     assert res_acronym["entity"]["entity_id"] == "ENT:DEPT:MAWS-034"
@@ -202,14 +196,12 @@ def test_2_tamil_transliteration_and_aliases(seeded_service):
 
 def test_3_historical_name_lookups(seeded_service):
     """Verify time-bounded resolution of historical place names (Madras -> Chennai)."""
-    # Query historical name 'Madras'
     res = seeded_service.resolve_entity("Madras", context={"year": "1990"})
     assert res["resolved"] is True
     assert res["entity"]["entity_id"] == "ENT:AREA:CHENNAI"
     assert res["is_historical"] is True
     assert res["matching_method"] == ResolutionMethod.HISTORICAL_NAME_MATCH.value
 
-    # Query Tamil historical name 'மதராஸ்'
     res_ta = seeded_service.resolve_entity("மதராஸ்")
     assert res_ta["resolved"] is True
     assert res_ta["entity"]["entity_id"] == "ENT:AREA:CHENNAI"
@@ -220,18 +212,15 @@ def test_4_homonym_disambiguation_safeguard(seeded_service):
     Verify that querying a homonym without context returns AMBIGUOUS_HOMONYM
     and does NOT arbitrarily merge distinct real-world places.
     """
-    # Querying 'Anna Nagar' without district context must be ambiguous
     res_ambiguous = seeded_service.resolve_entity("Anna Nagar")
     assert res_ambiguous["resolved"] is False
     assert res_ambiguous["status"] == "AMBIGUOUS_HOMONYM"
     assert len(res_ambiguous["candidates"]) == 2
 
-    # Querying 'Anna Nagar' with district 'Chennai' resolves specifically to Chennai zone
     res_chennai = seeded_service.resolve_entity("Anna Nagar", context={"district": "Chennai"})
     assert res_chennai["resolved"] is True
     assert res_chennai["entity"]["entity_id"] == "ENT:AREA:ANNA_NAGAR_CHN"
 
-    # Querying 'Anna Nagar' with district 'Madurai' resolves specifically to Madurai locality
     res_madurai = seeded_service.resolve_entity("Anna Nagar", context={"district": "Madurai"})
     assert res_madurai["resolved"] is True
     assert res_madurai["entity"]["entity_id"] == "ENT:AREA:ANNA_NAGAR_MDU"
@@ -250,7 +239,6 @@ def test_5_distinct_politicians_not_merged(seeded_service):
     assert res_k["resolved"] is True
     assert res_k["entity"]["entity_id"] == "ENT:REP:MURUGESAN_K"
 
-    # Ensure duplicate candidate scanner identifies divergence reasons
     candidates = seeded_service.detect_duplicate_candidates(
         entity_type=RegistryEntityType.REPRESENTATIVE,
         similarity_threshold=0.75,
@@ -270,11 +258,9 @@ def test_6_preservation_of_original_source_names(seeded_service, db_session):
         .first()
     )
     assert mapping is not None
-    # Verbatim reported text must be preserved exactly
     assert mapping.source_record_name == "Thiru M.K. Stalin (Chief Minister)"
     assert mapping.entity_id == "ENT:REP:MK-STALIN"
 
-    # Deterministic lookup by source ID
     res = seeded_service.resolve_entity(
         query_name="",
         source_system="TN_ASSEMBLY",
@@ -286,7 +272,6 @@ def test_6_preservation_of_original_source_names(seeded_service, db_session):
 
 def test_7_entity_merge_with_audit_history(seeded_service, db_session):
     """Verify merge of duplicate entities re-points mappings and records audit trail."""
-    # Register duplicate scheme
     dup_scheme = seeded_service.register_canonical_entity(
         entity_id="ENT:SCHEME:TEMP_BREAKFAST",
         entity_type=RegistryEntityType.SCHEME,
@@ -306,7 +291,6 @@ def test_7_entity_merge_with_audit_history(seeded_service, db_session):
         source_record_name="Morning Meal Initiative",
     )
 
-    # Perform Merge
     merge_res = seeded_service.merge_entities(
         primary_entity_id=canonical_scheme.entity_id,
         secondary_entity_id=dup_scheme.entity_id,
@@ -315,22 +299,18 @@ def test_7_entity_merge_with_audit_history(seeded_service, db_session):
     )
     assert merge_res["status"] == "MERGED"
 
-    # Verify secondary entity is marked MERGED
     db_secondary = db_session.query(CanonicalEntity).filter_by(entity_id=dup_scheme.entity_id).first()
     assert db_secondary.status == EntityLifecycleStatus.MERGED
     assert db_secondary.merged_into_id == canonical_scheme.entity_id
 
-    # Verify mapping was reassigned
     mapping = db_session.query(SourceIdentifierMapping).filter_by(source_record_id="TMP-001").first()
     assert mapping.entity_id == canonical_scheme.entity_id
 
-    # Verify audit record
     audit = db_session.query(EntityAuditRecord).filter_by(audit_id=merge_res["audit_id"]).first()
     assert audit is not None
     assert audit.operation_type.value == "MERGE"
     assert audit.performed_by == "CIVIC_AUDITOR_TEST"
 
-    # Resolving the old ID should automatically redirect to primary
     res_redirect = seeded_service.resolve_entity(dup_scheme.entity_id)
     assert res_redirect["resolved"] is True
     assert res_redirect["entity"]["entity_id"] == canonical_scheme.entity_id
@@ -370,14 +350,12 @@ def test_8_entity_split_with_audit_history(seeded_service, db_session):
     )
     assert split_res["status"] == "SPLIT"
 
-    # Verify mapping migration
     db_m2 = db_session.query(SourceIdentifierMapping).filter_by(mapping_id=m2.mapping_id).first()
     assert db_m2.entity_id == "ENT:DEPT:DIRECTORATE_MED_EDU"
 
     db_m1 = db_session.query(SourceIdentifierMapping).filter_by(mapping_id=m1.mapping_id).first()
     assert db_m1.entity_id == combined_dept.entity_id
 
-    # Verify split audit record
     audit = db_session.query(EntityAuditRecord).filter_by(audit_id=split_res["audit_id"]).first()
     assert audit.operation_type.value == "SPLIT"
 
@@ -395,7 +373,6 @@ def test_9_api_lookup_and_history_endpoints(seeded_service, monkeypatch):
     app.config["TESTING"] = True
     client = app.test_client()
 
-    # 1. Test lookup endpoint for representative
     resp = client.get("/api/entities/lookup?name=M.K.+Stalin")
     assert resp.status_code == 200
     json_data = resp.get_json()
@@ -403,16 +380,13 @@ def test_9_api_lookup_and_history_endpoints(seeded_service, monkeypatch):
     assert json_data["data"]["resolved"] is True
     assert json_data["data"]["entity"]["entity_id"] == "ENT:REP:MK-STALIN"
 
-    # 2. Test lookup with missing params
     err_resp = client.get("/api/entities/lookup")
     assert err_resp.status_code == 400
 
-    # 3. Test profile endpoint
     prof_resp = client.get("/api/entities/ENT:REP:MK-STALIN")
     assert prof_resp.status_code == 200
     assert prof_resp.get_json()["data"]["entity_id"] == "ENT:REP:MK-STALIN"
 
-    # 4. Test duplicates scanning endpoint
     dup_resp = client.get("/api/entities/duplicates")
     assert dup_resp.status_code == 200
     assert "candidates" in dup_resp.get_json()["data"]

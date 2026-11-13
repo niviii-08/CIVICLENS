@@ -30,7 +30,6 @@ from backend.services.promise_assessment_engine import PromiseAssessmentEngine, 
 class TestPromiseAssessmentEngine(unittest.TestCase):
 
     def setUp(self):
-        # Create SQLite in-memory database
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
@@ -168,11 +167,9 @@ class TestPromiseAssessmentEngine(unittest.TestCase):
         self.db.add_all([m, p])
         self.db.commit()
 
-        # Step 1: Initial evaluation (no evidence -> no_evidence_found)
         res1 = self.assessment_engine.evaluate_promise(p, persist=True)
         self.assertEqual(res1["status"], PromiseStatus.NO_EVIDENCE_FOUND.value)
 
-        # Add evidence
         ev = Evidence(
             content="G.O. Ms. No. 10 issued.",
             supporting_values={"source_type": "Government Orders", "source_tier": 1}
@@ -184,19 +181,15 @@ class TestPromiseAssessmentEngine(unittest.TestCase):
         self.db.add(link)
         self.db.commit()
 
-        # Step 2: Re-evaluation (evidence added -> policy_action)
         res2 = self.assessment_engine.evaluate_promise(p, persist=True)
         self.assertEqual(res2["status"], PromiseStatus.POLICY_ACTION.value)
 
-        # Verify audit history log entries
         history_entries = self.db.query(PromiseAssessmentHistory).filter_by(promise_id="P_AUDIT_01").order_by(PromiseAssessmentHistory.id).all()
         self.assertEqual(len(history_entries), 2)
 
-        # Entry 1: initial creation
         self.assertIsNone(history_entries[0].previous_status)
         self.assertEqual(history_entries[0].new_status, PromiseStatus.NO_EVIDENCE_FOUND.value)
 
-        # Entry 2: transition from no_evidence_found to policy_action
         self.assertEqual(history_entries[1].previous_status, PromiseStatus.NO_EVIDENCE_FOUND.value)
         self.assertEqual(history_entries[1].new_status, PromiseStatus.POLICY_ACTION.value)
         self.assertIn("deterministic_rule_engine_v1", history_entries[1].changed_by)

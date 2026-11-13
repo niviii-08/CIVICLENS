@@ -8,7 +8,6 @@ amount normalization, and page provenance.
 
 from typing import Dict, Any, List
 
-# Mock native digital PDF document payload (Form 24A style)
 MOCK_NATIVE_DOC_PAYLOAD: Dict[str, Any] = {
     "document_id": "DOC_2021_DMK_24A_TEST",
     "source_url": "https://www.eci.gov.in/files/Form24A_DMK_FY2021-22.pdf",
@@ -43,5 +42,4 @@ MOCK_NATIVE_DOC_PAYLOAD: Dict[str, Any] = {
     ]
 }
 
-# Mock scanned PDF page (low text density)
 MOCK_SCANNED_PAGE_TEXT = "   ECI STAMP 2021   "

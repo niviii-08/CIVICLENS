@@ -40,7 +40,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Pre-populate sample representative records
     rep_mp = Representative(
         representative_id="REP-MP-001",
         official_name="Dr. Kalanidhi Veeraswamy",
@@ -63,7 +62,6 @@ def db_session():
 def test_1_record_and_calculate_mp_parliamentary_activity(db_session):
     service = LegislativeActivityService(db=db_session)
 
-    # Record Lok Sabha MP activities
     service.record_activity(
         activity_id="ACT-MP-001-Q1",
         representative_id="REP-MP-001",
@@ -105,7 +103,6 @@ def test_1_record_and_calculate_mp_parliamentary_activity(db_session):
         source_reference="Lok Sabha Debates, 22-03-2023, col. 104"
     )
 
-    # Official Attendance recorded (86.0%)
     service.record_activity(
         activity_id="ACT-MP-001-ATT",
         representative_id="REP-MP-001",
@@ -139,7 +136,6 @@ def test_2_record_and_calculate_mla_assembly_activity_with_unavailable_attendanc
     """
     service = LegislativeActivityService(db=db_session)
 
-    # Record MLA debates and questions
     service.record_activity(
         activity_id="ACT-MLA-013-DEB1",
         representative_id="REP-MLA-013",
@@ -166,7 +162,6 @@ def test_2_record_and_calculate_mla_assembly_activity_with_unavailable_attendanc
         source_reference="TNLA Proceedings 15-04-2023, item 4"
     )
 
-    # Mark attendance as UNAVAILABLE as it is not gazetted online
     service.record_unavailable_indicator(
         representative_id="REP-MLA-013",
         legislative_body="TN_ASSEMBLY",
@@ -182,7 +177,6 @@ def test_2_record_and_calculate_mla_assembly_activity_with_unavailable_attendanc
 
     assert summary["debates_and_speeches_count"] == 2
     assert summary["call_attention_motions_count"] == 1
-    # Critical requirement: Attendance must NOT be 0%
     assert summary["attendance"]["percentage"] is None
     assert summary["attendance"]["is_available"] is False
     assert summary["attendance"]["status"] == "UNAVAILABLE"
@@ -196,7 +190,6 @@ def test_3_distinguish_zero_activity_from_unavailable_activity(db_session):
     """
     service = LegislativeActivityService(db=db_session)
 
-    # Record that MP was active, but introduced 0 bills
     service.record_activity(
         activity_id="ACT-MP-001-Q1",
         representative_id="REP-MP-001",
@@ -207,7 +200,6 @@ def test_3_distinguish_zero_activity_from_unavailable_activity(db_session):
         source_reference="Sansad Starred Q.No 204"
     )
 
-    # Explicitly mark committee participation as unavailable for this session
     service.record_unavailable_indicator(
         representative_id="REP-MP-001",
         legislative_body="LOK_SABHA",
@@ -221,9 +213,7 @@ def test_3_distinguish_zero_activity_from_unavailable_activity(db_session):
         session="17th Lok Sabha - Session 12"
     )
 
-    # Zero activity where tracked: bills count is 0
     assert summary["private_member_bills_count"] == 0
-    # Unavailable metric: attendance is None, not 0.0%
     assert summary["attendance"]["percentage"] is None
     assert summary["attendance"]["status"] == "UNAVAILABLE"
 
@@ -261,9 +251,8 @@ def test_4_mp_vs_mla_comparison_triggers_institutional_warning(db_session):
     assert "sits approximately 65 days/year" in comp["institutional_warning"]
     assert comp["effectiveness_disclaimer"] is not None
 
-    # Normalized rate: MLA has higher debate rate per sittings despite lower raw count
     norm_debates = comp["comparison_metrics"]["normalized_per_10_sittings"]["debates_per_10_sittings"]
-    assert norm_debates["rep_b"] > norm_debates["rep_a"]  # MLA debate rate > MP debate rate per sitting!
+    assert norm_debates["rep_b"] > norm_debates["rep_a"]
 
 
 def test_5_source_reference_traceability(db_session):

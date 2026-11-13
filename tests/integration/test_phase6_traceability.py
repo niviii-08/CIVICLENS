@@ -54,7 +54,6 @@ def test_1_source_document_registry_operations(setup_traceability_data):
     assert doc.verification_status == "VERIFIED"
     assert len(doc.sha256_checksum) == 64
 
-    # List documents
     all_docs = service.list_source_documents()
     assert len(all_docs) >= 7
 
@@ -129,39 +128,33 @@ def test_5_audit_trail_logging_and_immutability(setup_traceability_data):
 
 def test_6_traceability_api_endpoints(api_client, setup_traceability_data):
     """Verifies REST API exposure of source documents, citations, lineages, conflicts, and audit trail."""
-    # 1. Source documents list
     res_docs = api_client.get("/api/representatives/sources")
     assert res_docs.status_code == 200
     docs = res_docs.get_json()["data"]["documents"]
     assert len(docs) >= 7
 
-    # 2. Source document detail
     res_doc = api_client.get("/api/representatives/sources/D4-001")
     assert res_doc.status_code == 200
     doc_data = res_doc.get_json()["data"]
     assert doc_data["publisher"] == "PRS Legislative Research"
 
-    # 3. Entity evidence citations
     res_ev = api_client.get("/api/representatives/evidence?entity_type=REPRESENTATIVE&entity_id=REP-MP-17-PERAMBALUR")
     assert res_ev.status_code == 200
     ev_data = res_ev.get_json()["data"]
     assert ev_data["total_links_count"] >= 1
     assert ev_data["evidence_links"][0]["document_id"] == "D4-001"
 
-    # 4. Metric lineage drill-down
     res_lin = api_client.get("/api/representatives/metrics/MET-EXPENDITURE-PC-TN-04/lineage")
     assert res_lin.status_code == 200
     lin_data = res_lin.get_json()["data"]
     assert lin_data["calculation_method"] == "EXPENDITURE_UTILIZATION"
     assert len(lin_data["constituent_input_records"]) >= 1
 
-    # 5. Conflicting evidence list
     res_conf = api_client.get("/api/representatives/conflicts")
     assert res_conf.status_code == 200
     conf_data = res_conf.get_json()["data"]
     assert conf_data["total_count"] >= 1
 
-    # 6. Audit trail ledger
     res_aud = api_client.get("/api/representatives/audit-trail")
     assert res_aud.status_code == 200
     aud_data = res_aud.get_json()["data"]

@@ -77,7 +77,6 @@ def test_2_relationship_types_vocabulary():
     members = [m.value for m in GraphRelationshipType]
     for rel in required_relationships:
         assert rel in members, f"Required relationship {rel} missing from GraphRelationshipType"
-        # Test helper method
         parsed = GraphRelationshipType.from_string(rel)
         assert parsed.value == rel
 
@@ -106,7 +105,6 @@ def test_4_civic_graph_node_persistence_and_serialization(db_session):
     saved_nodes = db_session.query(CivicGraphNode).all()
     assert len(saved_nodes) == len(sample_nodes)
 
-    # Validate specific node
     rep_node = db_session.query(CivicGraphNode).filter_by(node_id="NODE:REP:REP_MK_STALIN").first()
     assert rep_node is not None
     assert rep_node.label == "M. K. Stalin"
@@ -124,7 +122,6 @@ def test_4_civic_graph_node_persistence_and_serialization(db_session):
 
 def test_5_civic_evidence_edge_persistence_and_provenance(db_session):
     """Verify CivicEvidenceEdge creation with full provenance retention."""
-    # Seed nodes first
     for node_data in get_phase9_sample_nodes():
         db_session.add(CivicGraphNode(**node_data))
     db_session.commit()
@@ -140,7 +137,6 @@ def test_5_civic_evidence_edge_persistence_and_provenance(db_session):
     saved_edges = db_session.query(CivicEvidenceEdge).all()
     assert len(saved_edges) == len(sample_edges)
 
-    # Check that EVERY edge retains required provenance fields
     for edge in saved_edges:
         assert edge.source_node_id.startswith("NODE:")
         assert edge.target_node_id.startswith("NODE:")
@@ -161,7 +157,6 @@ def test_6_epistemic_guardrail_non_causation_from_association(db_session):
     Spatial co-location (e.g. issue in a constituency) must use 'located_in',
     NOT 'implements' or 'funds'.
     """
-    # Seed nodes
     for node_data in get_phase9_sample_nodes():
         db_session.add(CivicGraphNode(**node_data))
     db_session.commit()
@@ -170,7 +165,6 @@ def test_6_epistemic_guardrail_non_causation_from_association(db_session):
         db_session.add(CivicEvidenceEdge(**edge_data))
     db_session.commit()
 
-    # Find the edge between Kolathur civic issue and Kolathur constituency
     spatial_edge = db_session.query(CivicEvidenceEdge).filter_by(
         source_node_id="NODE:ISSUE:CIVIC_KOLATHUR_ROAD_01",
         target_node_id="NODE:CONST:AC_KOLATHUR",
@@ -178,7 +172,6 @@ def test_6_epistemic_guardrail_non_causation_from_association(db_session):
 
     assert spatial_edge is not None
     assert spatial_edge.relationship_type == GraphRelationshipType.LOCATED_IN
-    # Must NOT infer causation
     assert spatial_edge.relationship_type != GraphRelationshipType.IMPLEMENTS
     assert spatial_edge.relationship_type != GraphRelationshipType.FUNDS
     assert "Does NOT imply MLA personal negligence" in spatial_edge.epistemic_notes
@@ -197,11 +190,9 @@ def test_7_bidirectional_traversal(db_session):
     party_node = db_session.query(CivicGraphNode).filter_by(node_id="NODE:PARTY:DMK").first()
     assert party_node is not None
 
-    # Party should have incoming FUNDS edge from donor
     incoming_rels = [e.relationship_type for e in party_node.incoming_edges]
     assert GraphRelationshipType.FUNDS in incoming_rels
 
-    # Party should have outgoing PROMISES edge to promise
     outgoing_rels = [e.relationship_type for e in party_node.outgoing_edges]
     assert GraphRelationshipType.PROMISES in outgoing_rels
 

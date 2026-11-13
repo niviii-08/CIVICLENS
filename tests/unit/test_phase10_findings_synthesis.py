@@ -176,7 +176,6 @@ def test_1_record_all_12_attributes_and_6_evidence_classification_types(db_sessi
     assert d["review_status"] == "VERIFIED"
     assert d["created_at"] is not None
 
-    # Verify all 6 Phase 10.7 evidence classification types are valid in FindingType
     for ft_name in [
         "IMPLEMENTATION_EVIDENCE_AVAILABLE",
         "TARGET_ACHIEVEMENT_DOCUMENTED",
@@ -197,7 +196,6 @@ def test_2_unsupported_conclusions_political_verdicts_and_why_explanations(db_se
     3. Political verdict rhetoric raises `POLITICAL_VERDICT_PROHIBITED`.
     4. Unsupported causal "why" explanation raises `UNSUPPORTED_CAUSAL_EXPLANATION`.
     """
-    # 1. Stronger than evidence (empty supporting_evidence) -> raises STRONGER_THAN_EVIDENCE
     with pytest.raises(UnsupportedFindingConclusionError) as exc_strong:
         PolicyEvidenceSynthesisService.synthesize_finding(
             db_session,
@@ -213,7 +211,6 @@ def test_2_unsupported_conclusions_political_verdicts_and_why_explanations(db_se
         )
     assert exc_strong.value.error_code == "STRONGER_THAN_EVIDENCE"
 
-    # 2. Auto-downgrade to INSUFFICIENT_EVIDENCE when supporting_evidence is empty
     f_downgraded = PolicyEvidenceSynthesisService.synthesize_finding(
         db_session,
         finding_id="FND-TEST-107-DOWNGRADED",
@@ -229,7 +226,6 @@ def test_2_unsupported_conclusions_political_verdicts_and_why_explanations(db_se
     assert f_downgraded.finding_type == FindingType.INSUFFICIENT_EVIDENCE
     assert f_downgraded.review_status == FindingReviewStatus.PENDING_REVIEW
 
-    # 3. Political verdict language -> raises POLITICAL_VERDICT_PROHIBITED
     with pytest.raises(UnsupportedFindingConclusionError) as exc_verdict:
         PolicyEvidenceSynthesisService.synthesize_finding(
             db_session,
@@ -249,7 +245,6 @@ def test_2_unsupported_conclusions_political_verdicts_and_why_explanations(db_se
         )
     assert exc_verdict.value.error_code == "POLITICAL_VERDICT_PROHIBITED"
 
-    # 4. Unsupported "why" explanation on a descriptive study -> raises UNSUPPORTED_CAUSAL_EXPLANATION
     with pytest.raises(UnsupportedFindingConclusionError) as exc_why:
         PolicyEvidenceSynthesisService.synthesize_finding(
             db_session,
@@ -311,7 +306,6 @@ def test_3_conflicting_documents_handling(db_session):
         )
     assert exc_conflict.value.error_code == "UNACKNOWLEDGED_CONFLICTING_EVIDENCE"
 
-    # Now allow auto-downgrade or classify as CONFLICTING_FINDINGS -> preserves both sides
     f_conflict = PolicyEvidenceSynthesisService.synthesize_finding(
         db_session,
         finding_id="FND-TEST-107-CONFLICT-OK",
@@ -353,7 +347,7 @@ def test_4_numerical_consistency_and_extracted_vs_calculated_distinction(db_sess
             finding_type=FindingType.OUTCOME_CHANGE_OBSERVED,
             indicator_values_used={"baseline_value": 48.0, "followup_value": 54.0},
             calculation_method="ABSOLUTE_CHANGE",
-            quantified_effect=15.0,  # Inconsistent with 54.0 - 48.0 = 6.0!
+            quantified_effect=15.0,
             supporting_evidence=[
                 {
                     "source_document_id": "DOC-TEST-AISHE-2024",
@@ -364,7 +358,6 @@ def test_4_numerical_consistency_and_extracted_vs_calculated_distinction(db_sess
         )
     assert exc_num.value.error_code == "NUMERICAL_MISMATCH"
 
-    # Valid hybrid finding with both extracted statements and deterministic calculated metric
     f_hybrid = PolicyEvidenceSynthesisService.synthesize_finding(
         db_session,
         finding_id="FND-TEST-107-HYBRID",
@@ -448,7 +441,6 @@ def test_5_source_traceability_and_phase9_evidence_graph_sync(db_session):
         )
     assert exc_unhedged_llm.value.error_code == "UNREFERENCED_SUMMARY_STATEMENT"
 
-    # Synthesize a finding and sync it into Phase 9's Evidence Graph
     f_graph = PolicyEvidenceSynthesisService.synthesize_finding(
         db_session,
         finding_id="FND-TEST-107-GRAPH",
@@ -477,7 +469,7 @@ def test_5_source_traceability_and_phase9_evidence_graph_sync(db_session):
 
     sync_res = PolicyEvidenceSynthesisService.sync_finding_to_evidence_graph(db_session, f_graph)
     assert sync_res["finding_node_id"] == "NODE:FINDING:FND-TEST-107-GRAPH"
-    assert sync_res["total_edges"] == 3  # 1 EVALUATES + 1 PROVIDES_EVIDENCE_FOR + 1 CONTRADICTS
+    assert sync_res["total_edges"] == 3
 
     finding_node = (
         db_session.query(CivicGraphNode)

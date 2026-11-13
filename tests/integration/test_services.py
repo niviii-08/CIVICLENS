@@ -9,14 +9,12 @@ def test_service_architecture_and_validation(db_session, sample_source, sample_d
     """
     Test the service layer validations and repository delegation using fixtures.
     """
-    # --- 1. Source Service ---
     with pytest.raises(ValueError, match="Source name is strictly required."):
         SourceService.create_source(db_session, obj_in={"type": "News"})
         
     source = SourceService.create_source(db_session, obj_in={"name": "The Hindu", "type": " news "})
     assert source.type == "News"
     
-    # --- 2. Document Service ---
     with pytest.raises(ValueError, match="Both Document 'title' and 'content' are required."):
         DocumentService.create_document(db_session, obj_in={"title": "Empty Content"})
         
@@ -25,7 +23,6 @@ def test_service_architecture_and_validation(db_session, sample_source, sample_d
     )
     assert doc.id is not None
     
-    # --- 3. Evidence Service ---
     with pytest.raises(ValueError, match="Evidence content cannot be empty."):
         EvidenceService.create_evidence(db_session, document_id=sample_document.id, content="")
         
@@ -43,7 +40,6 @@ def test_service_architecture_and_validation(db_session, sample_source, sample_d
     fetched_evidence = EvidenceService.get_evidence_for_result(db_session, "TestAssessment", "res_123")
     assert len(fetched_evidence) == 1
     
-    # --- 4. Model Prediction Service ---
     with pytest.raises(ValueError, match="Missing required field for prediction: target_type"):
         ModelPredictionService.record_prediction(db_session, obj_in={"model_name": "classifier"}) 
         
@@ -57,7 +53,6 @@ def test_service_architecture_and_validation(db_session, sample_source, sample_d
     })
     assert prediction.model_version == "v1.2"
     
-    # --- 5. Model Evaluation Service ---
     with pytest.raises(ValueError, match="Evaluation score must be a number."):
         ModelEvaluationService.record_evaluation(db_session, obj_in={
             "model_name": "claim_classifier",

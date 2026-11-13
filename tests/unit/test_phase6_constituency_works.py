@@ -39,7 +39,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Pre-populate sample constituency and representative
     const = Constituency(
         constituency_id="AC-013",
         official_name="Kolathur",
@@ -62,7 +61,6 @@ def db_session():
 def test_1_monetary_totals_and_unspent_balance(db_session):
     service = ConstituencyWorksService(db=db_session)
 
-    # Work 1: Fully completed MLACDS work
     service.record_work(
         work_id="WORK-MLACDS-01",
         constituency_id="AC-013",
@@ -78,7 +76,6 @@ def test_1_monetary_totals_and_unspent_balance(db_session):
         attribution_type=AttributionType.REPRESENTATIVE_SPONSORED
     )
 
-    # Work 2: Work in progress MLACDS work with unspent balance
     service.record_work(
         work_id="WORK-MLACDS-02",
         constituency_id="AC-013",
@@ -100,9 +97,7 @@ def test_1_monetary_totals_and_unspent_balance(db_session):
     assert summary["financial_summary"]["total_sanctioned_inr"] == 4000000.0
     assert summary["financial_summary"]["total_released_inr"] == 3500000.0
     assert summary["financial_summary"]["total_expenditure_inr"] == 2850000.0
-    # Unspent balance = 3,500,000 - 2,850,000 = 650,000
     assert summary["financial_summary"]["unspent_balance_inr"] == 650000.0
-    # Pending release = 4,000,000 - 3,500,000 = 500,000
     assert summary["financial_summary"]["unreleased_funds_inr"] == 500000.0
     assert summary["output_metrics"]["total_completed_projects"] == 1
 
@@ -110,7 +105,6 @@ def test_1_monetary_totals_and_unspent_balance(db_session):
 def test_2_missing_dates_flagged_as_data_quality_issues(db_session):
     service = ConstituencyWorksService(db=db_session)
 
-    # Work completed without completion_date
     w1 = service.record_work(
         work_id="WORK-DATE-01",
         constituency_id="AC-013",
@@ -120,19 +114,18 @@ def test_2_missing_dates_flagged_as_data_quality_issues(db_session):
         released_amount=800000.0,
         reported_expenditure=780000.0,
         approval_date="2022-09-01",
-        completion_date=None,  # Missing completion date on completed project
+        completion_date=None,
         project_status=WorkProjectStatus.REPORTED_COMPLETED
     )
     assert any("MISSING_COMPLETION_DATE" in issue for issue in w1.data_quality_issues)
 
-    # Work active without approval_date
     w2 = service.record_work(
         work_id="WORK-DATE-02",
         constituency_id="AC-013",
         scheme_id="MLACDS",
         project_description="High-mast lamp installation",
         sanctioned_amount=500000.0,
-        approval_date=None,  # Missing approval date on sanctioned work
+        approval_date=None,
         project_status=WorkProjectStatus.SANCTIONED
     )
     assert any("MISSING_APPROVAL_DATE" in issue for issue in w2.data_quality_issues)
@@ -141,7 +134,6 @@ def test_2_missing_dates_flagged_as_data_quality_issues(db_session):
 def test_3_conflicting_statuses_and_audit_cross_referencing(db_session):
     service = ConstituencyWorksService(db=db_session)
 
-    # Record portal claim: REPORTED_COMPLETED
     service.record_work(
         work_id="WORK-AUDIT-01",
         constituency_id="AC-013",
@@ -155,7 +147,6 @@ def test_3_conflicting_statuses_and_audit_cross_referencing(db_session):
         project_status=WorkProjectStatus.REPORTED_COMPLETED
     )
 
-    # Audit report contradicts portal claim: Work is still incomplete on ground
     verified_work = service.cross_reference_verification(
         work_id="WORK-AUDIT-01",
         independent_status=WorkProjectStatus.WORK_IN_PROGRESS,
@@ -171,7 +162,6 @@ def test_3_conflicting_statuses_and_audit_cross_referencing(db_session):
 def test_4_monetary_expenditure_overrun_conflict_flagging(db_session):
     service = ConstituencyWorksService(db=db_session)
 
-    # Expenditure ₹3,500,000 exceeds released funds ₹3,000,000
     work = service.record_work(
         work_id="WORK-OVERRUN-01",
         constituency_id="AC-013",
@@ -179,7 +169,7 @@ def test_4_monetary_expenditure_overrun_conflict_flagging(db_session):
         project_description="Culvert widening project",
         sanctioned_amount=3000000.0,
         released_amount=3000000.0,
-        reported_expenditure=3500000.0,  # Overrun
+        reported_expenditure=3500000.0,
         approval_date="2022-04-10",
         project_status=WorkProjectStatus.WORK_IN_PROGRESS
     )
@@ -191,12 +181,10 @@ def test_4_monetary_expenditure_overrun_conflict_flagging(db_session):
 def test_5_attribution_separation_for_executive_projects(db_session):
     service = ConstituencyWorksService(db=db_session)
 
-    # Executive State Project (State Highway PWD flyover)
-    # Even if representative_id is passed, service MUST clear it to prevent false attribution
     work = service.record_work(
         work_id="WORK-EXEC-01",
         constituency_id="AC-013",
-        representative_id="REP-MLA-013",  # Passed by caller
+        representative_id="REP-MLA-013",
         scheme_id="STATE_HIGHWAYS_PWD",
         project_description="Construction of Grade Separator at Retteri Junction",
         sanctioned_amount=45000000.0,
@@ -207,7 +195,6 @@ def test_5_attribution_separation_for_executive_projects(db_session):
         attribution_type=AttributionType.EXECUTIVE_STATE_PROJECT
     )
 
-    # Critical requirement: representative_id must be cleared for executive projects
     assert work.representative_id is None
     assert work.attribution_type == AttributionType.EXECUTIVE_STATE_PROJECT
 
@@ -215,7 +202,6 @@ def test_5_attribution_separation_for_executive_projects(db_session):
 def test_6_geographic_mapping_and_constituency_aggregation(db_session):
     service = ConstituencyWorksService(db=db_session)
 
-    # Add a second constituency (Edappadi)
     const2 = Constituency(
         constituency_id="AC-115",
         official_name="Edappadi",
@@ -250,7 +236,6 @@ def test_6_geographic_mapping_and_constituency_aggregation(db_session):
 def test_7_duplicate_project_updates_and_idempotency(db_session):
     service = ConstituencyWorksService(db=db_session)
 
-    # Initial record
     w1 = service.record_work(
         work_id="WORK-DUP-01",
         constituency_id="AC-013",
@@ -261,7 +246,6 @@ def test_7_duplicate_project_updates_and_idempotency(db_session):
     )
     assert w1.project_status == WorkProjectStatus.PROPOSED
 
-    # Update with progress
     w2 = service.record_work(
         work_id="WORK-DUP-01",
         constituency_id="AC-013",
@@ -277,6 +261,5 @@ def test_7_duplicate_project_updates_and_idempotency(db_session):
 
     assert w2.work_id == "WORK-DUP-01"
     assert w2.project_status == WorkProjectStatus.REPORTED_COMPLETED
-    # Count must remain 1
     total_count = db_session.query(ConstituencyWork).filter(ConstituencyWork.work_id == "WORK-DUP-01").count()
     assert total_count == 1

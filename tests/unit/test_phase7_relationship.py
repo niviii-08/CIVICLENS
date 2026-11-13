@@ -54,8 +54,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Prepopulate standard test evidence documents and passages
-    # 1. Statutory Support Document
     doc_supp = EvidenceDocument(
         document_id="EDOC-TN-GO-2023",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -76,7 +74,6 @@ def db_session():
         numerical_values={"amount_crores": 7000.0, "monthly_stipend": 1000.0, "beneficiaries_crores": 1.15, "year": 2023}
     )
 
-    # 2. Statutory Contradiction Document (CAG Audit)
     doc_contra = EvidenceDocument(
         document_id="EDOC-CAG-AUDIT-2024",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -97,7 +94,6 @@ def db_session():
         numerical_values={"year": 2024}
     )
 
-    # 3. Outdated Historical Document
     doc_outdated = EvidenceDocument(
         document_id="EDOC-CAG-OLD-2018",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -118,7 +114,6 @@ def db_session():
         numerical_values={"year": 2018}
     )
 
-    # 4. Unrelated Other-State Document
     doc_unrelated = EvidenceDocument(
         document_id="EDOC-KAR-SCHEME-2023",
         source_tier=SourceTier.TIER_2_OFFICIAL_AGENCY,
@@ -146,9 +141,6 @@ def db_session():
     session.close()
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Direct Supporting Evidence
-# ---------------------------------------------------------------------------
 def test_1_direct_supporting_evidence(db_session):
     analyzer = EvidenceRelationshipAnalyzer(db=db_session)
 
@@ -194,9 +186,6 @@ def test_1_direct_supporting_evidence(db_session):
     assert res["confidence"] >= 0.80
 
 
-# ---------------------------------------------------------------------------
-# Test 2: Direct Contradicting Evidence
-# ---------------------------------------------------------------------------
 def test_2_direct_contradicting_evidence(db_session):
     analyzer = EvidenceRelationshipAnalyzer(db=db_session)
 
@@ -232,13 +221,9 @@ def test_2_direct_contradicting_evidence(db_session):
     assert res["confidence"] >= 0.80
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Partially Supporting Evidence
-# ---------------------------------------------------------------------------
 def test_3_partially_supporting_evidence(db_session):
     analyzer = EvidenceRelationshipAnalyzer(db=db_session)
 
-    # Document showing pilot implementation of breakfast scheme in 1,545 schools
     doc_pilot = EvidenceDocument(
         document_id="EDOC-TN-PILOT-2022",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -257,7 +242,6 @@ def test_3_partially_supporting_evidence(db_session):
     db_session.add_all([doc_pilot, pass_pilot])
     db_session.commit()
 
-    # Claim asserts complete state-wide delivery of 33,000 schools
     claim = Claim(
         claim_id="CLM-TEST-PARTIAL-01",
         original_text="The breakfast scheme covered all 33,000 schools in Tamil Nadu in 2022.",
@@ -282,14 +266,10 @@ def test_3_partially_supporting_evidence(db_session):
         atomic_claim=atomic
     )
 
-    # Since 1545 vs 33000 is a significant variance, it is classified as contradiction or partial support
     assert res["relationship_type"] in [EvidenceRelationshipType.PARTIALLY_SUPPORTS, EvidenceRelationshipType.CONTRADICTS]
     assert res["entity_alignment"] in ["EXACT_MATCH", "RELATED_ENTITY"]
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Outdated Evidence Handling
-# ---------------------------------------------------------------------------
 def test_4_outdated_evidence_handling(db_session):
     """
     Verifies that an older audit report (2018) is flagged as outdated relative to
@@ -328,9 +308,6 @@ def test_4_outdated_evidence_handling(db_session):
     assert "outdated" in res["reasoning_summary"].lower()
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Unrelated Evidence Handling
-# ---------------------------------------------------------------------------
 def test_5_unrelated_evidence_handling(db_session):
     """
     Verifies that a document discussing Karnataka Gruha Lakshmi is classified as UNRELATED
@@ -367,9 +344,6 @@ def test_5_unrelated_evidence_handling(db_session):
     assert res["geographic_alignment"] == "GEOGRAPHIC_MISMATCH" or res["entity_alignment"] == "ENTITY_MISMATCH"
 
 
-# ---------------------------------------------------------------------------
-# Test 6: Syndicated Copies Detection & Deduplication
-# ---------------------------------------------------------------------------
 def test_6_syndicated_copies_detection_and_deduplication(db_session):
     """
     Verifies that identical PTI wire copies are recognized as syndicated echoes,
@@ -417,7 +391,6 @@ def test_6_syndicated_copies_detection_and_deduplication(db_session):
         claim_category=ClaimCategory.GOVERNMENT_SCHEMES
     )
 
-    # First copy
     cluster_list = []
     res1 = analyzer.analyze_claim_evidence_relationship(
         claim=claim,
@@ -433,7 +406,6 @@ def test_6_syndicated_copies_detection_and_deduplication(db_session):
         "document_id": doc_news1.document_id
     })
 
-    # Second copy (identical PTI wire feed)
     res2 = analyzer.analyze_claim_evidence_relationship(
         claim=claim,
         passage=pass_news2,
@@ -445,9 +417,6 @@ def test_6_syndicated_copies_detection_and_deduplication(db_session):
     assert "syndicated copy" in res2["reasoning_summary"].lower()
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Source Stance (Reporting a Claim vs Independent Fact)
-# ---------------------------------------------------------------------------
 def test_7_source_stance_reporting_vs_independent_fact(db_session):
     """
     Verifies that a news article quoting a politician's speech is classified as REPORTING_CLAIM,
@@ -488,9 +457,6 @@ def test_7_source_stance_reporting_vs_independent_fact(db_session):
     assert res["relationship_type"] == EvidenceRelationshipType.CONTEXTUALIZES
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Absence of Evidence Does Not Prove Falsehood
-# ---------------------------------------------------------------------------
 def test_8_absence_of_evidence_does_not_prove_falsehood(db_session):
     """
     Enforces core epistemic principle:
@@ -513,9 +479,6 @@ def test_8_absence_of_evidence_does_not_prove_falsehood(db_session):
     assert "Absence of evidence does not constitute evidence of absence" in eval_result["disclaimer"]
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Keeping Contradictory Evidence Visible
-# ---------------------------------------------------------------------------
 def test_9_keeping_contradictory_evidence_visible(db_session):
     """
     Verifies that contradictory evidence is persisted and retained in relationships list
@@ -532,7 +495,6 @@ def test_9_keeping_contradictory_evidence_visible(db_session):
     db_session.add(claim)
     db_session.commit()
 
-    # Link both supporting and contradictory passages
     pass_supp = db_session.query(EvidencePassage).filter_by(passage_id="EPASS-GO-49-01").first()
     pass_contra = db_session.query(EvidencePassage).filter_by(passage_id="EPASS-CAG-01").first()
 
@@ -560,18 +522,13 @@ def test_9_keeping_contradictory_evidence_visible(db_session):
 
     assert EvidenceRelationshipType.SUPPORTS in types
     assert EvidenceRelationshipType.CONTRADICTS in types
-    # Ensure contradiction is preserved in DB
     contra_rel = next(s for s in saved if s.relationship_type == EvidenceRelationshipType.CONTRADICTS)
     assert contra_rel.contradicting_text_reference is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Multilingual Tamil Claim Relationship Analysis
-# ---------------------------------------------------------------------------
 def test_10_multilingual_tamil_claim_relationship(db_session):
     analyzer = EvidenceRelationshipAnalyzer(db=db_session)
 
-    # Tamil claim text with exact original preservation
     claim = Claim(
         claim_id="CLM-TEST-TAMIL-REL-01",
         original_text="கலைஞர் மகளிர் உரிமைத் திட்டம் மூலம் மாதம் ₹1,000 வழங்கப்படுகிறது.",
@@ -605,8 +562,6 @@ def test_10_multilingual_tamil_claim_relationship(db_session):
     assert res["supporting_text_reference"] is not None
 
 
-# ---------------------------------------------------------------------------
-# Test 11: REST API Endpoints Integration
 @pytest.fixture
 def api_client(db_session):
     """Flask test client bound to test database engine."""
@@ -623,13 +578,9 @@ def api_client(db_session):
     Base.metadata.drop_all(bind=engine)
 
 
-# ---------------------------------------------------------------------------
-# Test 11: REST API Endpoints Integration
-# ---------------------------------------------------------------------------
 def test_11_rest_api_relationship_endpoints(api_client):
     claim_id = "CLM-API-REL-01"
 
-    # 1. Ingest a test claim
     ingest_resp = api_client.post("/api/claims/ingest", json={
         "claim_id": claim_id,
         "original_text": "Kalaignar Magalir Urimai Thittam in Tamil Nadu.",
@@ -639,7 +590,6 @@ def test_11_rest_api_relationship_endpoints(api_client):
     })
     assert ingest_resp.status_code == 200
 
-    # 2. Add an evidence document and passage to the database
     from backend.database.session import SessionLocal
     db = SessionLocal()
     try:
@@ -667,7 +617,6 @@ def test_11_rest_api_relationship_endpoints(api_client):
     finally:
         db.close()
 
-    # 3. POST /api/claims/<claim_id>/analyze-evidence
     post_resp = api_client.post(f"/api/claims/{claim_id}/analyze-evidence", json={})
     assert post_resp.status_code == 200
     post_data = post_resp.get_json()
@@ -675,7 +624,6 @@ def test_11_rest_api_relationship_endpoints(api_client):
     assert "relationships" in post_data["data"]
     assert "epistemic_disclaimer" in post_data["data"]
 
-    # 4. GET /api/claims/<claim_id>/relationships
     get_resp = api_client.get(f"/api/claims/{claim_id}/relationships")
     assert get_resp.status_code == 200
     get_data = get_resp.get_json()

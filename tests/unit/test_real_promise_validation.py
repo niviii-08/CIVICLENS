@@ -17,42 +17,33 @@ from scripts.validate_real_promises import (
 class TestRealPromiseValidation(unittest.TestCase):
 
     def test_tamil_unicode_integrity_check(self):
-        # Valid Tamil text
         valid_tamil = "விவசாயிகளுக்கு இலவச மின்சாரம் வழங்கப்படும்"
         self.assertEqual(len(check_tamil_unicode_integrity(valid_tamil)), 0)
 
-        # Unattached diacritic at start or after space
         broken_tamil = " ொ ாருளாதார வளர்ச்சி"
         flags = check_tamil_unicode_integrity(broken_tamil)
         self.assertTrue(len(flags) > 0)
 
     def test_incomplete_sentence_detection(self):
-        # Complete sentence
         complete = "A new medical college will be established in every district."
         self.assertFalse(is_incomplete_sentence(complete))
 
-        # Fragment starting with lower-case leading verb/conjunction
         fragment_start = "will prescribe fees for private school students"
         self.assertTrue(is_incomplete_sentence(fragment_start))
 
-        # Fragment ending with dangling preposition
         fragment_end = "Higher education subsidies will be provided to"
         self.assertTrue(is_incomplete_sentence(fragment_end))
 
-        # Short text < 15 chars
         short_fragment = "Free laptops"
         self.assertTrue(is_incomplete_sentence(short_fragment))
 
     def test_page_or_header_artifact_detection(self):
-        # Page numbers
         self.assertTrue(is_page_or_header_artifact("Page 12 of 150"))
         self.assertTrue(is_page_or_header_artifact("12"))
         self.assertTrue(is_page_or_header_artifact("--- 45 ---"))
 
-        # Banner title
         self.assertTrue(is_page_or_header_artifact("ELECTION MANIFESTO 2026"))
 
-        # Valid promise text should NOT be an artifact
         self.assertFalse(is_page_or_header_artifact("100 days of guaranteed wage employment will be provided."))
 
     def test_jaccard_similarity(self):
@@ -88,7 +79,6 @@ class TestRealPromiseValidation(unittest.TestCase):
         self.assertEqual(score, 1.0)
         self.assertEqual(v_result["validation_status"], "valid")
 
-        # Duplicate record test
         dup_record = dict(valid_record)
         dup_record["promise_id"] = "P-TEST-002"
         status_dup, score_dup, flags_dup, _ = validate_promise_record(dup_record, seen_exact, seen_token_sets)

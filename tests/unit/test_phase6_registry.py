@@ -43,7 +43,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Pre-populate sample political parties
     parties = [
         PoliticalParty(party_id="PARTY-DMK", party_name="Dravida Munnetra Kazhagam", party_code="DMK"),
         PoliticalParty(party_id="PARTY-AIADMK", party_name="All India Anna Dravida Munnetra Kazhagam", party_code="AIADMK"),
@@ -60,7 +59,6 @@ def db_session():
 def test_1_register_canonical_representative_and_constituency(db_session):
     service = RepresentativeRegistryService(db=db_session)
 
-    # 1. Register Constituency
     const = service.register_constituency(
         constituency_id="AC-013-2008",
         official_name="Kolathur",
@@ -73,7 +71,6 @@ def test_1_register_canonical_representative_and_constituency(db_session):
     assert const.constituency_id == "AC-013-2008"
     assert const.official_name == "Kolathur"
 
-    # 2. Register Representative
     rep = service.register_representative(
         representative_id="REP-MLA-013-STALIN",
         official_name="M. K. Stalin",
@@ -96,7 +93,6 @@ def test_2_duplicate_name_disambiguation(db_session):
     """
     service = RepresentativeRegistryService(db=db_session)
 
-    # Register two constituencies
     service.register_constituency(
         constituency_id="AC-139",
         official_name="Manapparai",
@@ -110,7 +106,6 @@ def test_2_duplicate_name_disambiguation(db_session):
         district="Virudhunagar"
     )
 
-    # Register Rep 1: R. Chandrasekar in Manapparai
     rep1 = service.register_representative(
         representative_id="REP-MLA-139-CHANDRASEKAR",
         official_name="R. Chandrasekar",
@@ -129,7 +124,6 @@ def test_2_duplicate_name_disambiguation(db_session):
         term_end="2021-05-03"
     )
 
-    # Register Rep 2: R. Chandrasekar in Sattur
     rep2 = service.register_representative(
         representative_id="REP-MLA-204-CHANDRASEKAR",
         official_name="R. Chandrasekar",
@@ -148,14 +142,12 @@ def test_2_duplicate_name_disambiguation(db_session):
         is_active_term=True
     )
 
-    # Query with Manapparai constituency context -> MUST resolve to Rep 1
     resolved_1 = service.resolve_representative(
         query_name="R. Chandrasekar",
         constituency_id="AC-139"
     )
     assert resolved_1.representative_id == "REP-MLA-139-CHANDRASEKAR"
 
-    # Query with Sattur constituency context -> MUST resolve to Rep 2
     resolved_2 = service.resolve_representative(
         query_name="R. Chandrasekar",
         constituency_id="AC-204"
@@ -202,11 +194,10 @@ def test_4_historical_terms_and_party_preservation(db_session):
         representative_id="REP-MLA-SAMPLE-SWITCHER",
         official_name="K. S. Thennarasu",
         representative_type=RepresentativeType.MLA,
-        party_id="PARTY-DMK",  # Current party
+        party_id="PARTY-DMK",
         term_start="2021-05-07"
     )
 
-    # Term 1: 2011 to 2016 under AIADMK
     service.register_term(
         term_id="TERM-THENNARASU-2011",
         representative_id=rep.representative_id,
@@ -216,7 +207,6 @@ def test_4_historical_terms_and_party_preservation(db_session):
         term_end="2016-05-21"
     )
 
-    # Term 2: 2021 to Present under DMK
     service.register_term(
         term_id="TERM-THENNARASU-2021",
         representative_id=rep.representative_id,
@@ -226,14 +216,12 @@ def test_4_historical_terms_and_party_preservation(db_session):
         is_active_term=True
     )
 
-    # Check historical party for 2013 -> MUST be AIADMK
     party_2013 = service.get_historical_party_for_term(
         representative_id=rep.representative_id,
         year=2013
     )
     assert party_2013 == "PARTY-AIADMK"
 
-    # Check historical party for 2022 -> MUST be DMK
     party_2022 = service.get_historical_party_for_term(
         representative_id=rep.representative_id,
         year=2022
@@ -247,7 +235,6 @@ def test_5_constituency_boundary_and_naming_changes(db_session):
     """
     service = RepresentativeRegistryService(db=db_session)
 
-    # Pre-2008 constituency (Triplicane - abolished/merged in 2008)
     c_pre = service.register_constituency(
         constituency_id="AC-TRIPLICANE-1977",
         official_name="Triplicane",
@@ -259,19 +246,17 @@ def test_5_constituency_boundary_and_naming_changes(db_session):
         successor_id="AC-CHEPAUK-THIRUVALLIKENI-2008"
     )
 
-    # Post-2008 constituency (Chepauk-Thiruvallikeni)
     c_post = service.register_constituency(
         constituency_id="AC-CHEPAUK-THIRUVALLIKENI-2008",
         official_name="Chepauk-Thiruvallikeni",
         constituency_type=ConstituencyType.ASSEMBLY,
         district="Chennai",
         valid_from="2008",
-        valid_to=None,  # Active
+        valid_to=None,
         delimitation_year=2008,
         predecessor_id="AC-TRIPLICANE-1977"
     )
 
-    # Record history
     hist = service.record_boundary_change(
         history_id="HIST-CHEP-01",
         constituency_id=c_post.constituency_id,
@@ -282,7 +267,6 @@ def test_5_constituency_boundary_and_naming_changes(db_session):
     )
     assert hist.history_id == "HIST-CHEP-01"
 
-    # Test as_of_year lookups
     c_1996 = service.get_constituency_as_of("AC-TRIPLICANE-1977", as_of_year=1996)
     assert c_1996 is not None
     assert c_1996.official_name == "Triplicane"
@@ -304,7 +288,7 @@ def test_6_rajya_sabha_representative_no_constituency(db_session):
         representative_type=RepresentativeType.RAJYA_SABHA_MP,
         aliases=["V. Gopalasamy", "வைக்கோ"],
         party_id="PARTY-DMK",
-        constituency_id=None,  # State-wide representative
+        constituency_id=None,
         term_start="2019-07-25"
     )
 
@@ -330,11 +314,9 @@ def test_7_multilingual_and_alias_resolution(db_session):
         constituency_id="AC-013"
     )
 
-    # Resolve using Tamil alias
     res_ta = service.resolve_representative(query_name="மு.க. ஸ்டாலின்")
     assert res_ta.representative_id == "REP-MLA-013-STALIN"
 
-    # Resolve using informal English nickname
     res_en = service.resolve_representative(query_name="MK Stalin")
     assert res_en.representative_id == "REP-MLA-013-STALIN"
 

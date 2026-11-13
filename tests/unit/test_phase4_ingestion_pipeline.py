@@ -103,7 +103,6 @@ class TestPhase4IngestionPipeline:
         """Test Tier 1 (URL), Tier 2 (Content Hash), and Tier 3 (Fuzzy Title + Date) duplicate detection."""
         detector = DuplicateDetector()
         
-        # Insert baseline article
         pub_date = datetime.now(timezone.utc)
         art = Article(
             article_id="art_dupe_base",
@@ -119,7 +118,6 @@ class TestPhase4IngestionPipeline:
         db_session.add(art)
         db_session.commit()
 
-        # Tier 1 Duplicate Check (Matching URL)
         is_dupe1, reason1 = detector.check_duplicate(
             db_session, "https://test-fixture.example.com/base-url-dupe",
             "https://test-fixture.example.com/canon-base-dupe", "hash_new", "Different Title", pub_date
@@ -127,7 +125,6 @@ class TestPhase4IngestionPipeline:
         assert is_dupe1 is True
         assert "Tier 1" in reason1
 
-        # Tier 2 Duplicate Check (Matching Text Hash)
         is_dupe2, reason2 = detector.check_duplicate(
             db_session, "https://test-fixture.example.com/new-url-hash",
             "https://test-fixture.example.com/new-canon-hash", "hash_base_12345", "Different Title", pub_date
@@ -135,7 +132,6 @@ class TestPhase4IngestionPipeline:
         assert is_dupe2 is True
         assert "Tier 2" in reason2
 
-        # Tier 3 Duplicate Check (Fuzzy Title Jaccard Similarity within 48h)
         is_dupe3, reason3 = detector.check_duplicate(
             db_session, "https://test-fixture.example.com/new-url-3",
             "https://test-fixture.example.com/new-canon-3", "hash_new_3",
@@ -164,7 +160,6 @@ class TestPhase4IngestionPipeline:
         """Test enqueuing articles for processing, fetching pending items, and marking complete."""
         queue_mgr = ProcessingQueueManager()
         
-        # Create article first
         art = Article(
             article_id="art_queue_test_unique",
             source_id="src_test_fixture",
@@ -177,15 +172,12 @@ class TestPhase4IngestionPipeline:
         db_session.add(art)
         db_session.commit()
 
-        # Enqueue
         item = queue_mgr.enqueue_article(db_session, "art_queue_test_unique")
         assert item.status == "PENDING"
 
-        # Fetch Pending
         pending = queue_mgr.fetch_pending(db_session)
         assert len(pending) >= 1
 
-        # Mark Completed
         queue_mgr.mark_completed(db_session, item.id)
         assert item.status == "COMPLETED"
 
@@ -207,14 +199,12 @@ class TestPhase4IngestionPipeline:
 
             assert os.path.exists(article.raw_html_path)
 
-            # Verify Core Provenance Document & Evidence Records
             doc = db_session.query(Document).filter(Document.title == article.title).first()
             assert doc is not None
             evidence = db_session.query(Evidence).filter(Evidence.document_id == doc.id).first()
             assert evidence is not None
             assert evidence.result_id == article.article_id
 
-            # Verify Processing Queue Item
             queue_item = db_session.query(NewsProcessingQueue).filter(NewsProcessingQueue.article_id == article.article_id).first()
             assert queue_item is not None
             assert queue_item.status == "PENDING"

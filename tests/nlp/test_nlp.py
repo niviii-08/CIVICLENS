@@ -12,7 +12,7 @@ def test_whitespace_normalization():
     assert normalize_whitespace(None) == ""
 
 def test_unicode_normalization():
-    composed = "\u0b95\u0bbe" # கா
+    composed = "\u0b95\u0bbe"
     decomposed = "\u0b95" + "\u0bbe"
     
     assert normalize_unicode(composed) == normalize_unicode(decomposed)

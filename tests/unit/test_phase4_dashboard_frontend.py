@@ -25,44 +25,34 @@ class TestPhase4DashboardFrontend:
             mock_get.return_value = mock_resp
             mock_post.return_value = mock_resp
 
-            # 1. Sources
             ok, data = client.get_news_sources()
             assert ok is True
             assert len(data) == 1
 
-            # 2. Articles
             ok, data = client.get_news_articles(source_id="src_test", limit=10)
             assert ok is True
 
-            # 3. Detail
             ok, data = client.get_news_article_detail("art_123")
             assert ok is True
 
-            # 4. Topics
             ok, data = client.get_news_topics()
             assert ok is True
 
-            # 5. Entities
             ok, data = client.get_news_entities()
             assert ok is True
 
-            # 6. Events
             ok, data = client.get_news_events()
             assert ok is True
 
-            # 7. Coverage
             ok, data = client.get_news_coverage()
             assert ok is True
 
-            # 8. Comparison
             ok, data = client.get_news_source_comparison("src_a", "src_b")
             assert ok is True
 
-            # 9. Bias indicators
             ok, data = client.get_news_bias_indicators("src_a")
             assert ok is True
 
-            # 10. Calculate indicators
             ok, data = client.calculate_news_indicators("src_a")
             assert ok is True
 

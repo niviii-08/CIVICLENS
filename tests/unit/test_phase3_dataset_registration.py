@@ -66,7 +66,6 @@ class TestPhase3DatasetRegistration(unittest.TestCase):
 
         sha256_set = set()
         for item in files:
-            # Check required fields
             self.assertIn("dataset_id", item)
             self.assertIn("file_id", item)
             self.assertIn("original_filename", item)
@@ -76,21 +75,16 @@ class TestPhase3DatasetRegistration(unittest.TestCase):
             self.assertIn("sha256", item)
             self.assertIn("duplicate_classification", item)
 
-            # Check that file exists on disk
             extracted_file_path = os.path.join(RAW_DIR, item["original_filename"])
             if not os.path.exists(extracted_file_path):
-                # Check nested relative path
                 extracted_file_path = os.path.join(RAW_DIR, item["relative_path"])
             self.assertTrue(os.path.exists(extracted_file_path), f"Extracted file {item['relative_path']} must exist")
 
-            # Check SHA-256 non-empty and 64 chars
             self.assertEqual(len(item["sha256"]), 64)
             sha256_set.add(item["sha256"])
 
-            # Check duplicate classification values
             self.assertIn(item["duplicate_classification"], ["unique", "exact_duplicate", "probable_duplicate", "different_version", "uncertain"])
 
-        # Check all SHA256 hashes in dataset are unique
         self.assertEqual(len(sha256_set), 20, "All 20 extracted files must have distinct SHA-256 hashes")
 
     def test_no_fabricated_metadata(self):

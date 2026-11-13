@@ -8,7 +8,6 @@ designed to test all 10 automated validation rules (V-01 to V-10) and non-mergin
 from typing import Dict, Any, List
 
 MOCK_RAW_CONTRIBUTIONS_FOR_VALIDATION: List[Dict[str, Any]] = [
-    # 1. Valid record
     {
         "record_id": "REC_VAL_001",
         "document_id": "DOC_2021_DMK_24A",
@@ -24,7 +23,6 @@ MOCK_RAW_CONTRIBUTIONS_FOR_VALIDATION: List[Dict[str, Any]] = [
         "extraction_confidence": 0.95,
         "page_number": 1
     },
-    # 2. V-01 Missing Party
     {
         "record_id": "REC_VAL_002",
         "document_id": "DOC_2021_UNK_24A",
@@ -40,7 +38,6 @@ MOCK_RAW_CONTRIBUTIONS_FOR_VALIDATION: List[Dict[str, Any]] = [
         "extraction_confidence": 0.90,
         "page_number": 1
     },
-    # 3. V-02 Negative Amount
     {
         "record_id": "REC_VAL_003",
         "document_id": "DOC_2021_DMK_24A",
@@ -56,7 +53,6 @@ MOCK_RAW_CONTRIBUTIONS_FOR_VALIDATION: List[Dict[str, Any]] = [
         "extraction_confidence": 0.85,
         "page_number": 1
     },
-    # 4. V-03 Invalid Currency
     {
         "record_id": "REC_VAL_004",
         "document_id": "DOC_2021_DMK_24A",
@@ -72,7 +68,6 @@ MOCK_RAW_CONTRIBUTIONS_FOR_VALIDATION: List[Dict[str, Any]] = [
         "extraction_confidence": 0.40,
         "page_number": 1
     },
-    # 5. V-04 Malformed Date & V-09 FY Mismatch (Date in 2020 for FY2021-22)
     {
         "record_id": "REC_VAL_005",
         "document_id": "DOC_2021_DMK_24A",
@@ -83,12 +78,11 @@ MOCK_RAW_CONTRIBUTIONS_FOR_VALIDATION: List[Dict[str, Any]] = [
         "normalized_amount_inr": 200000.0,
         "amount_status": "VALID_NUMERIC",
         "payment_mode": "DD",
-        "payment_date": "15/05/2020",  # FY2020-21 date inside FY2021-22 record
+        "payment_date": "15/05/2020",
         "raw_row": "5 | Early Date Corp | 2,00,000 | DD | 15/05/2020",
         "extraction_confidence": 0.85,
         "page_number": 1
     },
-    # 6. V-05 Duplicate row (identical to REC_VAL_001)
     {
         "record_id": "REC_VAL_006",
         "document_id": "DOC_2021_DMK_24A",
@@ -106,13 +100,12 @@ MOCK_RAW_CONTRIBUTIONS_FOR_VALIDATION: List[Dict[str, Any]] = [
     }
 ]
 
-# Mock financial statement for cross-validation testing
 MOCK_STATEMENT_FOR_CROSS_VALIDATION: Dict[str, Any] = {
     "statement_id": "STMT_DMK_2021",
     "party_code": "DMK",
     "financial_year": "FY2021-22",
     "income_categories": {
-        "donations_above_20k": 1000000.0,  # 10 Lakhs summary, but itemized sum in REC_VAL_001 is 50 Lakhs -> V-07 mismatch
+        "donations_above_20k": 1000000.0,
     },
-    "total_income": 4000000.0  # 40 Lakhs total, but itemized sum is 50 Lakhs -> V-10 source inconsistency
+    "total_income": 4000000.0
 }

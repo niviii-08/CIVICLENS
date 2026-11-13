@@ -37,7 +37,6 @@ class TestClassification(unittest.TestCase):
         self.assertEqual(classify("We will provide Rs. 1000 per month to every test household.")[0], C.SPECIFIC_PROMISE)
 
     def test_specific_tamil(self):
-        # synthetic: "Rs. 1000 will be provided to test families."
         self.assertEqual(classify("சோதனை குடும்பங்களுக்கு ரூ.1000 வழங்கப்படும்.")[0], C.SPECIFIC_PROMISE)
 
     def test_general_policy(self):
@@ -69,7 +68,7 @@ class TestSplittingAndTraceability(unittest.TestCase):
     def test_original_text_preserved_exactly(self):
         text = "We  will   provide\u00a0free test laptops to 50 students."
         rec = PromiseExtractor().extract([seg(text)])[0]
-        self.assertEqual(rec.original_text, text)  # untouched, including odd spacing
+        self.assertEqual(rec.original_text, text)
         self.assertEqual(rec.normalized_text, "We will provide free test laptops to 50 students.")
         self.assertNotEqual(rec.original_text, rec.normalized_text)
 

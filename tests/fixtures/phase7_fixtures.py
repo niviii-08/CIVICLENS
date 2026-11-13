@@ -17,13 +17,9 @@ Covers bilingual statements (Tamil and English) across core claim categories:
 
 from typing import Dict, Any, List
 
-# Explicit Test Fixture Metadata Marker
 IS_TEST_FIXTURE = True
 FIXTURE_VERSION = "7.0-test"
 
-# ---------------------------------------------------------------------------
-# 1. Sample Claims Fixtures
-# ---------------------------------------------------------------------------
 MOCK_CLAIMS: List[Dict[str, Any]] = [
     {
         "claim_id": "CLM-FIX-001-SCHEME",
@@ -152,9 +148,6 @@ MOCK_CLAIMS: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 2. Sample Evidence Documents Fixtures
-# ---------------------------------------------------------------------------
 MOCK_EVIDENCE_DOCS: List[Dict[str, Any]] = [
     {
         "document_id": "EDOC-FIX-001-GO-KMUT",
@@ -268,9 +261,6 @@ MOCK_EVIDENCE_DOCS: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 3. Sample Human Review Records Fixtures
-# ---------------------------------------------------------------------------
 MOCK_REVIEWS: List[Dict[str, Any]] = [
     {
         "review_id": "REV-FIX-001",

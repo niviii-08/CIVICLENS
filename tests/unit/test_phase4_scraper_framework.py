@@ -71,7 +71,6 @@ class TestPhase4ScraperFramework:
         """Test URL discovery from RSS feed XML and HTML link parsing."""
         scraper = SourceScraper()
         
-        # Test RSS link discovery
         with patch.object(scraper.fetcher, 'fetch', return_value=SYNTHETIC_RSS_FEED):
             source_cfg = SourceConfig(
                 source_id="src_test", source_name="Test Source", domain="test-fixture.example.com",
@@ -81,7 +80,6 @@ class TestPhase4ScraperFramework:
             assert len(urls) == 2
             assert "https://test-fixture.example.com/test/article-1" in urls
 
-        # Test HTML link discovery with pattern matching
         html_links = """
         <a href="/test/match-1">Matching Link 1</a>
         <a href="/other/ignore-1">Ignored Link</a>
@@ -114,13 +112,11 @@ class TestPhase4ScraperFramework:
         """Test URL canonical deduplication and exact text hash deduplication."""
         dedup = Deduplicator()
         
-        # 1. URL Deduplication
         url1 = "https://example.com/news/123?utm_source=rss"
         url2 = "https://example.com/news/123?utm_source=twitter"
         assert not dedup.is_duplicate_url(url1)
-        assert dedup.is_duplicate_url(url2) # Same canonical URL base
+        assert dedup.is_duplicate_url(url2)
 
-        # 2. Text Hash Deduplication
         text = "TEST FIXTURE duplicate body content."
         hash_val = GenericSourceAdapter.compute_text_hash(text)
         assert not dedup.is_duplicate_text(hash_val)
@@ -132,7 +128,6 @@ class TestPhase4ScraperFramework:
         canonical = adapter.extract_canonical_url(SYNTHETIC_HTML_PAGE, "https://example.com/fallback")
         assert canonical == "https://test-fixture.example.com/canonical-article-123"
 
-        # Fallback when canonical tag is absent
         no_canon_html = "<html><head><title>Test</title></head><body><h1>Title</h1></body></html>"
         fallback = adapter.extract_canonical_url(no_canon_html, "https://example.com/fallback")
         assert fallback == "https://example.com/fallback"
@@ -144,7 +139,6 @@ class TestPhase4ScraperFramework:
         robots = RobotsChecker("TestBot")
         fetcher = Fetcher(rate_limiter, cache_mgr, robots, max_retries=3, backoff_factor=1.1)
 
-        # Mock session to fail twice then succeed
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.text = "SUCCESS"
@@ -161,11 +155,9 @@ class TestPhase4ScraperFramework:
         limiter = RateLimiter(default_delay=0.1)
         domain = "test-rate-limit.example.com"
         
-        # First call has no delay
         w1 = limiter.wait(domain)
         assert w1 == 0.0
         
-        # Immediate second call incurs delay
         w2 = limiter.wait(domain, custom_delay=0.1)
         assert w2 > 0.0
 
@@ -175,16 +167,12 @@ class TestPhase4ScraperFramework:
         url = "https://test-fixture.example.com/cache-article"
         content = "CACHED_CONTENT_FIXTURE"
 
-        # Initial miss
         assert cache_mgr.get(url) is None
 
-        # Store in cache
         cache_mgr.set(url, content)
 
-        # Instant hit
         assert cache_mgr.get(url) == content
 
-        # Verify disk persistence by re-instantiating CacheManager
         cache_mgr_new = CacheManager(cache_dir=tmp_cache_dir, ttl_seconds=3600)
         assert cache_mgr_new.get(url) == content
 
@@ -192,7 +180,6 @@ class TestPhase4ScraperFramework:
         """Test fallback to generic adapter when custom adapter yields empty content."""
         parser = ArticleParser()
         
-        # Create a failing custom adapter returning None
         failing_adapter = MagicMock()
         failing_adapter.parse_article.return_value = None
         adapter_registry.register_adapter("failing_adapter", failing_adapter)
@@ -202,7 +189,6 @@ class TestPhase4ScraperFramework:
             parser_type="failing_adapter"
         )
 
-        # Parsing should trigger fallback to generic adapter and return content
         parsed = parser.parse(SYNTHETIC_HTML_PAGE, "https://example.com/fallback-test", source_cfg)
         assert parsed is not None
         assert "TEST FIXTURE — Local News Headline" in parsed["title"]
@@ -211,10 +197,8 @@ class TestPhase4ScraperFramework:
         """Test RobotsChecker policy auditing and disallow directive handling."""
         robots = RobotsChecker("TestBot")
         
-        # Permissive check on unknown domain
         assert robots.is_allowed("https://test-permissive.example.com/news")
 
-        # Mock robots.txt disallowing /private/
         mock_rp = MagicMock()
         mock_rp.can_fetch.side_effect = lambda ua, url: False if "/private/" in url else True
         robots.parsers["disallowed.example.com"] = mock_rp

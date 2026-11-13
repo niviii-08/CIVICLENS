@@ -58,7 +58,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Seed Phase 1 departments, schemes, and source documents (clearly labelled test fixtures)
     dept_sw = BudgetDepartment(id=1, name="Social Welfare and Women Empowerment", code="DEMAND-45")
     dept_he = BudgetDepartment(id=2, name="Higher Education Department", code="DEMAND-20")
 
@@ -134,7 +133,7 @@ def test_1_budget_estimate_vs_revised_estimate_and_supplementary_grants(db_sessi
         source_document_id=502,
         financial_year="2023-24",
         budget_stage=BudgetStage.revised_estimate,
-        amount=105000.0,  # 1,05,000 Lakh == 1,050.0 Crore (tests unit normalization)
+        amount=105000.0,
         currency_unit="RUPEES_LAKH",
         source_page_number=43,
         original_category_text="Pudhumai Penn Scheme - RE 2023-24",
@@ -161,7 +160,6 @@ def test_1_budget_estimate_vs_revised_estimate_and_supplementary_grants(db_sessi
     assert "First Supplementary Estimates Oct 2023" in res["accounting_adjustment_notes"]
     assert len(res["currency_conversions_applied"]) == 1
 
-    # Provenance verification
     prov = res["metric_provenance"]
     assert "revision_rate_pct = ((RE - BE) / BE) * 100" in prov["calculation_formula"]
     assert len(prov["source_links"]) == 2
@@ -228,7 +226,6 @@ def test_2_allocation_vs_actual_expenditure_and_epistemic_guardrails(db_session)
     db_session.add_all(recs_23_24 + recs_24_25_unpublished_actuals)
     db_session.commit()
 
-    # Case 1: 2023-24 with published actuals
     res_23 = PolicyBudgetExecutionAnalyticsService.analyze_allocation_vs_actual(
         recs_23_24, financial_year="2023-24"
     )
@@ -247,7 +244,6 @@ def test_2_allocation_vs_actual_expenditure_and_epistemic_guardrails(db_session)
     assert "Do NOT treat underspending alone as proof of policy failure" in res_23["epistemic_interpretation_guardrail"]
     assert "do NOT treat 100% absorption or overspending as proof of policy success" in res_23["epistemic_interpretation_guardrail"]
 
-    # Case 2: 2024-25 without published actuals -> NEVER assume allocation was spent
     res_24 = PolicyBudgetExecutionAnalyticsService.analyze_allocation_vs_actual(
         recs_24_25_unpublished_actuals, financial_year="2024-25"
     )
@@ -383,7 +379,7 @@ def test_4_planned_outputs_vs_completed_outputs_and_unit_costs():
 
     res = PolicyBudgetExecutionAnalyticsService.analyze_planned_vs_completed_outputs(activities)
     assert res["total_activities"] == 2
-    assert res["activity_completion_rate_pct"] == 50.0  # 1 of 2 COMPLETED
+    assert res["activity_completion_rate_pct"] == 50.0
 
     lab_group = res["outputs_by_unit"]["SMART_LABS"]
     assert lab_group["planned_output_total"] == 200.0
@@ -393,7 +389,7 @@ def test_4_planned_outputs_vs_completed_outputs_and_unit_costs():
     act_1 = res["activities"][0]
     assert act_1["output_completion_ratio_pct"] == 90.0
     assert act_1["output_shortfall"] == 10.0
-    assert act_1["realized_unit_cost_cr"] == 0.2  # 18.0 Cr / 90 labs = 0.20 Cr per lab
+    assert act_1["realized_unit_cost_cr"] == 0.2
 
 
 def test_5_yoy_changes_and_financial_vs_calendar_year_separation(db_session):
@@ -453,12 +449,11 @@ def test_5_yoy_changes_and_financial_vs_calendar_year_separation(db_session):
     assert series[2]["yoy_change_pct"] == 20.0
     assert series[2]["yoy_status"] == "COMPUTED"
 
-    # Reject Calendar Year "2023" in Financial Year YoY series
     cy_record = BudgetRecord(
         id=24,
         scheme_id=101,
         source_document_id=502,
-        financial_year="2023",  # Calendar Year!
+        financial_year="2023",
         budget_stage=BudgetStage.actual_expenditure,
         amount=750.0,
         currency_unit="RUPEES_CRORE",
@@ -469,7 +464,6 @@ def test_5_yoy_changes_and_financial_vs_calendar_year_separation(db_session):
         )
     assert exc_cy.value.error_code == "CALENDAR_VS_FINANCIAL_YEAR_MISMATCH"
 
-    # Reject mixed BudgetStage in YoY series
     be_record = BudgetRecord(
         id=25,
         scheme_id=101,
@@ -604,7 +598,6 @@ def test_7_missing_and_inconsistent_reporting_detection():
     4. `COMPLETED_OUTPUTS_WITH_ZERO_OR_MISSING_EXPENDITURE`
     """
     b_recs = [
-        # 2024-25 has BE but no Actuals -> MISSING_ACTUAL_EXPENDITURE
         BudgetRecord(
             id=41,
             scheme_id=101,
@@ -614,7 +607,6 @@ def test_7_missing_and_inconsistent_reporting_detection():
             amount=1200.0,
             currency_unit="RUPEES_CRORE",
         ),
-        # 2022-23 has Actual (700) > BE (600) * 1.05 without supplementary_grant_cr -> OVERRUN_WITHOUT_SUPPLEMENTARY_RECORD
         BudgetRecord(
             id=42,
             scheme_id=102,

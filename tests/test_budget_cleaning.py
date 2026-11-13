@@ -24,9 +24,9 @@ def mock_mappings_file(tmp_path):
 def dirty_record():
     return RawBudgetRecord(
         record_id="test-clean-1",
-        department_name="  H & FW  ", # Needs mapping and strip
-        scheme_name="  MDM  ", # Needs mapping and strip
-        financial_year="2024/25", # Needs normalization to 2024-25
+        department_name="  H & FW  ",
+        scheme_name="  MDM  ",
+        financial_year="2024/25",
         budget_stage=BudgetStage.budget_estimate,
         amount=50.0,
         original_category="Raw string here",
@@ -45,10 +45,8 @@ def test_cleaning_normalizations(mock_mappings_file, dirty_record):
     assert rec.scheme_name == "Mid Day Meal Scheme"
     assert rec.financial_year == "2024-25"
     
-    # Check that original raw data was preserved
     assert rec.original_category == "Raw string here"
     
-    # Check report
     assert report["total_processed"] == 1
     assert report["total_cleaned"] == 1
     assert len(report["transformations"]) == 1
@@ -59,19 +57,16 @@ def test_cleaning_normalizations(mock_mappings_file, dirty_record):
     assert any("Standardized FY" in c for c in changes)
 
 def test_missing_mappings_graceful_fallback(dirty_record):
-    # No mapping file
     cleaner = BudgetCleaner(mappings_file="nonexistent.json")
     cleaned, _, _ = cleaner.clean_batch([dirty_record])
     
     rec = cleaned[0]
-    # It should still strip whitespace and fix FY, even if mapping fails
     assert rec.department_name == "H & FW"
     assert rec.scheme_name == "MDM"
     assert rec.financial_year == "2024-25"
 
 def test_unresolved_records():
     cleaner = BudgetCleaner()
-    # A record that gets its department stripped to empty string
     empty_dept_record = RawBudgetRecord(
         record_id="test-clean-2",
         department_name="   ", 

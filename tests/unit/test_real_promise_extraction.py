@@ -70,7 +70,6 @@ class TestRealPromiseExtraction(unittest.TestCase):
         tamil_promises = [p for p in promises if p["language"] == "Tamil"]
         self.assertGreater(len(tamil_promises), 100, "Should have over 100 Tamil promises")
 
-        # Verify Tamil characters exist in original_text
         t_sample = tamil_promises[0]
         has_tamil_script = any('\u0B80' <= char <= '\u0BFF' for char in t_sample["original_text"])
         self.assertTrue(has_tamil_script, "Tamil promise original_text must preserve Tamil script")

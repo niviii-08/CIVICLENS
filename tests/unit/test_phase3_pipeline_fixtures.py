@@ -94,22 +94,18 @@ def make_segment(text: str, manifesto_id: str, page_number: int, section: str, l
 class TestPhase3PipelineFixtures(unittest.TestCase):
 
     def setUp(self):
-        # 1. Setup isolated in-memory SQLite engine
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         TestingSession = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         self.db = TestingSession()
 
-        # 2. Setup Flask test client & override DB session in API module
         self.app = create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
 
-        # Monkey-patch get_db in API module
         self._orig_get_db = api_promises_module.get_db
         api_promises_module.get_db = lambda: self.db
 
-        # 3. Instantiate pipeline components with MockEmbedder
         mock_embedder = MockEmbedder()
         searcher = SemanticSchemeSearcher(db_session=self.db, embedder=mock_embedder)
 
@@ -127,14 +123,12 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         """Verify test fixtures exist in tests/fixtures/manifestos/ and carry required safety banners."""
         self.assertTrue(os.path.exists(FIXTURES_DIR), f"Fixtures directory {FIXTURES_DIR} must exist")
         
-        # Verify prohibited location check: ensure no test fixtures exist in data/raw/manifestos/
         prohibited_dir = os.path.join("data", "raw", "manifestos")
         if os.path.exists(prohibited_dir):
             files = os.listdir(prohibited_dir)
             for f in files:
                 self.assertNotIn("sample_", f.lower(), "Synthetic fixtures must not be placed in data/raw/manifestos/")
 
-        # Verify safety banner in all manifesto fixture files
         fixture_files = ["sample_manifesto_en.txt", "sample_manifesto_ta.txt", "sample_manifesto_bilingual.json"]
         for filename in fixture_files:
             filepath = os.path.join(FIXTURES_DIR, filename)
@@ -153,7 +147,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         Fixture document → promise extraction → normalization → database → scheme matching
         → evidence matching → assessment → API endpoints → frontend service integration.
         """
-        # --- Step 1: Load Fixture Manifesto Document ---
         bilingual_path = os.path.join(FIXTURES_DIR, "sample_manifesto_bilingual.json")
         with open(bilingual_path, "r", encoding="utf-8") as f:
             fixture_json = json.load(f)
@@ -161,7 +154,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         manifesto_id = fixture_json["manifesto_id"]
         party_name = fixture_json["party_name"]
 
-        # Create DB Manifesto record
         manifesto_db = Manifesto(
             manifesto_id=manifesto_id,
             title=fixture_json["title"],
@@ -172,7 +164,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         self.db.add(manifesto_db)
         self.db.commit()
 
-        # --- Step 2: Promise Extraction ---
         segments = []
         for page in fixture_json["pages"]:
             page_num = page["page_number"]
@@ -185,27 +176,22 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         extracted_promises = self.extractor.extract(segments)
         self.assertGreater(len(extracted_promises), 0, "Extraction pipeline must yield promises from fixture segments")
 
-        # --- Step 3: Promise Normalization & Categorization ---
         normalized_promises = []
         for rec in extracted_promises:
             norm = self.normalizer_service.normalize_promise(rec)
             normalized_promises.append(norm)
             
-            # Verify original_text is untouched
             self.assertEqual(norm.original_text, rec.original_text)
 
-        # Check that actionable promise has extracted metadata
         health_promise = next((p for p in normalized_promises if "primary health" in p.original_text.lower()), None)
         self.assertIsNotNone(health_promise)
         self.assertIn("500 crore", health_promise.metadata.monetary_target)
         self.assertIn(health_promise.primary_category, ["Healthcare", "Education"])
 
-        # Check ambiguous statement isn't forced into rigid category
         vision_promise = next((p for p in normalized_promises if "backbone of our progressive society" in p.original_text.lower()), None)
         self.assertIsNotNone(vision_promise)
         self.assertIn(vision_promise.primary_category, ["Uncategorized", "Other", "Youth"])
 
-        # --- Step 4: Database Persistence ---
         category_map = {}
         for norm in normalized_promises:
             cat_name = norm.primary_category
@@ -232,7 +218,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
             )
             self.db.add(promise_db)
 
-            # Link category
             cat_mapping = PromiseCategoryMapping(
                 promise_id=norm.promise_id,
                 category_id=category_map[cat_name].id,
@@ -246,7 +231,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         db_promise_count = self.db.query(PoliticalPromise).count()
         self.assertEqual(db_promise_count, len(normalized_promises))
 
-        # --- Step 5: Historical Scheme Matching ---
         dept_db = BudgetDepartment(code="HEALTH", name="Health and Family Welfare")
         self.db.add(dept_db)
         self.db.flush()
@@ -260,7 +244,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         self.db.add(scheme_db)
         self.db.commit()
 
-        # Run scheme matcher
         health_promise_db = self.db.query(PoliticalPromise).filter_by(promise_id=health_promise.promise_id).first()
         matches = self.scheme_matcher.match_promise(
             promise=health_promise_db,
@@ -269,7 +252,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         )
         self.assertIsInstance(matches, list)
 
-        # Manually verify or add PromiseSchemeLink
         scheme_link = PromiseSchemeLink(
             promise_id=health_promise.promise_id,
             historical_scheme_id=scheme_db.id,
@@ -281,7 +263,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         self.db.add(scheme_link)
         self.db.commit()
 
-        # --- Step 6: Evidence Acquisition & Matching ---
         doc_db = Document(
             title="GO 104 - Sanction for 50 Health Centres",
             content="Government Order approving 50 new primary health centres with ₹500 crore budget allocation.",
@@ -301,7 +282,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         self.db.add(evidence_db)
         self.db.commit()
 
-        # Create explicit evidence link for test verification
         elink = PromiseEvidenceLink(
             promise_id=health_promise.promise_id,
             evidence_id=evidence_db.id,
@@ -314,8 +294,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         self.db.add(elink)
         self.db.commit()
 
-        # --- Step 7: Evidence-Based Promise Assessment Engine ---
-        # Assess health promise (which has evidence)
         assessment_health = self.assessment_engine.evaluate_promise(health_promise_db)
         self.assertIn(
             assessment_health["status"],
@@ -328,12 +306,10 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         )
         self.assertGreater(assessment_health["confidence"], 0.5)
 
-        # Assess promise with NO evidence
         no_evidence_promise = next(p for p in normalized_promises if p.promise_id != health_promise.promise_id)
         no_ev_promise_db = self.db.query(PoliticalPromise).filter_by(promise_id=no_evidence_promise.promise_id).first()
         assessment_no_ev = self.assessment_engine.evaluate_promise(no_ev_promise_db)
 
-        # CRITICAL RULE ASSERTION: Absence of evidence MUST yield 'no_evidence_found', NEVER 'not_implemented'
         self.assertEqual(
             assessment_no_ev["status"],
             PromiseStatus.NO_EVIDENCE_FOUND.value,
@@ -345,8 +321,6 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
             "No evidence must never be reported as not_implemented"
         )
 
-        # --- Step 8: API Endpoint Verification ---
-        # Test GET /api/promises/manifestos
         resp_m = self.client.get("/api/promises/manifestos")
         self.assertEqual(resp_m.status_code, 200)
         m_data = resp_m.get_json()
@@ -355,20 +329,17 @@ class TestPhase3PipelineFixtures(unittest.TestCase):
         self.assertEqual(len(m_items), 1)
         self.assertEqual(m_items[0]["party"], party_name)
 
-        # Test GET /api/promises/
         resp_p = self.client.get("/api/promises/")
         self.assertEqual(resp_p.status_code, 200)
         p_data = resp_p.get_json()
         self.assertEqual(p_data["status"], "success")
         self.assertEqual(p_data["data"]["total"], len(normalized_promises))
 
-        # Test GET /api/promises/<id> detail endpoint
         resp_detail = self.client.get(f"/api/promises/{health_promise.promise_id}")
         self.assertEqual(resp_detail.status_code, 200)
         detail_json = resp_detail.get_json()["data"]
         self.assertEqual(detail_json["original_text"], health_promise.original_text)
 
-        # Test GET /api/promises/<id>/assessment endpoint
         resp_assess = self.client.get(f"/api/promises/{health_promise.promise_id}/assessment")
         self.assertEqual(resp_assess.status_code, 200)
         assess_json = resp_assess.get_json()["data"]

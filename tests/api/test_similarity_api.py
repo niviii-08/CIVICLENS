@@ -8,7 +8,6 @@ def app():
     app = Flask(__name__)
     app.register_blueprint(api_bp)
     
-    # Mock DB session in the routes
     import backend.api.schemes as schemes_module
     mock_db = MagicMock()
     def get_test_db():
@@ -26,7 +25,6 @@ def test_semantic_search_api_missing_query(client):
     assert "Query parameter is required" in response.json["message"]
 
 def test_semantic_search_api_valid(client, monkeypatch):
-    # Mock SemanticSchemeSearcher
     from backend.nlp.similarity import SemanticSchemeSearcher
     mock_searcher = MagicMock(spec=SemanticSchemeSearcher)
     mock_searcher.search_by_text.return_value = {
@@ -50,7 +48,6 @@ def test_semantic_search_api_valid(client, monkeypatch):
     assert "disclaimer" in data["items"][0]
 
 def test_similar_schemes_api_valid(client, monkeypatch):
-    # Mock SemanticSchemeSearcher
     from backend.nlp.similarity import SemanticSchemeSearcher
     mock_searcher = MagicMock(spec=SemanticSchemeSearcher)
     mock_searcher.search_by_scheme_id.return_value = {
@@ -70,4 +67,4 @@ def test_similar_schemes_api_valid(client, monkeypatch):
     assert data["query_scheme"]["scheme_name"] == "Source Scheme"
     assert len(data["items"]) == 1
     
-print("Creating tests file.")
+print("Creating tests file.")

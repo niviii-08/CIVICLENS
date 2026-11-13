@@ -129,11 +129,9 @@ def test_1_baseline_vs_followup_all_9_fields_and_zero_baseline(db_session):
 
     res = PolicyOutcomeAnalysisService.analyze_baseline_vs_followup(ind_ger, obs_base, obs_follow)
 
-    # Verify non-causal guardrails
     assert res["epistemic_label"] == NON_CAUSAL_DESCRIPTIVE_LABEL
     assert res["causal_claim_permitted"] is False
 
-    # Verify all 9 mandatory fields
     assert res["indicator_definition"]["indicator_id"] == "IND-TEST-106-GER"
     assert res["baseline_value"] == 48.0
     assert res["followup_value"] == 54.0
@@ -148,7 +146,6 @@ def test_1_baseline_vs_followup_all_9_fields_and_zero_baseline(db_session):
     assert res["missing_data_info"]["is_complete"] is True
     assert any("Do NOT infer that the change was caused by the policy" in lim for lim in res["interpretation_limitations"])
 
-    # Verify Zero Baseline handling (`baseline_value = 0.0`)
     obs_zero_base = IndicatorObservation(
         observation_id="OBS-TEST-106-ZERO-BASE",
         indicator_id=ind_ger.indicator_id,
@@ -225,7 +222,6 @@ def test_2_negative_changes_and_directional_improvement_semantics(db_session):
     assert res_mmr["change_direction"] == "DECREASE"
     assert res_mmr["normative_trajectory"] == "FAVORABLE_OBSERVED_CHANGE"
 
-    # Now test negative change on an indicator where INCREASE is desired
     ind_att = PolicyIndicatorRegistryService.register_indicator(
         db_session,
         indicator_id="IND-TEST-106-ATT",
@@ -337,7 +333,6 @@ def test_3_target_vs_actual_and_incomplete_periods_in_trends(db_session):
         is_test_fixture=True,
     )
 
-    # 1. Target vs Actual
     t_res = PolicyOutcomeAnalysisService.analyze_target_vs_actual_outcome(
         ind, obs_21, obs_24, obs_target
     )
@@ -345,10 +340,9 @@ def test_3_target_vs_actual_and_incomplete_periods_in_trends(db_session):
     assert tc["target_value"] == 100.0
     assert tc["target_gap"] == -20.0
     assert tc["target_realization_pct"] == 80.0
-    assert tc["distance_to_target_pct"] == 60.0  # (80 - 50) / (100 - 50) * 100
+    assert tc["distance_to_target_pct"] == 60.0
     assert tc["target_status"] == "BELOW_STATED_TARGET"
 
-    # 2. Trend series with missing FY2022-23
     trend = PolicyOutcomeAnalysisService.analyze_outcome_trend_series(
         ind,
         [obs_21, obs_23, obs_24],
@@ -360,11 +354,9 @@ def test_3_target_vs_actual_and_incomplete_periods_in_trends(db_session):
     assert pts[1]["reference_period"] == "FY2022-23"
     assert pts[1]["value"] is None
     assert pts[1]["status"] == "MISSING_PERIOD_OBSERVATION"
-    # Period right after a missing gap must not fabricate a 1-year change across a 2-year gap
     assert pts[2]["reference_period"] == "FY2023-24"
     assert pts[2]["status"] == "OBSERVED_AFTER_MISSING_GAP"
     assert pts[2]["period_over_period_change"] is None
-    # Consecutive period FY2023-24 -> FY2024-25 computes change normally
     assert pts[3]["reference_period"] == "FY2024-25"
     assert pts[3]["period_over_period_change"] == 5.0
 
@@ -445,7 +437,6 @@ def test_4_geographic_comparison_and_context_explanation_requirement(db_session)
         ),
     ]
 
-    # 1. Without comparability_context -> flags UNEXPLAINED_POPULATION_OR_GEOGRAPHIC_HETEROGENEITY
     res_no_ctx = PolicyOutcomeAnalysisService.analyze_geographic_comparison(ind_dist, b_obs, f_obs)
     assert res_no_ctx["has_complete_comparability_context"] is False
     assert any(
@@ -453,7 +444,6 @@ def test_4_geographic_comparison_and_context_explanation_requirement(db_session)
         for lim in res_no_ctx["interpretation_limitations"]
     )
 
-    # 2. With complete comparability_context -> has_complete_comparability_context is True
     ctx = {
         "TN-DIST-CHENNAI": {
             "coverage_note": "100% urban UPHC coverage",
@@ -536,7 +526,7 @@ def test_5_beneficiary_group_comparison_small_samples_and_privacy_suppression(db
             },
             {
                 "group": grp_small,
-                "sample_or_cell_count": 18,  # < 30 -> small sample warning
+                "sample_or_cell_count": 18,
                 "baseline_value": 70.0,
                 "followup_value": 85.0,
                 "population_share_pct": 2.0,
@@ -546,7 +536,7 @@ def test_5_beneficiary_group_comparison_small_samples_and_privacy_suppression(db
             },
             {
                 "group": grp_micro,
-                "sample_or_cell_count": 3,  # < 5 -> privacy suppression
+                "sample_or_cell_count": 3,
                 "baseline_value": 66.7,
                 "followup_value": 100.0,
                 "source_reference": "SWD Micro Table",
@@ -557,7 +547,7 @@ def test_5_beneficiary_group_comparison_small_samples_and_privacy_suppression(db
     g_list = res["group_comparisons"]
     assert g_list[0]["privacy_status"] == "PRIVACY_SAFE_AGGREGATE"
     assert g_list[0]["absolute_change"] == 12.0
-    assert g_list[0]["demographic_parity_index"] == 1.1  # 66.0 / 60.0
+    assert g_list[0]["demographic_parity_index"] == 1.1
 
     assert g_list[1]["privacy_status"] == "PRIVACY_SAFE_AGGREGATE"
     assert any("SMALL_SAMPLE_HIGH_VARIANCE_WARNING" in w for w in g_list[1]["group_limitations"])
@@ -644,7 +634,6 @@ def test_7_documented_findings_causal_downgrading_and_sensitivity_checks(db_sess
         is_test_fixture=True,
     )
 
-    # 1. Unsubstantiated causal claim -> automatically downgraded
     study_unverified = EvaluationStudy(
         study_id="STD-TEST-106-WEAK",
         scheme_id="SCH-TEST-106",
@@ -676,7 +665,6 @@ def test_7_documented_findings_causal_downgrading_and_sensitivity_checks(db_sess
     assert res_downgraded["causal_claim_permitted"] is False
     assert res_downgraded["epistemic_label"] == NON_CAUSAL_DESCRIPTIVE_LABEL
 
-    # 2. Verified Difference-in-Differences (DiD) quasi-experimental study -> causal label permitted
     study_did = EvaluationStudy(
         study_id="STD-TEST-106-DID",
         scheme_id="SCH-TEST-106",
@@ -717,7 +705,6 @@ def test_7_documented_findings_causal_downgrading_and_sensitivity_checks(db_sess
     assert res_causal["causal_claim_permitted"] is True
     assert res_causal["epistemic_label"] == VERIFIED_CAUSAL_LABEL
 
-    # 3. Sensitivity checks: small sample (< 4) vs sufficient sample (>= 4)
     sens_small = PolicyOutcomeAnalysisService.run_outcome_sensitivity_checks(
         ind, [("DIST-1", 3.5), ("DIST-2", 4.0)]
     )

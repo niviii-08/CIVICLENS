@@ -71,12 +71,10 @@ class TestPhase5RealDataIntegration:
             if c.amount_inr is not None:
                 assert c.amount_inr > 0
 
-            # Trace donor
             donor = db_session.query(Donor).filter(Donor.donor_id == c.donor_id).first()
             assert donor is not None
             assert donor.legal_name == c.donor_name_as_reported
 
-            # Trace document
             doc = db_session.query(FinancialDocument).filter(FinancialDocument.document_id == c.document_id).first()
             assert doc is not None
 
@@ -98,7 +96,7 @@ class TestPhase5RealDataIntegration:
         total_metric = FundingAnalyticsEngine.calculate_total_disclosed_contributions(
             "PARTY_TN_DMK", "FY2024-25", c_schemas, ["DOC_MYNETA_DMK_P1"]
         )
-        assert total_metric.value == 4324967713.0  # ₹432.50 Cr across all sample rows
+        assert total_metric.value == 4324967713.0
 
         concentration = FundingAnalyticsEngine.calculate_donor_concentration(
             "PARTY_TN_DMK", "FY2024-25", c_schemas, ["DOC_MYNETA_DMK_P1"]
@@ -114,20 +112,17 @@ class TestPhase5RealDataIntegration:
         assert "Collection through Distribution of Donation Tickets" in top_donors.value[0]["donor_name"]
 
     def test_api_serving_real_data(self, client):
-        # 1. Parties endpoint serves registered parties
         res = client.get("/api/funding/parties")
         assert res.status_code == 200
         parties = res.get_json()["data"]["parties"]
         assert len(parties) >= 80
 
-        # 2. Real contribution summary
         res_summary = client.get("/api/funding/contributions/summary?party_id=PARTY_TN_DMK")
         assert res_summary.status_code == 200
         data = res_summary.get_json()["data"]
         assert data["total_records"] == 28
         assert data["total_disclosed_inr"] == 4324967713.0
 
-        # 3. Documents endpoint
         res_docs = client.get("/api/funding/documents")
         assert res_docs.status_code == 200
         docs = res_docs.get_json()["data"]["documents"]

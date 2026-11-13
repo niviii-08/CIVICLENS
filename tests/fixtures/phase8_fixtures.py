@@ -23,9 +23,6 @@ from backend.models.civic_issue import IssueCategoryEnum
 IS_TEST_FIXTURE = True
 FIXTURE_VERSION = "8.0-test"
 
-# ---------------------------------------------------------------------------
-# 1. Categories Fixtures (All 14 standard civic categories)
-# ---------------------------------------------------------------------------
 MOCK_CATEGORIES: List[Dict[str, Any]] = [
     {
         "code": "roads",
@@ -155,9 +152,6 @@ MOCK_CATEGORIES: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 2. Departments Fixtures
-# ---------------------------------------------------------------------------
 MOCK_DEPARTMENTS: List[Dict[str, Any]] = [
     {
         "code": "DEPT_MAWS",
@@ -206,9 +200,6 @@ MOCK_DEPARTMENTS: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 3. Administrative Areas Fixtures
-# ---------------------------------------------------------------------------
 MOCK_AREAS: List[Dict[str, Any]] = [
     {
         "area_code": "ADM-TN-STATE",
@@ -267,9 +258,6 @@ MOCK_AREAS: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 4. Service Standards (SLAs) Fixtures
-# ---------------------------------------------------------------------------
 MOCK_SERVICE_STANDARDS: List[Dict[str, Any]] = [
     {
         "standard_code": "SLA-MAWS-POTHOLE-48H",
@@ -306,9 +294,6 @@ MOCK_SERVICE_STANDARDS: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 5. Grievance Records with Raw Text (Testing PII Scrubbing)
-# ---------------------------------------------------------------------------
 MOCK_RAW_GRIEVANCES_FOR_PII: List[Dict[str, Any]] = [
     {
         "raw_text": "I Thiru K. Murugesan from Door No. 42/1, 2nd Main Road, Besant Nagar submit that our street light is broken. Call me at 9840123456 or email murugan.k@gmail.com. Aadhaar: 1234 5678 9012.",
@@ -320,9 +305,6 @@ MOCK_RAW_GRIEVANCES_FOR_PII: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 6. Civic Issues Fixtures
-# ---------------------------------------------------------------------------
 MOCK_CIVIC_ISSUES: List[Dict[str, Any]] = [
     {
         "issue_code": "CIV-FIX-001-POTHOLE-ADYAR",
@@ -383,9 +365,6 @@ MOCK_CIVIC_ISSUES: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 7. Response Records Fixtures
-# ---------------------------------------------------------------------------
 MOCK_RESPONSES: List[Dict[str, Any]] = [
     {
         "response_code": "RSP-FIX-001-WATERLEAK",
@@ -411,9 +390,6 @@ MOCK_RESPONSES: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 8. Resolution Evidence Fixtures
-# ---------------------------------------------------------------------------
 MOCK_EVIDENCE: List[Dict[str, Any]] = [
     {
         "response_code": "RSP-FIX-001-WATERLEAK",
@@ -428,9 +404,6 @@ MOCK_EVIDENCE: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 9. Public Works Fixtures
-# ---------------------------------------------------------------------------
 MOCK_PUBLIC_WORKS: List[Dict[str, Any]] = [
     {
         "work_code": "WRK-FIX-001-ROAD-PATCH",
@@ -444,9 +417,6 @@ MOCK_PUBLIC_WORKS: List[Dict[str, Any]] = [
     }
 ]
 
-# ---------------------------------------------------------------------------
-# 10. Acquisition Test Fixtures (HTML, CSV, JSON, Mock Content)
-# ---------------------------------------------------------------------------
 MOCK_HTML_PAGE_WITH_TABLE: str = """<!DOCTYPE html>
 <html>
 <head><title>Tamil Nadu Municipal Grievance Report 2024</title></head>
@@ -525,9 +495,6 @@ MOCK_JSON_DATA: str = """[
   }
 ]"""
 
-# ---------------------------------------------------------------------------
-# 11. Heterogeneous Grievance Ingestion Test Fixtures (Phase 8.3)
-# ---------------------------------------------------------------------------
 MOCK_DARPG_RECORDS: List[Dict[str, Any]] = [
     {
         "Registration Number": "DARPG/TN/2024/0001",
@@ -590,14 +557,11 @@ MOCK_CM_HELPLINE_RECORDS: List[Dict[str, Any]] = [
         "grievance_nature": "பட்டா மாறுதல் தாமதம்",
         "petition_summary": "6 மாதங்களாக பட்டா மாறுதல் விண்ணப்பம் நிலுவையில் உள்ளது.",
         "district": "திருச்சிராப்பள்ளி",
-        "current_status": None  # Unknown status test
+        "current_status": None
     }
 ]
 
 
-# ---------------------------------------------------------------------------
-# 11. Phase 8.4 Issue Classification & Relationship Fixtures
-# ---------------------------------------------------------------------------
 MOCK_CLASSIFICATION_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "TC-TAMIL-01",
@@ -658,7 +622,6 @@ MOCK_CLASSIFICATION_RECORDS: List[Dict[str, Any]] = [
 ]
 
 MOCK_RELATIONSHIP_SCENARIOS = {
-    # Scenario A: Exact duplicate records
     "duplicate_pair": [
         {
             "grievance_id": "GRV-GCC-TEST-001",
@@ -680,7 +643,6 @@ MOCK_RELATIONSHIP_SCENARIOS = {
         }
     ],
 
-    # Scenario B: Multiple complaints about the same active issue
     "multiple_complaints_same_issue": [
         {
             "grievance_id": "GRV-GCC-ACTIVE-01",
@@ -702,7 +664,6 @@ MOCK_RELATIONSHIP_SCENARIOS = {
         }
     ],
 
-    # Scenario C: Recurring issue at the same location (prior resolved, returns months later)
     "recurring_issue_pair": [
         {
             "grievance_id": "GRV-GCC-REC-HISTORIC",
@@ -726,7 +687,6 @@ MOCK_RELATIONSHIP_SCENARIOS = {
         }
     ],
 
-    # Scenario D: Separate issues in the same area
     "separate_issues_same_area": [
         {
             "grievance_id": "GRV-GCC-SEP-01",
@@ -748,7 +708,6 @@ MOCK_RELATIONSHIP_SCENARIOS = {
         }
     ],
 
-    # Scenario E: Unrelated reports with identical text in different districts/areas
     "unrelated_similar_reports": [
         {
             "grievance_id": "GRV-CHENNAI-SIMILAR",

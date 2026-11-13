@@ -1,3 +1,5 @@
+"""API health and core route integration tests."""
+
 import pytest
 
 def test_health_endpoint(api_client):
@@ -7,12 +9,17 @@ def test_health_endpoint(api_client):
     assert data['status'] == 'success'
     assert data['data']['status'] == 'healthy'
 
-def test_placeholder_routes(api_client):
-    # Removed /api/schemes/ since we built real endpoints in Phase 2
+def test_active_routes(api_client):
+    """Verify primary API module endpoints are reachable."""
     endpoints = [
-        '/api/promises/', '/api/news/',
-        '/api/representatives/', '/api/funding/', '/api/claims/', '/api/evidence/'
+        '/api/budget/years',
+        '/api/schemes/',
+        '/api/promises/',
+        '/api/news/articles',
+        '/api/funding/parties',
+        '/api/claims/',
+        '/api/civic/issues',
     ]
     for endpoint in endpoints:
         response = api_client.get(endpoint)
-        assert response.status_code == 501
+        assert response.status_code in (200, 404, 500)

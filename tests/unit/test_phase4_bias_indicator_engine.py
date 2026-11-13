@@ -25,7 +25,6 @@ def setup_bias_engine_fixtures(db_session):
     """Sets up synthetic sources, articles, features, and topics for multi-dimensional analysis testing."""
     now = datetime.now(timezone.utc)
 
-    # 1. Sources
     src_a = NewsSource(
         source_id="src_bias_alpha",
         source_name="Synthetic Alpha Post",
@@ -45,7 +44,6 @@ def setup_bias_engine_fixtures(db_session):
     db_session.add_all([src_a, src_b])
     db_session.commit()
 
-    # 2. Articles for Source A (5 articles for full confidence)
     arts_a = []
     for i in range(5):
         t = f"TEST FIXTURE — Alpha Metro Scheme Article {i+1}"
@@ -64,7 +62,6 @@ def setup_bias_engine_fixtures(db_session):
         )
         arts_a.append(art)
 
-    # 3. Articles for Source B (3 articles for low sample confidence)
     arts_b = []
     for i in range(3):
         t = f"TEST FIXTURE — Beta Urban Transit News {i+1}"
@@ -86,7 +83,6 @@ def setup_bias_engine_fixtures(db_session):
     db_session.add_all(arts_a + arts_b)
     db_session.commit()
 
-    # 4. Attach Features & Entities
     for i, a in enumerate(arts_a):
         feat = ArticleFeature(
             article_id=a.article_id,
@@ -150,38 +146,28 @@ class TestPhase4BiasIndicatorEngine:
 
         inds = res["indicators"]
 
-        # 1. Sentiment distribution
         assert "sentiment_distribution" in inds
         assert "positive_ratio" in inds["sentiment_distribution"]
 
-        # 2. Headline sentiment
         assert "headline_sentiment" in inds
 
-        # 3. Article sentiment
         assert "article_sentiment" in inds
 
-        # 4 & 5. Entity prominence and frequency
         assert "entity_prominence" in inds
         assert "entity_mention_frequency" in inds
 
-        # 6. Topic emphasis
         assert "topic_emphasis" in inds
 
-        # 7. Event coverage frequency
         assert "event_coverage_frequency" in inds
 
-        # 8. Framing distribution
         assert "framing_distribution" in inds
         assert "positive_framing_pct" in inds["framing_distribution"]
 
-        # 9. Quote distribution
         assert "quote_distribution" in inds
 
-        # 10. Sourcing reference distribution
         assert "sourcing_reference_distribution" in inds
         assert "official_citation_ratio" in inds["sourcing_reference_distribution"]
 
-        # 11 & 12. Cross-source wording & coverage diff placeholders
         assert "wording_similarity" in inds
         assert "coverage_difference" in inds
 
@@ -192,7 +178,7 @@ class TestPhase4BiasIndicatorEngine:
         res = calc.compute_all_indicators(db_session, src_b, days_window=30)
 
         assert res["sample_size"] == 3
-        assert res["statistical_confidence"] == 0.6  # 3/5
+        assert res["statistical_confidence"] == 0.6
 
     def test_pairwise_source_comparison(self, db_session, setup_bias_engine_fixtures):
         """Test pairwise source comparison including normalized framing % and wording similarity."""
@@ -215,7 +201,6 @@ class TestPhase4BiasIndicatorEngine:
         src_a = setup_bias_engine_fixtures["src_a"]
         src_b = setup_bias_engine_fixtures["src_b"]
 
-        # Persist indicators
         indicators = engine.generate_and_persist_source_indicators(src_a, days_window=30)
         assert len(indicators) > 0
         for ind in indicators:
@@ -223,7 +208,6 @@ class TestPhase4BiasIndicatorEngine:
             assert ind.calculation_version == CALCULATION_VERSION
             assert "Biased" not in ind.interpretation_label
 
-        # Persist comparison
         comp_rec = engine.generate_and_persist_comparison(src_a, src_b, days_window=30)
         assert comp_rec is not None
         assert comp_rec.methodology_version == METHODOLOGY_VERSION
@@ -234,7 +218,6 @@ class TestPhase4BiasIndicatorEngine:
         from backend.database.session import SessionLocal
         db = SessionLocal()
         try:
-            # Register a source for API calculation test if not already present
             src = db.query(NewsSource).filter(NewsSource.source_id == "src_api_calc_test").first()
             if not src:
                 src = NewsSource(
@@ -266,16 +249,13 @@ class TestPhase4BiasIndicatorEngine:
                     db.add(art)
             db.commit()
 
-            # 1. POST /api/news/indicators/calculate
             res_calc = api_client.post('/api/news/indicators/calculate', json={"source_id": "src_api_calc_test", "days_window": 30})
             assert res_calc.status_code == 200
             assert len(res_calc.json["data"]) > 0
 
-            # 2. GET /api/news/metrics/coverage
             res_cov = api_client.get('/api/news/metrics/coverage')
             assert res_cov.status_code == 200
 
-            # 3. GET /api/news/comparisons
             res_comp = api_client.get('/api/news/comparisons')
             assert res_comp.status_code == 200
 

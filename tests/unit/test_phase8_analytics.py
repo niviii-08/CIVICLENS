@@ -47,9 +47,6 @@ def analytics_engine():
     return CivicAnalyticsEngine(default_source="TN_CIVIC_ANALYTICS_TEST")
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Category Counts Calculation
-# ---------------------------------------------------------------------------
 def test_calculate_category_counts(analytics_engine):
     records = [
         {"issue_category": IssueCategoryEnum.ROADS},
@@ -71,9 +68,6 @@ def test_calculate_category_counts(analytics_engine):
     assert "Category counts reflect citizen reporting propensity" in res.caveats
 
 
-# ---------------------------------------------------------------------------
-# Test 2: Administrative Area Counts & Population Rates
-# ---------------------------------------------------------------------------
 def test_calculate_area_counts_with_and_without_population(analytics_engine):
     records = [
         {"administrative_area_id": "ADM-TN-DIST-002-CHENNAI"},
@@ -86,7 +80,6 @@ def test_calculate_area_counts_with_and_without_population(analytics_engine):
     pop_map = {
         "ADM-TN-DIST-002-CHENNAI": 7_000_000,
         "ADM-TN-DIST-013-MADURAI": 3_000_000,
-        # Tenkasi omitted to test missing population
     }
 
     res = analytics_engine.calculate_area_counts(records, period="2024", population_map=pop_map)
@@ -96,7 +89,6 @@ def test_calculate_area_counts_with_and_without_population(analytics_engine):
     assert res.distribution["counts"]["ADM-TN-DIST-002-CHENNAI"] == 3
     assert res.distribution["counts"]["ADM-TN-DIST-038-TENKASI"] == 1
 
-    # Check per-100k rates
     chennai_rate = res.distribution["rate_per_100k_population"]["ADM-TN-DIST-002-CHENNAI"]
     assert chennai_rate == round((3 / 7_000_000) * 100_000, 2)
     assert res.distribution["rate_per_100k_population"]["ADM-TN-DIST-038-TENKASI"] is None
@@ -104,16 +96,13 @@ def test_calculate_area_counts_with_and_without_population(analytics_engine):
     assert "POPULATION & ACCESS DISPARITY" in res.caveats
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Department Counts & Unassigned Tracking
-# ---------------------------------------------------------------------------
 def test_calculate_department_counts(analytics_engine):
     records = [
         {"department_id": "DEPT-MAWS-001"},
         {"department_id": "DEPT-MAWS-001"},
         {"department_id": "DEPT-HIGHWAYS-002"},
-        {"department_id": None},  # unassigned
-        {"department_id": "   "},  # blank / unassigned
+        {"department_id": None},
+        {"department_id": "   "},
     ]
 
     res = analytics_engine.calculate_department_counts(records, period="2024-03")
@@ -127,9 +116,6 @@ def test_calculate_department_counts(analytics_engine):
     assert "Shared and contested jurisdictions" in res.caveats
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Temporal Trends & Month-over-Month Growth
-# ---------------------------------------------------------------------------
 def test_calculate_temporal_trends(analytics_engine):
     records = [
         {"submission_date": datetime(2024, 1, 10, tzinfo=timezone.utc)},
@@ -138,7 +124,7 @@ def test_calculate_temporal_trends(analytics_engine):
         {"submission_date": datetime(2024, 2, 20, tzinfo=timezone.utc)},
         {"submission_date": datetime(2024, 2, 25, tzinfo=timezone.utc)},
         {"submission_date": datetime(2024, 3, 1, tzinfo=timezone.utc)},
-        {"submission_date": None},  # Missing date handling
+        {"submission_date": None},
     ]
 
     res = analytics_engine.calculate_temporal_trends(records, period="2024-Q1")
@@ -150,37 +136,29 @@ def test_calculate_temporal_trends(analytics_engine):
     assert monthly["2024-03"] == 1
     assert monthly["UNKNOWN_DATE"] == 1
 
-    # Check month-over-month percentage change (from 2 in Jan to 3 in Feb = +50%)
     mom = res.distribution["month_over_month_change_pct"]
     assert mom["2024-02"] == 50.0
     assert mom["2024-03"] == -66.67
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Turnaround Times (Acknowledgement and Resolution)
-# ---------------------------------------------------------------------------
 def test_calculate_turnaround_times(analytics_engine):
     base_time = datetime(2024, 1, 1, 10, 0, tzinfo=timezone.utc)
     records = [
-        # Record 1: ack in 2 hours, resolved in 3 days
         {
             "submission_date": base_time,
             "acknowledgement_date": base_time + timedelta(hours=2),
             "resolution_date": base_time + timedelta(days=3),
         },
-        # Record 2: ack in 4 hours, resolved in 7 days
         {
             "submission_date": base_time,
             "acknowledgement_date": base_time + timedelta(hours=4),
             "resolution_date": base_time + timedelta(days=7),
         },
-        # Record 3: ack in 6 hours, unresolved
         {
             "submission_date": base_time,
             "acknowledgement_date": base_time + timedelta(hours=6),
             "resolution_date": None,
         },
-        # Record 4: completely missing dates
         {
             "submission_date": None,
             "acknowledgement_date": None,
@@ -203,9 +181,6 @@ def test_calculate_turnaround_times(analytics_engine):
     assert "measures administrative docket closure" in res.caveats
 
 
-# ---------------------------------------------------------------------------
-# Test 6: Known Status Percentage Calculation
-# ---------------------------------------------------------------------------
 def test_calculate_known_status_percentage(analytics_engine):
     records = [
         {"status": "submitted"},
@@ -225,9 +200,6 @@ def test_calculate_known_status_percentage(analytics_engine):
     assert res.metric_value == 50.0
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Recurring Issue Clusters & Hotspots
-# ---------------------------------------------------------------------------
 def test_calculate_recurring_clusters(analytics_engine):
     records = [
         {"administrative_area_id": "WARD-110", "issue_category": "roads", "repeat_count": 3, "is_recurring": True},
@@ -245,9 +217,6 @@ def test_calculate_recurring_clusters(analytics_engine):
     assert res.distribution["top_hotspots"]["WARD-110:roads"] == 2
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Reopened Issue Counts
-# ---------------------------------------------------------------------------
 def test_calculate_reopened_issues(analytics_engine):
     records = [
         {"status": "reopened"},
@@ -268,9 +237,6 @@ def test_calculate_reopened_issues(analytics_engine):
     assert "Portals lacking an online reopen" in res.caveats
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Documented Departmental Response Rate
-# ---------------------------------------------------------------------------
 def test_calculate_documented_response_rate(analytics_engine):
     records = [
         {"responses": [{"id": 1, "summary": "Inspection done"}]},
@@ -283,35 +249,27 @@ def test_calculate_documented_response_rate(analytics_engine):
 
     assert res.metric_code == "DOCUMENTED_RESPONSE_RATE"
     assert res.sample_size == 4
-    # Records 1 and 3 have documented responses/acknowledgements
     assert res.distribution["records_with_documented_response"] == 2
     assert res.metric_value == 50.0
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Resolution Evidence Coverage
-# ---------------------------------------------------------------------------
 def test_calculate_resolution_evidence_coverage(analytics_engine):
     records = [
-        # Closure 1: verified with empirical evidence
         {
             "status": "marked_resolved",
             "resolution_verification_status": ResolutionVerificationStatus.VERIFIED,
             "is_evidence_supported": True,
         },
-        # Closure 2: independently verified resolved
         {
             "status": "independently_verified_resolved",
             "resolution_verification_status": ResolutionVerificationStatus.VERIFIED,
             "is_evidence_supported": True,
         },
-        # Closure 3: marked resolved without corroborating evidence
         {
             "status": "marked_resolved",
             "resolution_verification_status": ResolutionVerificationStatus.PENDING_VERIFICATION,
             "is_evidence_supported": False,
         },
-        # Record 4: still open (not part of denominator)
         {
             "status": "under_review",
             "resolution_verification_status": ResolutionVerificationStatus.PENDING_VERIFICATION,
@@ -322,7 +280,7 @@ def test_calculate_resolution_evidence_coverage(analytics_engine):
     res = analytics_engine.calculate_resolution_evidence_coverage(records, period="2024-Q1")
 
     assert res.metric_code == "RESOLUTION_EVIDENCE_COVERAGE"
-    assert res.sample_size == 3  # 3 marked closures
+    assert res.sample_size == 3
     assert res.distribution["verified_with_evidence"] == 2
     assert res.distribution["unverified_closures"] == 1
     assert res.metric_value == 66.67
@@ -330,11 +288,7 @@ def test_calculate_resolution_evidence_coverage(analytics_engine):
     assert "An unverified closure does not imply falsehood" in res.caveats
 
 
-# ---------------------------------------------------------------------------
-# Test 11: Small Sample Guard in Anomaly Detection
-# ---------------------------------------------------------------------------
 def test_anomaly_detection_small_sample_protection(analytics_engine):
-    # N = 10, which is below the threshold of 30
     small_records = [
         {"submission_date": datetime(2024, 1, 1, tzinfo=timezone.utc)} for _ in range(10)
     ]
@@ -347,7 +301,6 @@ def test_anomaly_detection_small_sample_protection(analytics_engine):
 
 
 def test_anomaly_detection_insufficient_periods(analytics_engine):
-    # N = 35, but all in the same month (only 1 baseline period, need >= 3)
     records = [
         {"submission_date": datetime(2024, 1, 15, tzinfo=timezone.utc)} for _ in range(35)
     ]
@@ -359,23 +312,17 @@ def test_anomaly_detection_insufficient_periods(analytics_engine):
     assert "Baseline periods count (1) is below minimum requirement" in res.reason
 
 
-# ---------------------------------------------------------------------------
-# Test 12: Anomaly Detection with Sufficient Data & Labeling
-# ---------------------------------------------------------------------------
 def test_anomaly_detection_sufficient_data_and_labeling(analytics_engine):
-    # Construct 4 baseline periods with ~10 records, and a spike of 60 records in month 5
     records = []
-    # 4 normal months
     for month in range(1, 5):
         for day in range(1, 11):
             records.append({"submission_date": datetime(2024, month, day, tzinfo=timezone.utc)})
 
-    # Month 5 spike
     for day in range(1, 31):
         records.append({"submission_date": datetime(2024, 5, min(day, 28), tzinfo=timezone.utc)})
         records.append({"submission_date": datetime(2024, 5, min(day, 28), tzinfo=timezone.utc)})
 
-    assert len(records) == 40 + 60  # 100 records > 30, across 5 periods >= 3
+    assert len(records) == 40 + 60
 
     res = analytics_engine.detect_volume_anomalies(records, z_threshold=1.5)
 
@@ -387,19 +334,13 @@ def test_anomaly_detection_sufficient_data_and_labeling(analytics_engine):
     assert spike_anomaly.observed_count == 60
     assert spike_anomaly.z_score > 1.5
 
-    # STRICT LABEL CHECK: Must be exploratory investigation indicator
     assert spike_anomaly.indicator_label == "INVESTIGATION_INDICATOR_UNUSUAL_VOLUME"
     assert "NOT proof of administrative negligence" in spike_anomaly.interpretation_note
     assert "EXPLORATORY INDICATOR" in res.interpretative_notice
 
 
-# ---------------------------------------------------------------------------
-# Test 13: Area Comparison with Mandatory Population and Context Controls
-# ---------------------------------------------------------------------------
 def test_compare_areas_context_and_caveats(analytics_engine):
-    # Area A: Chennai (100 records, 7M population)
     records_a = [{"id": i} for i in range(100)]
-    # Area B: Tenkasi (20 records, 1.4M population)
     records_b = [{"id": i} for i in range(20)]
 
     comp_valid = analytics_engine.compare_areas(
@@ -418,7 +359,6 @@ def test_compare_areas_context_and_caveats(analytics_engine):
     assert comp_valid.area_b_rate_per_100k == round((20 / 1_400_000) * 100_000, 2)
     assert "POPULATION & ACCESS DISPARITY" in comp_valid.interpretative_caveat
 
-    # Test when population is missing
     comp_missing_pop = analytics_engine.compare_areas(
         area_a_code="CHENNAI",
         area_a_name="Greater Chennai Corporation",
@@ -434,9 +374,6 @@ def test_compare_areas_context_and_caveats(analytics_engine):
     assert "CRITICAL WARNING: Population data is missing" in comp_missing_pop.required_context
 
 
-# ---------------------------------------------------------------------------
-# Test 14: Comprehensive Report & Database Persistence
-# ---------------------------------------------------------------------------
 def test_comprehensive_report_and_db_persistence(analytics_engine, in_memory_db):
     sample_records = [
         GrievanceRecord(
@@ -478,7 +415,6 @@ def test_comprehensive_report_and_db_persistence(analytics_engine, in_memory_db)
     assert "RESOLUTION_EVIDENCE_COVERAGE" in report.metrics
     assert "COMPLAINTS DO NOT EQUAL PREVALENCE" in report.general_disclaimer
 
-    # Test persistence to database
     db_metrics = analytics_engine.persist_report_to_db(in_memory_db, report, is_test_fixture=True)
 
     assert len(db_metrics) == 10

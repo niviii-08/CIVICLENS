@@ -25,7 +25,6 @@ def setup_api_database_fixtures():
     db = SessionLocal()
     now = datetime.now(timezone.utc)
     try:
-        # 1. Sources
         src1 = db.query(NewsSource).filter(NewsSource.source_id == "src_api_phase48_ta").first()
         if not src1:
             src1 = NewsSource(
@@ -51,7 +50,6 @@ def setup_api_database_fixtures():
             db.add(src2)
         db.commit()
 
-        # 2. Topic
         top = db.query(Topic).filter(Topic.topic_id == "TOPIC_P48_GOVERNANCE").first()
         if not top:
             top = Topic(
@@ -63,7 +61,6 @@ def setup_api_database_fixtures():
             db.add(top)
             db.commit()
 
-        # 3. Entity
         ent = db.query(PoliticalEntity).filter(PoliticalEntity.entity_id == "ent_p48_leader").first()
         if not ent:
             ent = PoliticalEntity(
@@ -75,7 +72,6 @@ def setup_api_database_fixtures():
             db.add(ent)
             db.commit()
 
-        # 4. Event
         evt = db.query(PoliticalEvent).filter(PoliticalEvent.event_id == "evt_p48_assembly_session").first()
         if not evt:
             evt = PoliticalEvent(
@@ -87,7 +83,6 @@ def setup_api_database_fixtures():
             db.add(evt)
             db.commit()
 
-        # 5. Articles
         art1_text = "TEST FIXTURE — NOT REAL NEWS DATA. தமிழ் நிலத்தின் பட்ஜெட் சட்டப்பேரவைக் கூட்டம் நடைபெற்றது."
         art1 = db.query(Article).filter(Article.article_id == "art_p48_001").first()
         if not art1:
@@ -107,7 +102,6 @@ def setup_api_database_fixtures():
             db.add(art1)
             db.commit()
 
-            # Attach Relationships & Features
             db.add(ArticleTopic(article_id="art_p48_001", topic_id="TOPIC_P48_GOVERNANCE", relevance_score=0.95))
             db.add(ArticleEntity(article_id="art_p48_001", entity_id="ent_p48_leader", mention_count=4, prominence_score=0.85))
             db.add(ArticleEvent(article_id="art_p48_001", event_id="evt_p48_assembly_session", relevance_score=1.0))
@@ -120,7 +114,6 @@ def setup_api_database_fixtures():
             ))
             db.commit()
 
-        # 6. Provenance Document & Evidence Links
         doc = db.query(Document).filter(Document.title == "TEST FIXTURE — சட்டமன்றத் தகவல்கள்").first()
         if not doc:
             doc = Document(
@@ -156,12 +149,10 @@ class TestPhase4DatabaseAndAPI:
 
     def test_sources_api_and_filters(self, api_client, setup_api_database_fixtures):
         """Test GET /api/news/sources with language, source_type, and active_status filters."""
-        # Unfiltered list
         res = api_client.get('/api/news/sources')
         assert res.status_code == 200
         assert len(res.json["data"]) >= 2
 
-        # Language filter
         res_ta = api_client.get('/api/news/sources?language=ta')
         assert res_ta.status_code == 200
         assert all(s["language"] == "ta" for s in res_ta.json["data"])
@@ -185,27 +176,22 @@ class TestPhase4DatabaseAndAPI:
         entity_id = setup_api_database_fixtures["entity_id"]
         event_id = setup_api_database_fixtures["event_id"]
 
-        # 1. Filter by source_id
         res_src = api_client.get(f'/api/news/articles?source_id={src_ta}')
         assert res_src.status_code == 200
         assert len(res_src.json["data"]) >= 1
 
-        # 2. Filter by topic
         res_top = api_client.get(f'/api/news/articles?topic={topic_id}')
         assert res_top.status_code == 200
         assert len(res_top.json["data"]) >= 1
 
-        # 3. Filter by entity / party / person
         res_ent = api_client.get(f'/api/news/articles?entity_id={entity_id}')
         assert res_ent.status_code == 200
         assert len(res_ent.json["data"]) >= 1
 
-        # 4. Filter by event
         res_evt = api_client.get(f'/api/news/articles?event={event_id}')
         assert res_evt.status_code == 200
         assert len(res_evt.json["data"]) >= 1
 
-        # 5. Search query
         res_srch = api_client.get('/api/news/articles?search=சட்டமன்றத்')
         assert res_srch.status_code == 200
         assert len(res_srch.json["data"]) >= 1
@@ -247,12 +233,10 @@ class TestPhase4DatabaseAndAPI:
 
     def test_events_api_and_detail(self, api_client, setup_api_database_fixtures):
         """Test GET /api/news/events and GET /api/news/events/{id} detail endpoint."""
-        # GET /api/news/events
         res = api_client.get('/api/news/events')
         assert res.status_code == 200
         assert len(res.json["data"]) >= 1
 
-        # GET /api/news/events/{id}
         evt_id = setup_api_database_fixtures["event_id"]
         res_det = api_client.get(f'/api/news/events/{evt_id}')
         assert res_det.status_code == 200
@@ -261,11 +245,9 @@ class TestPhase4DatabaseAndAPI:
 
     def test_coverage_and_comparison_apis(self, api_client, setup_api_database_fixtures):
         """Test GET /api/news/coverage and GET /api/news/source-comparison endpoints."""
-        # Coverage
         res_cov = api_client.get('/api/news/coverage')
         assert res_cov.status_code == 200
 
-        # Comparison
         src_a = setup_api_database_fixtures["source_ta"]
         src_b = setup_api_database_fixtures["source_en"]
         res_comp = api_client.get(f'/api/news/source-comparison?source_a={src_a}&source_b={src_b}')
@@ -277,11 +259,9 @@ class TestPhase4DatabaseAndAPI:
         """Test GET /api/news/bias-indicators verifying explanations and non-scalar response framing."""
         src_ta = setup_api_database_fixtures["source_ta"]
         
-        # First trigger calculation
         res_calc = api_client.post('/api/news/indicators/calculate', json={"source_id": src_ta, "days_window": 30})
         assert res_calc.status_code == 200
 
-        # Retrieve indicators
         res = api_client.get(f'/api/news/bias-indicators?source_id={src_ta}')
         assert res.status_code == 200
         indicators = res.json["data"]

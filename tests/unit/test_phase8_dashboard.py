@@ -240,10 +240,8 @@ class TestCivicFixturesIntegrity:
         email_pattern = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
         for issue in FIXTURE_ISSUES:
-            # Must have [FIXTURE] label
             assert "[FIXTURE]" in issue["title"]
 
-            # Must NOT leak 10-digit Indian mobile numbers in description
             desc = issue["description"]
             assert not phone_pattern.search(desc), f"Potential phone leak in {issue['id']}"
             assert not email_pattern.search(desc), f"Potential email leak in {issue['id']}"
@@ -253,25 +251,21 @@ class TestCivicFixturesIntegrity:
         assert "marked_resolved" in statuses
         assert "independently_verified_resolved" in statuses
 
-        # Ensure verified_resolved issues have empirical evidence attached
         for issue in FIXTURE_ISSUES:
             if issue["status"] == "independently_verified_resolved":
                 assert issue["verification_status"] == "VERIFIED_RESOLVED"
                 assert len(issue["evidence"]) > 0
 
     def test_anti_causality_and_non_defamation_notes(self):
-        # Check cross phase links to constituencies
         for issue in FIXTURE_ISSUES:
             for link in issue.get("cross_phase_links", []):
                 if link.get("entity_type") == "CONSTITUENCY":
-                    # Must contain non-causal note in provenance
                     prov = link.get("provenance", "")
                     assert any(keyword in prov.lower() for keyword in ["non-causal", "no personal fault", "context only"]), (
                         f"Constituency link in {issue['id']} lacks non-causality disclaimer: {prov}"
                     )
 
     def test_guarded_anomalies_criteria(self):
-        # Anomaly alerts must have sample size >= 30
         for anom in FIXTURE_TRENDS.get("guarded_anomalies", []):
             assert anom["sample_size"] >= 30
             assert anom["sample_size_valid"] is True

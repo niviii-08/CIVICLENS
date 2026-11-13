@@ -84,7 +84,6 @@ class TestPhase4NLPPipeline:
         """Test Tamil and English stopword filtering."""
         processor = StopwordProcessor()
         
-        # Tamil stopword test
         ta_tokens = ["மற்றும்", "சென்னை", "இந்த", "மெட்ரோ"]
         filtered_ta = processor.filter_stopwords(ta_tokens, language="ta")
         assert "மற்றும்" not in filtered_ta
@@ -92,7 +91,6 @@ class TestPhase4NLPPipeline:
         assert "சென்னை" in filtered_ta
         assert "மெட்ரோ" in filtered_ta
 
-        # English stopword test
         en_tokens = ["the", "budget", "for", "infrastructure"]
         filtered_en = processor.filter_stopwords(en_tokens, language="en")
         assert "the" not in filtered_en
@@ -103,11 +101,9 @@ class TestPhase4NLPPipeline:
         """Test rule-based Tamil inflection suffix stripping and English stemming."""
         stemmer = StemmerLemmatizer()
         
-        # Tamil suffix stemming: "-களுக்கு" -> base
         assert stemmer.stem_tamil_word("திட்டங்களுக்கு") == "திட்டங்"
         assert stemmer.stem_tamil_word("அறிக்கையை") == "அறிக்கை"
 
-        # English stemming: "-ing" -> base
         assert stemmer.stem_english_word("allocating") == "allocat"
         assert stemmer.stem_english_word("developments") == "development"
 

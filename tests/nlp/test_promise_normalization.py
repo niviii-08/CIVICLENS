@@ -135,9 +135,7 @@ class TestPromiseNormalizationService(unittest.TestCase):
         rec = make_promise_record(original)
         norm = self.service.normalize_promise(rec)
 
-        # original_text MUST be preserved EXACTLY as provided
         self.assertEqual(norm.original_text, original)
-        # normalized_text applies NFC and whitespace collapsing
         self.assertEqual(norm.normalized_text, "We will provide Rs. 1000 to women.")
 
     def test_normalization_service_batch(self):

@@ -67,7 +67,6 @@ def app_and_db(monkeypatch):
 
     session = TestingSessionLocal()
 
-    # Prepopulate standard categories
     cat_roads = IssueCategory(
         code=IssueCategoryEnum.ROADS,
         name_en="Roads & Footpaths",
@@ -83,7 +82,6 @@ def app_and_db(monkeypatch):
     session.add_all([cat_roads, cat_water])
     session.flush()
 
-    # Prepopulate departments
     dept_gcc = CivicDepartment(
         code="DEPT-GCC-001",
         name_en="Greater Chennai Corporation",
@@ -101,7 +99,6 @@ def app_and_db(monkeypatch):
     session.add_all([dept_gcc, dept_twad])
     session.flush()
 
-    # Prepopulate administrative area
     area_chennai = AdministrativeArea(
         area_code="ADM-TN-DIST-002-CHENNAI",
         name_en="Chennai District",
@@ -112,7 +109,6 @@ def app_and_db(monkeypatch):
     session.add(area_chennai)
     session.flush()
 
-    # Statutory Source Document
     src_doc = SourceDocument(
         document_code="DOC-GCC-PROCEEDING-2026-001",
         title="Greater Chennai Corporation Standing Committee Proceedings 2026",
@@ -133,20 +129,15 @@ def app_and_db(monkeypatch):
     yield client, TestingSessionLocal
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO A: Complete End-to-End Traceability Chain
-# -----------------------------------------------------------------------------
 def test_scenario_a_complete_end_to_end_traceability_chain(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
 
-    # 1. Source doc & Grievance
     doc = session.query(SourceDocument).first()
     category = session.query(IssueCategory).filter_by(code=IssueCategoryEnum.ROADS).first()
     dept = session.query(CivicDepartment).filter_by(code="DEPT-GCC-001").first()
     area = session.query(AdministrativeArea).first()
 
-    # Normalized Issue
     issue = CivicIssue(
         issue_code="TN-CHN-2026-TR-001",
         title="Severe potholes on Anna Salai arterial corridor",
@@ -181,7 +172,6 @@ def test_scenario_a_complete_end_to_end_traceability_chain(app_and_db):
     session.add(grievance)
     session.flush()
 
-    # Department Response
     resp = ResponseRecord(
         response_code="RESP-GCC-2026-001",
         civic_issue_id=issue.id,
@@ -196,7 +186,6 @@ def test_scenario_a_complete_end_to_end_traceability_chain(app_and_db):
     session.add(resp)
     session.flush()
 
-    # Empirical Evidence
     evid = ResolutionEvidence(
         response_id=resp.id,
         evidence_type=EvidenceType.COMPLETION_CERTIFICATE,
@@ -213,7 +202,6 @@ def test_scenario_a_complete_end_to_end_traceability_chain(app_and_db):
     session.add(evid)
     session.flush()
 
-    # Human Auditor Review
     audit = CivicReviewAudit(
         civic_issue_id=issue.id,
         reviewer_id="AUDITOR-SR-01",
@@ -230,17 +218,15 @@ def test_scenario_a_complete_end_to_end_traceability_chain(app_and_db):
     session.add(audit)
     session.commit()
 
-    # Request unified timeline API
     res = client.get(f"/api/civic/issues/{issue.id}/timeline")
     assert res.status_code == 200
     data = res.get_json()["data"]
 
     assert data["issue_id"] == issue.id
-    assert data["completeness_score"] == 1.0  # Zero gaps!
+    assert data["completeness_score"] == 1.0
     assert data["gaps_count"] == 0
     assert len(data["chain"]) == 7
 
-    # Verify each stage
     stages = {hop["stage_name"]: hop for hop in data["chain"]}
     assert stages["ORIGINAL_PUBLIC_RECORD"]["is_gap"] is False
     assert stages["ORIGINAL_PUBLIC_RECORD"]["record_id"] == "GRV-2026-0001"
@@ -265,9 +251,6 @@ def test_scenario_a_complete_end_to_end_traceability_chain(app_and_db):
     assert stages["VERIFICATION_STATUS_AND_AUDIT"]["verification_status"] == "VERIFIED"
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO B: Missing Departmental Response Handling
-# -----------------------------------------------------------------------------
 def test_scenario_b_missing_response_handling(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -304,16 +287,12 @@ def test_scenario_b_missing_response_handling(app_and_db):
     data = res.get_json()["data"]
 
     stages = {hop["stage_name"]: hop for hop in data["chain"]}
-    # Stage 4 must be flagged as a gap
     atr_stage = stages["OFFICIAL_RESPONSE_ATR"]
     assert atr_stage["is_gap"] is True
     assert atr_stage["origin_badge"] == "NO_OFFICIAL_RESPONSE"
     assert "Action-Taken Report" in atr_stage["gap_reason"]
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO C: Missing Resolution Evidence (Unverified Closure)
-# -----------------------------------------------------------------------------
 def test_scenario_c_missing_resolution_evidence_and_coverage_metric(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -345,7 +324,7 @@ def test_scenario_c_missing_resolution_evidence_and_coverage_metric(app_and_db):
         reported_status="marked_resolved",
         action_taken_date=datetime(2026, 2, 3, tzinfo=timezone.utc),
         official_remark="Bulb replaced by lineman.",
-        is_evidence_supported=False,  # Zero empirical proof!
+        is_evidence_supported=False,
         is_test_fixture=True,
     )
     session.add(resp)
@@ -362,9 +341,6 @@ def test_scenario_c_missing_resolution_evidence_and_coverage_metric(app_and_db):
     assert "Zero empirical artifacts available" in ev_stage["gap_reason"]
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO D: Conflicting Resolution Evidence Detection
-# -----------------------------------------------------------------------------
 def test_scenario_d_conflicting_resolution_evidence_detection(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -402,7 +378,6 @@ def test_scenario_d_conflicting_resolution_evidence_detection(app_and_db):
     session.add(resp)
     session.flush()
 
-    # Contradicting Citizen Audit Evidence
     conflict_evid = ResolutionEvidence(
         response_id=resp.id,
         evidence_type=EvidenceType.CITIZEN_AUDIT,
@@ -425,16 +400,12 @@ def test_scenario_d_conflicting_resolution_evidence_detection(app_and_db):
     assert data["evidence_assessment"] == "resolution_evidence_conflicting"
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO E: Unresolved Department Responsibility
-# -----------------------------------------------------------------------------
 def test_scenario_e_multiple_candidate_departments_or_unresolved_jurisdiction(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
 
     category = session.query(IssueCategory).first()
 
-    # Issue with department_id = None (unresolved border between Corporation and Highways)
     issue = CivicIssue(
         issue_code="TN-DISPUTE-BORDER-01",
         title="Encroached storm water culvert on boundary road",
@@ -459,9 +430,6 @@ def test_scenario_e_multiple_candidate_departments_or_unresolved_jurisdiction(ap
     assert "No government department officially mapped" in dept_stage["gap_reason"]
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO F: Automated Inference vs Official Report Distinction
-# -----------------------------------------------------------------------------
 def test_scenario_f_automated_inference_vs_official_report_distinction(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -500,15 +468,10 @@ def test_scenario_f_automated_inference_vs_official_report_distinction(app_and_d
     chain = res.get_json()["data"]["chain"]
 
     stages = {hop["stage_name"]: hop for hop in chain}
-    # Stage 2 (Normalized issue) must be an automated system inference
     assert stages["NORMALIZED_CIVIC_ISSUE"]["origin_badge"] == "AUTOMATED_SYSTEM_INFERENCE"
-    # Stage 4 (Official response) must be an official government record
     assert stages["OFFICIAL_RESPONSE_ATR"]["origin_badge"] == "OFFICIAL_GOVERNMENT_RECORD"
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO G: Human Reviewer Override and Audit Trail Preservation
-# -----------------------------------------------------------------------------
 def test_scenario_g_human_reviewer_override_and_audit_trail_preservation(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -531,7 +494,6 @@ def test_scenario_g_human_reviewer_override_and_audit_trail_preservation(app_and
     session.add(issue)
     session.commit()
 
-    # 1. Attempt review with UNAUTHORIZED role
     res_unauth = client.post(
         f"/api/civic/issues/{issue.id}/review",
         json={"action": "VERIFY_RESOLUTION", "reason": "Looks good to me."},
@@ -539,7 +501,6 @@ def test_scenario_g_human_reviewer_override_and_audit_trail_preservation(app_and
     )
     assert res_unauth.status_code == 403
 
-    # 2. Execute review with AUTHORIZED role (SENIOR_CIVIC_AUDITOR)
     res_auth = client.post(
         f"/api/civic/issues/{issue.id}/review",
         json={
@@ -556,15 +517,11 @@ def test_scenario_g_human_reviewer_override_and_audit_trail_preservation(app_and
     assert audit_data["new_status"] == "DISPUTED"
     assert audit_data["new_assessment"] == "resolution_evidence_conflicting"
 
-    # Verify audit record persisted in database
     db_audit = session.query(CivicReviewAudit).filter_by(civic_issue_id=issue.id).first()
     assert db_audit is not None
     assert db_audit.action == "DISPUTE_RESOLUTION"
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO H: Unverified Resolution Claim Guard
-# -----------------------------------------------------------------------------
 def test_scenario_h_unverified_resolution_claim_guard(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -572,7 +529,6 @@ def test_scenario_h_unverified_resolution_claim_guard(app_and_db):
     category = session.query(IssueCategory).first()
     dept = session.query(CivicDepartment).first()
 
-    # Issue administratively marked resolved, but not verified
     issue = CivicIssue(
         issue_code="TN-TEST-GUARD-01",
         title="Fallen tree branch on pavement",
@@ -593,7 +549,6 @@ def test_scenario_h_unverified_resolution_claim_guard(app_and_db):
     assert res.status_code == 200
     data = res.get_json()["data"]
 
-    # System must explicitly show verification_status is NOT verified
     assert data["verification_status"] != "VERIFIED"
     assert data["evidence_assessment"] == "resolution_not_independently_verified"
 
@@ -601,9 +556,6 @@ def test_scenario_h_unverified_resolution_claim_guard(app_and_db):
     assert "not an independently verified empirical outcome" in stages["REPORTED_RESOLUTION"]["description"]
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO I: Backward Navigation Continuity
-# -----------------------------------------------------------------------------
 def test_scenario_i_backward_navigation_continuity(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -659,12 +611,10 @@ def test_scenario_i_backward_navigation_continuity(app_and_db):
     session.add(evid)
     session.commit()
 
-    # Query provenance graph
     res = client.get(f"/api/civic/issues/{issue.id}/provenance")
     assert res.status_code == 200
     graph = res.get_json()["data"]
 
-    # Must contain nodes for Doc, Grievance, Issue, Dept, Response, and Evidence
     node_types = {n["type"] for n in graph["nodes"]}
     assert "SourceDocument" in node_types
     assert "GrievanceRecord" in node_types
@@ -673,17 +623,12 @@ def test_scenario_i_backward_navigation_continuity(app_and_db):
     assert "ResponseRecord" in node_types
     assert "ResolutionEvidence" in node_types
 
-    # Edges must establish unbroken path
     assert graph["edge_count"] >= 5
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO J: Traceability Metrics Computation & Safe Empty Samples
-# -----------------------------------------------------------------------------
 def test_scenario_j_traceability_metrics_computation_and_empty_sample_safety(app_and_db):
     client, SessionLocal = app_and_db
 
-    # 1. Query metrics with filter that returns 0 issues (empty sample)
     res_empty = client.get("/api/civic/traceability/metrics?district=NonExistentDistrictXYZ")
     assert res_empty.status_code == 200
     data_empty = res_empty.get_json()["data"]
@@ -693,7 +638,6 @@ def test_scenario_j_traceability_metrics_computation_and_empty_sample_safety(app
     assert data_empty["department_response_rate"] == 0.0
     assert "definitions" in data_empty
 
-    # 2. Add an issue to populate database
     session = SessionLocal()
     category = session.query(IssueCategory).first()
     dept = session.query(CivicDepartment).first()
@@ -738,7 +682,6 @@ def test_scenario_j_traceability_metrics_computation_and_empty_sample_safety(app
     session.add(evid)
     session.commit()
 
-    # Query global metrics on populated database
     res_all = client.get("/api/civic/traceability/metrics")
     assert res_all.status_code == 200
     data_all = res_all.get_json()["data"]
@@ -754,9 +697,6 @@ def test_scenario_j_traceability_metrics_computation_and_empty_sample_safety(app
     assert "methodological_caveats" in data_all
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO K: DPDPA 2023 PII Sanitization in Traceability Endpoints
-# -----------------------------------------------------------------------------
 def test_scenario_k_dpdpa_pii_sanitization_in_traceability_endpoints(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -793,12 +733,10 @@ def test_scenario_k_dpdpa_pii_sanitization_in_traceability_endpoints(app_and_db)
     session.add(grievance)
     session.commit()
 
-    # Test timeline output
     res = client.get(f"/api/civic/issues/{issue.id}/timeline")
     assert res.status_code == 200
     timeline_str = res.get_data(as_text=True)
 
-    # Assert all PII is redacted
     assert "98765 43210" not in timeline_str
     assert "ramanathan@example.com" not in timeline_str
     assert "1234 5678 9012" not in timeline_str
@@ -807,7 +745,6 @@ def test_scenario_k_dpdpa_pii_sanitization_in_traceability_endpoints(app_and_db)
 
     assert "[PHONE REDACTED]" in timeline_str or "[EMAIL REDACTED]" in timeline_str or "[ADDRESS REDACTED]" in timeline_str
 
-    # Test review endpoint sanitization
     res_rev = client.post(
         f"/api/civic/issues/{issue.id}/review",
         json={
@@ -823,9 +760,6 @@ def test_scenario_k_dpdpa_pii_sanitization_in_traceability_endpoints(app_and_db)
     assert "[PHONE REDACTED]" in audit_dict["reason"]
 
 
-# -----------------------------------------------------------------------------
-# SCENARIO L: Non-Causality Rule Enforcement in Cross-Phase Links
-# -----------------------------------------------------------------------------
 def test_scenario_l_non_causality_rule_enforcement_in_cross_phase_links(app_and_db):
     client, SessionLocal = app_and_db
     session = SessionLocal()
@@ -846,7 +780,6 @@ def test_scenario_l_non_causality_rule_enforcement_in_cross_phase_links(app_and_
     session.add(issue)
     session.commit()
 
-    # 1. Attempt to create cross-phase link with forbidden matching method "same_area"
     res_bad = client.post(
         f"/api/civic/issues/{issue.id}/cross-phase-link",
         json={
@@ -854,14 +787,13 @@ def test_scenario_l_non_causality_rule_enforcement_in_cross_phase_links(app_and_
             "entity_type": "REPRESENTATIVE",
             "entity_id": "REP-TN-042",
             "relationship_nature": "CONSTITUENCY_CIVIC_FAILURE",
-            "matching_method": "same_area",  # FORBIDDEN!
+            "matching_method": "same_area",
             "provenance_summary": "Issue occurred in this MLA's constituency.",
         },
     )
     assert res_bad.status_code == 400
     assert "Cannot create cross-phase links merely because records share a geographic area" in res_bad.get_json()["message"]
 
-    # 2. Legitimate empirical linkage with documented tender reference
     res_good = client.post(
         f"/api/civic/issues/{issue.id}/cross-phase-link",
         json={

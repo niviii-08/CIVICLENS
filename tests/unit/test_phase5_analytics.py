@@ -33,12 +33,10 @@ class TestFundingAnalyticsEngine:
             document_ids=["DOC_DMK_FY21"]
         )
         assert m1.metric_name == "TOTAL_DISCLOSED_CONTRIBUTIONS"
-        # Sum: 10M + 50M + 100k + 30k = 60,130,000 INR
         assert m1.value == 60130000.0
         assert m1.unit == MetricUnit.INR
 
     def test_metric2_yoy_growth_calculation_and_skipping(self):
-        # Case A: Valid baseline YoY calculation
         m2 = FundingAnalyticsEngine.calculate_yoy_growth(
             party_id="PARTY_TN_DMK",
             current_year="FY2021-22",
@@ -49,11 +47,9 @@ class TestFundingAnalyticsEngine:
         )
         assert m2 is not None
         assert m2.metric_name == "YOY_CONTRIBUTION_GROWTH"
-        # ((60.13M - 40M) / 40M) * 100 = 50.325% -> rounds to 50.32 in python
         assert m2.value == 50.32
         assert m2.unit == MetricUnit.PERCENTAGE
 
-        # Case B: Missing baseline year -> Must return None (No calculation)
         m2_none = FundingAnalyticsEngine.calculate_yoy_growth(
             party_id="PARTY_TN_DMK",
             current_year="FY2021-22",
@@ -73,11 +69,11 @@ class TestFundingAnalyticsEngine:
         )
         assert m3.metric_name == "CONTRIBUTION_SIZE_DISTRIBUTION"
         val = m3.value
-        assert val["BELOW_50K"]["count"] == 1  # 30k
-        assert val["50K_TO_2L"]["count"] == 1  # 1 Lakh (100k)
+        assert val["BELOW_50K"]["count"] == 1
+        assert val["50K_TO_2L"]["count"] == 1
         assert val["2L_TO_10L"]["count"] == 0
         assert val["10L_TO_1CR"]["count"] == 0
-        assert val["ABOVE_1CR"]["count"] == 2  # 1 Crore + 5 Crore
+        assert val["ABOVE_1CR"]["count"] == 2
 
     def test_metric4_donor_concentration(self):
         m4 = FundingAnalyticsEngine.calculate_donor_concentration(
@@ -90,7 +86,7 @@ class TestFundingAnalyticsEngine:
         val = m4.value
         assert "gini_coefficient" in val
         assert "hhi_index" in val
-        assert val["gini_coefficient"] > 0.50  # Concentrated due to 5 Crore trust grant
+        assert val["gini_coefficient"] > 0.50
 
     def test_metric5_top_contributors(self):
         m5 = FundingAnalyticsEngine.calculate_top_contributors(
@@ -103,7 +99,6 @@ class TestFundingAnalyticsEngine:
         assert m5.metric_name == "TOP_DISCLOSED_CONTRIBUTORS"
         top_list = m5.value
         assert len(top_list) == 3
-        # Rank 1 must be Prudent Electoral Trust (5 Crore)
         assert top_list[0]["donor_name"] == "Prudent Electoral Trust"
         assert top_list[0]["total_amount_inr"] == 50000000.0
 
@@ -129,7 +124,6 @@ class TestFundingAnalyticsEngine:
         )
         assert m7.metric_name == "INCOME_EXPENDITURE_SURPLUS_RATIO"
         val = m7.value
-        # Income 30 Cr, Expenditure 22 Cr, Surplus 8 Cr -> (8 / 30) * 100 = 26.67%
         assert val["net_surplus_deficit_inr"] == 80000000.0
         assert val["surplus_ratio_percentage"] == 26.67
 
@@ -156,7 +150,6 @@ class TestFundingAnalyticsEngine:
         assert m9.metric_name == "ELECTORAL_TRUST_PASS_THROUGH"
         val = m9.value
         assert val["disclosed_trust_grants_inr"] == 50000000.0
-        # (5 Cr / 30 Cr) * 100 = 16.67%
         assert val["share_of_total_income_percentage"] == 16.67
 
     def test_metric10_election_expenditure_trend(self):
@@ -171,7 +164,6 @@ class TestFundingAnalyticsEngine:
         assert m10.metric_name == "ELECTION_EXPENDITURE_TREND"
         val = m10.value
         assert val["campaign_expenditure_inr"] == 190000000.0
-        # (19 Cr / 30 Cr) * 100 = 63.33%
         assert val["campaign_intensity_percentage"] == 63.33
 
     def test_metric11_summary_discrepancy_gap(self):
@@ -184,6 +176,5 @@ class TestFundingAnalyticsEngine:
         )
         assert m11.metric_name == "SUMMARY_DISCREPANCY_GAP"
         val = m11.value
-        # Extracted 24A sum = 60,130,000 INR; Audited schedule 20k reported = 60,130,000 INR -> Discrepancy = 0
         assert val["discrepancy_gap_inr"] == 0.0
         assert m11.data_quality_status == DataQualityStatus.HIGH_QUALITY

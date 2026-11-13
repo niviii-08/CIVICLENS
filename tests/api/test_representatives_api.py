@@ -47,7 +47,6 @@ def setup_teardown_phase6_data():
     Base.metadata.create_all(bind=engine)
     db: Session = SessionLocal()
 
-    # Pre-populate Party, Manifesto, Promise
     party = PoliticalParty(party_id="PARTY-DMK", party_name="Dravida Munnetra Kazhagam", party_code="DMK")
     db.merge(party)
     db.commit()
@@ -69,7 +68,6 @@ def setup_teardown_phase6_data():
     db.merge(promise)
     db.commit()
 
-    # Pre-populate Constituencies
     c1 = Constituency(
         constituency_id="AC-013",
         official_name="Kolathur",
@@ -88,7 +86,6 @@ def setup_teardown_phase6_data():
     db.merge(c2)
     db.commit()
 
-    # Pre-populate Geographic Mapping
     g_map = ConstituencyGeographicMapping(
         mapping_id="MAP-AC-013",
         constituency_id="AC-013",
@@ -99,7 +96,6 @@ def setup_teardown_phase6_data():
     db.merge(g_map)
     db.commit()
 
-    # Pre-populate Representatives
     rep1 = Representative(
         representative_id="REP-MLA-013",
         official_name="M. K. Stalin",
@@ -122,7 +118,6 @@ def setup_teardown_phase6_data():
     db.merge(rep2)
     db.commit()
 
-    # Pre-populate Terms
     term1 = RepresentativeTerm(
         term_id="TERM-TNLA-16-013",
         representative_id="REP-MLA-013",
@@ -134,7 +129,6 @@ def setup_teardown_phase6_data():
     db.merge(term1)
     db.commit()
 
-    # Pre-populate Legislative Activities
     act1 = LegislativeActivity(
         activity_id="ACT-API-001",
         representative_id="REP-MLA-013",
@@ -157,7 +151,6 @@ def setup_teardown_phase6_data():
     db.merge(act2)
     db.commit()
 
-    # Pre-populate Constituency Works
     work1 = ConstituencyWork(
         work_id="WRK-API-001",
         constituency_id="AC-013",
@@ -174,7 +167,6 @@ def setup_teardown_phase6_data():
     db.merge(work1)
     db.commit()
 
-    # Pre-populate Indicators
     ind1 = DevelopmentIndicator(
         indicator_id="IND-API-2011",
         geographic_unit_id="AC-013",
@@ -197,7 +189,6 @@ def setup_teardown_phase6_data():
     db.merge(ind2)
     db.commit()
 
-    # Pre-populate Promise Link
     link1 = PromisePerformanceLink(
         link_id="LNK-API-001",
         representative_id="REP-MLA-013",
@@ -210,7 +201,6 @@ def setup_teardown_phase6_data():
 
     yield
 
-    # Teardown
     try:
         db.query(PromisePerformanceLink).delete()
         db.query(DevelopmentIndicator).delete()
@@ -229,9 +219,6 @@ def setup_teardown_phase6_data():
         db.close()
 
 
-# -----------------------------------------------------------------------------
-# API TESTS
-# -----------------------------------------------------------------------------
 def test_1_search_representatives(api_client):
     """Test searching representatives with query and filters."""
     res = api_client.get("/api/representatives/search?q=Stalin&type=MLA")
@@ -309,7 +296,6 @@ def test_7_promises_endpoint(api_client):
 
 def test_8_cohort_comparison_endpoint(api_client):
     """Test valid cohort comparison and rejection of invalid cohorts."""
-    # Valid MLA comparison
     payload = {
         "representatives": ["REP-MLA-013", "REP-MLA-014"],
         "cohort_type": "TN_ASSEMBLY_MLA",
@@ -320,7 +306,6 @@ def test_8_cohort_comparison_endpoint(api_client):
     data = res.get_json()["data"]
     assert len(data["comparisons"]) == 2
 
-    # Insufficient reps
     res_err = api_client.post("/api/representatives/compare", json={"representatives": ["REP-MLA-013"]})
     assert res_err.status_code == 400
 

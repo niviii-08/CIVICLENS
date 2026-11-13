@@ -14,7 +14,6 @@ class TestRealPromiseAssessment(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Execute promise assessment pipeline
         run_real_promise_assessment()
 
     def test_assessment_field_completeness(self):

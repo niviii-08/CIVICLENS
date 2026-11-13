@@ -74,9 +74,6 @@ def db_session():
     session.close()
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Core 14 Issue Categories Coverage
-# ---------------------------------------------------------------------------
 def test_1_issue_categories_taxonomy_coverage(db_session):
     """Verify all 14 standard civic categories are defined, typed, and bilingual."""
     assert len(IssueCategoryEnum) == 14
@@ -90,7 +87,6 @@ def test_1_issue_categories_taxonomy_coverage(db_session):
     defined_categories = {cat.value for cat in IssueCategoryEnum}
     assert required_categories == defined_categories
 
-    # Persist mock categories into database
     for mock_cat in MOCK_CATEGORIES:
         category = IssueCategory(
             code=IssueCategoryEnum(mock_cat["code"]),
@@ -111,16 +107,12 @@ def test_1_issue_categories_taxonomy_coverage(db_session):
     assert "சாலை" in road_cat.name_ta
 
 
-# ---------------------------------------------------------------------------
-# Test 2: Strict Privacy Rules & PII Scrubbing
-# ---------------------------------------------------------------------------
 def test_2_strict_privacy_pii_sanitization():
     """Verify citizen names, phone numbers, emails, UIDs, and door numbers are stripped."""
     for sample in MOCK_RAW_GRIEVANCES_FOR_PII:
         raw_text = sample["raw_text"]
         sanitized = sanitize_pii(raw_text)
 
-        # Ensure no raw personal details remain
         assert "9840123456" not in sanitized
         assert "murugan.k@gmail.com" not in sanitized
         assert "1234 5678 9012" not in sanitized
@@ -130,15 +122,11 @@ def test_2_strict_privacy_pii_sanitization():
         assert "8765432109" not in sanitized
         assert "D.No. 15" not in sanitized
 
-        # Ensure sanitized placeholders are properly inserted
         assert "[PHONE REDACTED]" in sanitized
         assert "[CITIZEN]" in sanitized
         assert "[ADDRESS REDACTED]" in sanitized
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Administrative Hierarchy & Spatial Mapping
-# ---------------------------------------------------------------------------
 def test_3_administrative_area_hierarchy(db_session):
     """Verify nested administrative hierarchy: State -> District -> Zone -> Ward."""
     area_map = {}
@@ -159,7 +147,6 @@ def test_3_administrative_area_hierarchy(db_session):
         db_session.commit()
         area_map[mock_area["area_code"]] = area.id
 
-    # Verify Ward points to Zone and Zone points to District
     ward = db_session.query(AdministrativeArea).filter_by(area_code="ADM-TN-GCC-WARD-174").first()
     assert ward is not None
     assert ward.parent.area_code == "ADM-TN-GCC-ZONE-13-ADYAR"
@@ -167,12 +154,8 @@ def test_3_administrative_area_hierarchy(db_session):
     assert ward.parent.parent.parent.area_code == "ADM-TN-STATE"
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Government Departments & Service Standards (SLAs)
-# ---------------------------------------------------------------------------
 def test_4_departments_and_service_standards_sla(db_session):
     """Verify department registry and Citizen's Charter statutory turnaround limits."""
-    # Seed categories first
     cat_map = {}
     for mock_cat in MOCK_CATEGORIES:
         category = IssueCategory(
@@ -184,7 +167,6 @@ def test_4_departments_and_service_standards_sla(db_session):
         db_session.commit()
         cat_map[mock_cat["code"]] = category.id
 
-    # Seed departments
     dept_map = {}
     for mock_dept in MOCK_DEPARTMENTS:
         dept = GovernmentDepartment(
@@ -200,7 +182,6 @@ def test_4_departments_and_service_standards_sla(db_session):
         db_session.commit()
         dept_map[mock_dept["code"]] = dept.id
 
-    # Seed Service Standards
     for mock_sla in MOCK_SERVICE_STANDARDS:
         sla = ServiceStandard(
             standard_code=mock_sla["standard_code"],
@@ -222,12 +203,8 @@ def test_4_departments_and_service_standards_sla(db_session):
     assert pothole_sla.department.code == "DEPT_MAWS"
 
 
-# ---------------------------------------------------------------------------
-# Test 5: CivicIssue Creation & Grievance Linking
-# ---------------------------------------------------------------------------
 def test_5_civic_issue_creation_and_grievance_linking(db_session):
     """Verify CivicIssue root entity and attached anonymized GrievanceRecords."""
-    # Setup Category and Department
     cat = IssueCategory(code=IssueCategoryEnum.WATER_SUPPLY, name_en="Water Supply", name_ta="குடிநீர்")
     dept = GovernmentDepartment(code="DEPT_MAWS", name_en="MAWS Dept", name_ta="நகராட்சி நிர்வாகம்")
     db_session.add_all([cat, dept])
@@ -255,7 +232,6 @@ def test_5_civic_issue_creation_and_grievance_linking(db_session):
     db_session.add(issue)
     db_session.commit()
 
-    # Attach two anonymized grievance petitions
     grv1 = GrievanceRecord(
         record_token="GRV-2024-001",
         civic_issue_id=issue.id,
@@ -283,9 +259,6 @@ def test_5_civic_issue_creation_and_grievance_linking(db_session):
     assert reloaded_issue.department.code == "DEPT_MAWS"
 
 
-# ---------------------------------------------------------------------------
-# Test 6: SLA Turnaround & Delay Calculation
-# ---------------------------------------------------------------------------
 def test_6_sla_turnaround_and_breach_detection(db_session):
     """Verify compliant vs breached SLA calculations."""
     cat = IssueCategory(code=IssueCategoryEnum.ELECTRICITY, name_en="Electricity", name_ta="மின்சாரம்")
@@ -294,8 +267,8 @@ def test_6_sla_turnaround_and_breach_detection(db_session):
     db_session.commit()
 
     lodged_time = datetime(2024, 1, 10, 12, 0, 0, tzinfo=timezone.utc)
-    target_time = lodged_time + timedelta(hours=24)  # 24-hour SLA
-    action_time = lodged_time + timedelta(hours=76)  # 52 hours delayed!
+    target_time = lodged_time + timedelta(hours=24)
+    action_time = lodged_time + timedelta(hours=76)
 
     issue = CivicIssue(
         issue_code="CIV-FIX-003-DELAYED-TRANSFORMER",
@@ -312,7 +285,6 @@ def test_6_sla_turnaround_and_breach_detection(db_session):
     db_session.add(issue)
     db_session.commit()
 
-    # Calculate SLA delay
     delay_hours = (action_time - target_time).total_seconds() / 3600.0
     sla_breached = delay_hours > 0
 
@@ -335,9 +307,6 @@ def test_6_sla_turnaround_and_breach_detection(db_session):
     assert saved_response.delay_hours == 52.0
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Multi-Source Resolution Evidence & Public Works
-# ---------------------------------------------------------------------------
 def test_7_resolution_evidence_and_public_work_linking(db_session):
     """Verify corroborating evidence and capital work order linkage."""
     cat = IssueCategory(code=IssueCategoryEnum.WATER_SUPPLY, name_en="Water Supply", name_ta="குடிநீர்")
@@ -361,7 +330,6 @@ def test_7_resolution_evidence_and_public_work_linking(db_session):
     db_session.add(issue)
     db_session.commit()
 
-    # Response Record
     response = ResponseRecord(
         response_code="RSP-FIX-001-WATERLEAK",
         civic_issue_id=issue.id,
@@ -376,7 +344,6 @@ def test_7_resolution_evidence_and_public_work_linking(db_session):
     db_session.add(response)
     db_session.commit()
 
-    # Evidence Passage / Report
     evidence = ResolutionEvidence(
         response_id=response.id,
         evidence_type=EvidenceType.FIELD_INSPECTION_REPORT,
@@ -390,7 +357,6 @@ def test_7_resolution_evidence_and_public_work_linking(db_session):
     )
     db_session.add(evidence)
 
-    # Linked Public Work Contract
     work = PublicWork(
         work_code="WRK-FIX-002-MAWS-PIPE-REPAIR",
         civic_issue_id=issue.id,
@@ -412,9 +378,6 @@ def test_7_resolution_evidence_and_public_work_linking(db_session):
     assert reloaded_issue.public_works[0].sanctioned_amount_inr == 75000.0
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Chronological Issue Events & Data Quality Audit
-# ---------------------------------------------------------------------------
 def test_8_issue_event_logging_and_data_quality_issues(db_session):
     """Verify state transitions and automated data quality audits."""
     cat = IssueCategory(code=IssueCategoryEnum.ROADS, name_en="Roads", name_ta="சாலைகள்")
@@ -428,7 +391,7 @@ def test_8_issue_event_logging_and_data_quality_issues(db_session):
         category_id=cat.id,
         status=CivicIssueStatus.OPEN,
         severity=CivicIssueSeverity.LOW,
-        latitude=None,   # Missing coordinates!
+        latitude=None,
         longitude=None,
         reported_date=datetime.now(timezone.utc),
         is_test_fixture=True
@@ -436,7 +399,6 @@ def test_8_issue_event_logging_and_data_quality_issues(db_session):
     db_session.add(issue)
     db_session.commit()
 
-    # Log Event
     event = IssueEvent(
         civic_issue_id=issue.id,
         event_type="CREATED",
@@ -445,7 +407,6 @@ def test_8_issue_event_logging_and_data_quality_issues(db_session):
     )
     db_session.add(event)
 
-    # Flag Data Quality Issue
     dq = DataQualityIssue(
         civic_issue_id=issue.id,
         severity=DataQualitySeverity.WARNING,
@@ -464,9 +425,6 @@ def test_8_issue_event_logging_and_data_quality_issues(db_session):
     assert reloaded.quality_issues[0].severity == DataQualitySeverity.WARNING
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Zero Fabrication Compliance Rule
-# ---------------------------------------------------------------------------
 def test_9_zero_fabrication_compliance():
     """Verify all mock fixtures explicitly carry is_test_fixture=True."""
     assert IS_TEST_FIXTURE is True

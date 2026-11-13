@@ -79,9 +79,6 @@ def api_client(db_session):
         yield client
 
 
-# ---------------------------------------------------------------------------
-# Test 1: Verbatim Original Text Preservation
-# ---------------------------------------------------------------------------
 def test_1_register_claim_verbatim_preservation(db_session):
     service = ClaimVerificationService(db=db_session)
 
@@ -104,7 +101,6 @@ def test_1_register_claim_verbatim_preservation(db_session):
     assert claim.status == ClaimStatus.PENDING
     assert claim.language == "ta"
 
-    # Verify Version 1 is automatically initialized
     versions = db_session.query(ClaimVersion).filter(ClaimVersion.claim_id == claim.claim_id).all()
     assert len(versions) == 1
     assert versions[0].version_number == 1
@@ -112,9 +108,6 @@ def test_1_register_claim_verbatim_preservation(db_session):
     assert "Initial registration" in versions[0].change_rationale
 
 
-# ---------------------------------------------------------------------------
-# Test 2: Multi-Version Claim Tracking Without Overwriting Original
-# ---------------------------------------------------------------------------
 def test_2_claim_versioning_audit_trail(db_session):
     service = ClaimVerificationService(db=db_session)
     mock = MOCK_CLAIMS[0]
@@ -125,7 +118,6 @@ def test_2_claim_versioning_audit_trail(db_session):
         is_test_fixture=True
     )
 
-    # Add Version 2 (English transliteration and standard spelling)
     v2 = service.add_claim_version(
         claim_id=claim.claim_id,
         edited_text="Kalaignar Magalir Urimai Thittam provides ₹1,000/month to 1.15 crore women.",
@@ -137,15 +129,11 @@ def test_2_claim_versioning_audit_trail(db_session):
     assert v2.version_number == 2
     assert "Kalaignar Magalir Urimai Thittam" in v2.edited_text
 
-    # CRITICAL: Verify original_text in root Claim is COMPLETELY UNTOUCHED
     reloaded = db_session.query(Claim).filter(Claim.claim_id == claim.claim_id).first()
     assert reloaded.original_text == mock["original_text"]
     assert len(reloaded.versions) == 2
 
 
-# ---------------------------------------------------------------------------
-# Test 3: Claim Decomposition into Atomic Subjects
-# ---------------------------------------------------------------------------
 def test_3_claim_decomposition(db_session):
     service = ClaimVerificationService(db=db_session)
     mock = MOCK_CLAIMS[0]
@@ -170,13 +158,9 @@ def test_3_claim_decomposition(db_session):
     assert SubjectType.GOVERNMENT_DEPARTMENT in subj_types
 
 
-# ---------------------------------------------------------------------------
-# Test 4: Objective Source Quality Assessment Scoring Rubric
-# ---------------------------------------------------------------------------
 def test_4_source_quality_assessment_scoring(db_session):
     service = ClaimVerificationService(db=db_session)
 
-    # Ingest Tier 1 Document
     tier1_doc = EvidenceDocument(
         document_id="EDOC-STATUTORY-01",
         source_tier=SourceTier.TIER_1_STATUTORY,
@@ -188,7 +172,6 @@ def test_4_source_quality_assessment_scoring(db_session):
     )
     db_session.add(tier1_doc)
 
-    # Ingest Tier 5 Document
     tier5_doc = EvidenceDocument(
         document_id="EDOC-BLOG-01",
         source_tier=SourceTier.TIER_5_UNVERIFIED,
@@ -201,7 +184,6 @@ def test_4_source_quality_assessment_scoring(db_session):
     db_session.add(tier5_doc)
     db_session.commit()
 
-    # Assess Tier 1 Source: 0.35*1.0 + 0.25*1.0 + 0.20*1.0 + 0.20*1.0 = 1.00
     ass1 = service.assess_source_quality(
         document_id="EDOC-STATUTORY-01",
         primary_source_score=1.0,
@@ -211,7 +193,6 @@ def test_4_source_quality_assessment_scoring(db_session):
     assert ass1.composite_quality_score == 1.0
     assert ass1.source_tier == SourceTier.TIER_1_STATUTORY
 
-    # Assess Tier 5 Source: 0.35*0.2 + 0.25*0.3 + 0.20*0.2 + 0.20*0.3 = 0.07 + 0.075 + 0.04 + 0.06 = 0.245
     ass2 = service.assess_source_quality(
         document_id="EDOC-BLOG-01",
         primary_source_score=0.3,
@@ -222,9 +203,6 @@ def test_4_source_quality_assessment_scoring(db_session):
     assert ass2.composite_quality_score < ass1.composite_quality_score
 
 
-# ---------------------------------------------------------------------------
-# Test 5: Evidence Linking and Bidirectional Signal Scoring
-# ---------------------------------------------------------------------------
 def test_5_evidence_linking_and_bidirectional_signals(db_session):
     service = ClaimVerificationService(db=db_session)
     mock_c = MOCK_CLAIMS[0]
@@ -274,13 +252,9 @@ def test_5_evidence_linking_and_bidirectional_signals(db_session):
     assert claim.status == ClaimStatus.EVIDENCE_LINKED
 
 
-# ---------------------------------------------------------------------------
-# Test 6: Automated Verification Run and SUPPORTED Verdict
-# ---------------------------------------------------------------------------
 def test_6_automated_verification_run_and_verdict(db_session):
     service = ClaimVerificationService(db=db_session)
 
-    # 1. Register claim
     mock_c = MOCK_CLAIMS[0]
     claim = service.register_claim(
         claim_id=mock_c["claim_id"],
@@ -289,7 +263,6 @@ def test_6_automated_verification_run_and_verdict(db_session):
         is_test_fixture=True
     )
 
-    # 2. Add doc and passage
     doc_mock = MOCK_EVIDENCE_DOCS[0]
     doc = EvidenceDocument(
         document_id=doc_mock["document_id"],
@@ -309,10 +282,8 @@ def test_6_automated_verification_run_and_verdict(db_session):
     db_session.add(passage)
     db_session.commit()
 
-    # Assess source
     service.assess_source_quality(doc.document_id)
 
-    # Link evidence
     service.link_evidence(
         claim_id=claim.claim_id,
         passage_id=passage.passage_id,
@@ -321,7 +292,6 @@ def test_6_automated_verification_run_and_verdict(db_session):
         contradiction_score=0.01
     )
 
-    # Execute verification
     result = service.verify_claim(claim_id=claim.claim_id)
 
     assert result.verdict == VerificationVerdict.SUPPORTED
@@ -329,19 +299,14 @@ def test_6_automated_verification_run_and_verdict(db_session):
     assert result.is_current is True
     assert claim.status == ClaimStatus.VERIFIED
 
-    # Check VerificationHistory
     history = db_session.query(VerificationHistory).filter(VerificationHistory.claim_id == claim.claim_id).all()
     assert len(history) == 1
     assert history[0].new_verdict == "SUPPORTED"
 
 
-# ---------------------------------------------------------------------------
-# Test 7: Contradiction Analysis and CONTRADICTED Verdict
-# ---------------------------------------------------------------------------
 def test_7_contradiction_analysis_and_refutation(db_session):
     service = ClaimVerificationService(db=db_session)
 
-    # Claim asserts ₹15,000 Cr allocated for farmer debt relief in 2022-23
     mock_c = MOCK_CLAIMS[1]
     claim = service.register_claim(
         claim_id=mock_c["claim_id"],
@@ -350,7 +315,6 @@ def test_7_contradiction_analysis_and_refutation(db_session):
         is_test_fixture=True
     )
 
-    # Ingest actual statutory budget document showing ₹2,393 Cr
     doc_mock = MOCK_EVIDENCE_DOCS[1]
     doc = EvidenceDocument(
         document_id=doc_mock["document_id"],
@@ -373,7 +337,6 @@ def test_7_contradiction_analysis_and_refutation(db_session):
 
     service.assess_source_quality(doc.document_id)
 
-    # Link as CONTRADICTS
     service.link_evidence(
         claim_id=claim.claim_id,
         passage_id=passage.passage_id,
@@ -393,13 +356,9 @@ def test_7_contradiction_analysis_and_refutation(db_session):
     assert result.empirical_findings["actual_inr_cr"] == 2393.0
 
 
-# ---------------------------------------------------------------------------
-# Test 8: Uncertainty Exposure and Missing Records (UNVERIFIABLE)
-# ---------------------------------------------------------------------------
 def test_8_uncertainty_exposure_and_missing_data(db_session):
     service = ClaimVerificationService(db=db_session)
 
-    # Unverifiable secret cabinet assertion with no official records
     mock_c = MOCK_CLAIMS[5]
     claim = service.register_claim(
         claim_id=mock_c["claim_id"],
@@ -408,7 +367,6 @@ def test_8_uncertainty_exposure_and_missing_data(db_session):
         is_test_fixture=True
     )
 
-    # Verify claim with NO linked evidence
     result = service.verify_claim(
         claim_id=claim.claim_id,
         limitations_and_caveats="Data limitations: No public gazettes, cabinet minutes, or transport feasibility studies exist for this assertion."
@@ -420,9 +378,6 @@ def test_8_uncertainty_exposure_and_missing_data(db_session):
     assert "limitations" in result.limitations_and_caveats.lower()
 
 
-# ---------------------------------------------------------------------------
-# Test 9: Contextual Omission Detection (MISLEADING_CONTEXT)
-# ---------------------------------------------------------------------------
 def test_9_contextual_omission_detection(db_session):
     service = ClaimVerificationService(db=db_session)
 
@@ -466,9 +421,6 @@ def test_9_contextual_omission_detection(db_session):
     assert result.verdict == VerificationVerdict.MISLEADING_CONTEXT
 
 
-# ---------------------------------------------------------------------------
-# Test 10: Human Review Submission, Override Auditing, and History
-# ---------------------------------------------------------------------------
 def test_10_human_review_and_override_audit(db_session):
     service = ClaimVerificationService(db=db_session)
 
@@ -480,11 +432,9 @@ def test_10_human_review_and_override_audit(db_session):
         is_test_fixture=True
     )
 
-    # Initial automated verification
     res = service.verify_claim(claim_id=claim.claim_id, manual_rationale="Initial automated pass.")
     assert res.verdict == VerificationVerdict.UNVERIFIABLE_INSUFFICIENT_EVIDENCE
 
-    # Submit human expert review with OVERRIDE
     review = service.submit_human_review(
         claim_id=claim.claim_id,
         reviewer_id="analyst_parliamentary_02",
@@ -497,7 +447,6 @@ def test_10_human_review_and_override_audit(db_session):
     assert review.override_applied is True
     assert review.reviewed_verdict == "PARTIALLY_SUPPORTED"
 
-    # Verify updated current result
     updated_res = db_session.query(VerificationResult).filter(
         VerificationResult.claim_id == claim.claim_id,
         VerificationResult.is_current == True
@@ -505,7 +454,6 @@ def test_10_human_review_and_override_audit(db_session):
     assert updated_res.verdict == VerificationVerdict.PARTIALLY_SUPPORTED
     assert "Human Review Override" in updated_res.rationale
 
-    # Check VerificationHistory audit trail
     hist_entries = db_session.query(VerificationHistory).filter(
         VerificationHistory.claim_id == claim.claim_id
     ).all()
@@ -514,23 +462,15 @@ def test_10_human_review_and_override_audit(db_session):
     assert override_hist.new_verdict == "PARTIALLY_SUPPORTED"
 
 
-# ---------------------------------------------------------------------------
-# Test 11: Non-Ranking Rule Enforcement
-# ---------------------------------------------------------------------------
 def test_11_strictly_no_politician_rankings_enforced(db_session):
     service = ClaimVerificationService(db=db_session)
 
-    # Verify that ClaimVerificationService does NOT implement truthfulness rankings
     assert not hasattr(service, "rank_politicians_by_truthfulness")
     assert not hasattr(service, "get_party_honesty_leaderboard")
     assert not hasattr(service, "generate_politician_lie_meter")
 
 
-# ---------------------------------------------------------------------------
-# Test 12: REST API Endpoints Verification
-# ---------------------------------------------------------------------------
 def test_12_api_endpoints_integration(api_client, db_session):
-    # 1. Test POST /api/claims/
     post_payload = {
         "claim_id": "CLM-API-TEST-001",
         "original_text": "Tamil Nadu has the highest Gross Enrollment Ratio in higher education in India.",
@@ -544,20 +484,17 @@ def test_12_api_endpoints_integration(api_client, db_session):
     res_data = resp.get_json()["data"]
     assert res_data["claim_id"] == "CLM-API-TEST-001"
 
-    # 2. Test GET /api/claims/
     get_resp = api_client.get("/api/claims/")
     assert get_resp.status_code == 200
     claims_list = get_resp.get_json()["data"]["claims"]
     assert any(c["claim_id"] == "CLM-API-TEST-001" for c in claims_list)
 
-    # 3. Test GET /api/claims/<id>
     single_resp = api_client.get("/api/claims/CLM-API-TEST-001")
     assert single_resp.status_code == 200
     claim_prof = single_resp.get_json()["data"]
     assert claim_prof["claim_id"] == "CLM-API-TEST-001"
     assert len(claim_prof["versions"]) == 1
 
-    # 4. Test POST /api/claims/<id>/decompose
     decomp_payload = {
         "subjects": [
             {"subject_type": "GOVERNMENT_DEPARTMENT", "canonical_name": "Higher Education Department"},
@@ -567,14 +504,12 @@ def test_12_api_endpoints_integration(api_client, db_session):
     decomp_resp = api_client.post("/api/claims/CLM-API-TEST-001/decompose", json=decomp_payload)
     assert decomp_resp.status_code == 200
 
-    # 5. Test POST /api/claims/<id>/verify
     verify_resp = api_client.post("/api/claims/CLM-API-TEST-001/verify", json={
         "rationale": "Verified against AISHE survey report."
     })
     assert verify_resp.status_code == 200
     assert verify_resp.get_json()["data"]["verdict"] == "UNVERIFIABLE_INSUFFICIENT_EVIDENCE"
 
-    # 6. Test GET /api/claims/stats
     stats_resp = api_client.get("/api/claims/stats")
     assert stats_resp.status_code == 200
     stats = stats_resp.get_json()["data"]

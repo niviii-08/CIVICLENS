@@ -18,7 +18,6 @@ from backend.nlp.news_analyzer import TamilNewsAnalyzer
 from backend.services.news_service import NewsService
 from backend.api.app import create_app
 
-# --- TEST FIXTURES ---
 SYNTHETIC_TAMIL_ARTICLE = {
     "title": "TEST FIXTURE — சென்னை மெட்ரோ திட்டம் மற்றும் பட்ஜெட் தகவல்",
     "text": "TEST FIXTURE — NOT REAL NEWS DATA. சென்னை மெட்ரோ இரண்டாம் கட்டப் பணிகளுக்குத் தமிழ் நிலத்தின் பட்ஜெட் நிதி ஒதுக்கீடு செய்யப்பட்டுள்ளது. திமுக மற்றும் அதிமுக தலைவர்கள் இந்த அறிக்கையை பரிசீலித்தனர்.",
@@ -92,7 +91,6 @@ class TestPhase4NewsAnalyzer:
         """Test registering news sources and ingesting articles with full DB relationships."""
         service = NewsService(db_session)
         
-        # 1. Register Source
         source = service.register_source(
             source_id=SYNTHETIC_TAMIL_ARTICLE["source_id"],
             source_name=SYNTHETIC_TAMIL_ARTICLE["source_name"],
@@ -100,7 +98,6 @@ class TestPhase4NewsAnalyzer:
         )
         assert source.source_id == SYNTHETIC_TAMIL_ARTICLE["source_id"]
 
-        # 2. Ingest Article
         article = service.ingest_article(
             source_id=SYNTHETIC_TAMIL_ARTICLE["source_id"],
             url=SYNTHETIC_TAMIL_ARTICLE["url"],
@@ -112,7 +109,6 @@ class TestPhase4NewsAnalyzer:
         assert article.is_test_fixture is True
         assert article.language == "ta"
 
-        # 3. Verify Provenance (Document & Evidence Link)
         doc = db_session.query(Document).filter(Document.title == SYNTHETIC_TAMIL_ARTICLE["title"]).first()
         assert doc is not None
         evidence = db_session.query(Evidence).filter(Evidence.document_id == doc.id).first()
@@ -131,7 +127,6 @@ class TestPhase4NewsAnalyzer:
             article_text="TEST FIXTURE content text duplicate check test.",
             is_test_fixture=True
         )
-        # Ingest second article with same URL
         art2 = service.ingest_article(
             source_id="src_test_ta",
             url="https://example.com/dupe-test",
@@ -188,16 +183,13 @@ class TestPhase4NewsAnalyzer:
             is_test_fixture=True
         )
 
-        # GET /api/news/sources
         res_sources = api_client.get('/api/news/sources')
         assert res_sources.status_code == 200
         assert len(res_sources.json["data"]) >= 1
 
-        # GET /api/news/articles
         res_arts = api_client.get('/api/news/articles')
         assert res_arts.status_code == 200
         assert len(res_arts.json["data"]) >= 1
 
-        # GET /api/news/bias-indicators
         res_bias = api_client.get('/api/news/bias-indicators')
         assert res_bias.status_code == 200

@@ -15,7 +15,6 @@ class TestRealManifestoDatabaseImport(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Run database import to ensure DB is populated
         run_database_import()
 
     def test_database_record_counts(self):

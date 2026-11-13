@@ -14,14 +14,11 @@ def test_cosine_similarity():
     assert cosine_similarity(vec1, vec4) == 0.0
 
 def test_semantic_searcher():
-    # Mock DB session and Embedder
     mock_db = MagicMock()
     mock_embedder = MagicMock()
     
-    # Mock embedder response
     mock_embedder.generate_embedding.return_value = [1.0, 0.0, 0.0]
     
-    # Mock HistoricalScheme
     mock_scheme1 = MagicMock()
     mock_scheme1.id = 1
     mock_scheme1.scheme_name = "Target Scheme"
@@ -38,7 +35,7 @@ def test_semantic_searcher():
     mock_scheme2.embedding = {"vector": [0.0, 1.0, 0.0]}
     mock_scheme2.department.name = "Education"
     
-    mock_db.query().filter().all.return_value = [] # Mock for sources
+    mock_db.query().filter().all.return_value = []
     mock_db.query().all.return_value = [mock_scheme1, mock_scheme2]
     
     searcher = SemanticSchemeSearcher(mock_db, mock_embedder)
@@ -54,4 +51,4 @@ def test_semantic_searcher():
     
 if __name__ == '__main__':
     test_cosine_similarity()
-    test_semantic_searcher()
+    test_semantic_searcher()

@@ -19,16 +19,13 @@ class TestRealGovernmentEvidenceIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Run evidence integration pipeline
         run_evidence_integration_pipeline()
 
     def test_domain_whitelist_enforcement(self):
-        # Allowed official domains
         self.assertTrue(is_url_domain_allowed("https://cms.tn.gov.in/sites/default/files/go/test.pdf"))
         self.assertTrue(is_url_domain_allowed("https://budget.tn.gov.in/speech.pdf"))
         self.assertTrue(is_url_domain_allowed("https://dipr.tn.gov.in/press_release.pdf"))
 
-        # Arbitrary / non-government domains must be blocked
         self.assertFalse(is_url_domain_allowed("https://randomwebsite.com/article.html"))
         self.assertFalse(is_url_domain_allowed("https://fake-news-portal.org/claim"))
 

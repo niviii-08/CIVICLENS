@@ -7,7 +7,7 @@ def test_summarize_by_year():
         BudgetRecord(financial_year="2023", amount=100.0),
         BudgetRecord(financial_year="2023", amount=200.0),
         BudgetRecord(financial_year="2024", amount=500.0),
-        BudgetRecord(financial_year="2024", amount=None) # Missing amounts should be ignored
+        BudgetRecord(financial_year="2024", amount=None)
     ]
     
     summary = budget_service.summarize_by_year(records)
@@ -55,7 +55,6 @@ def test_compare_stages():
         BudgetRecord(scheme=scheme, financial_year="2023-24", budget_stage=BudgetStage.budget_estimate, amount=100.0),
         BudgetRecord(scheme=scheme, financial_year="2023-24", budget_stage=BudgetStage.actual_expenditure, amount=120.0),
         
-        # Unmatched stages should be ignored in comparison
         BudgetRecord(scheme=scheme, financial_year="2024-25", budget_stage=BudgetStage.budget_estimate, amount=150.0)
     ]
     
@@ -66,7 +65,7 @@ def test_compare_stages():
     )
     
     assert "Mid Day Meal (2023-24)" in comparisons
-    assert "Mid Day Meal (2024-25)" not in comparisons # Ignored because actuals missing
+    assert "Mid Day Meal (2024-25)" not in comparisons
     
     res = comparisons["Mid Day Meal (2023-24)"]
     assert res["value_a"] == 100.0

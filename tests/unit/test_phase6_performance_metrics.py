@@ -54,7 +54,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Pre-populate Party, Manifesto, and Promise
     party = PoliticalParty(party_id="PARTY-DMK", party_name="DMK", party_code="DMK")
     session.add(party)
     session.flush()
@@ -76,7 +75,6 @@ def db_session():
     session.add(promise)
     session.flush()
 
-    # Create Constituencies
     c1 = Constituency(
         constituency_id="AC-013",
         official_name="Kolathur",
@@ -101,7 +99,6 @@ def db_session():
     session.add_all([c1, c2, c3])
     session.flush()
 
-    # Create Representatives (MLAs and Lok Sabha MP)
     rep_mla1 = Representative(
         representative_id="REP-MLA-013",
         official_name="Representative A",
@@ -126,7 +123,6 @@ def db_session():
     session.add_all([rep_mla1, rep_mla2, rep_mp1])
     session.flush()
 
-    # Populate Sample Legislative Activities
     act1 = LegislativeActivity(
         activity_id="ACT-001",
         representative_id="REP-MLA-013",
@@ -157,7 +153,6 @@ def db_session():
     session.add_all([act1, act2, act3])
     session.flush()
 
-    # Populate Constituency Works & Financials
     w1 = ConstituencyWork(
         work_id="WRK-001",
         constituency_id="AC-013",
@@ -187,7 +182,6 @@ def db_session():
     session.add_all([w1, w2])
     session.flush()
 
-    # Populate Development Indicator Trajectory
     ind1 = DevelopmentIndicator(
         indicator_id="IND-LIT-2011",
         geographic_unit_id="AC-013",
@@ -209,7 +203,6 @@ def db_session():
     session.add_all([ind1, ind2])
     session.flush()
 
-    # Populate Promise Performance Link
     link = PromisePerformanceLink(
         link_id="LNK-001",
         representative_id="REP-MLA-013",
@@ -234,7 +227,6 @@ def test_1_legislative_activity_calculation(db_session):
 
     assert result["dimension"] == PerformanceDimension.LEGISLATIVE_ACTIVITY
     assert result["raw_metrics"]["total_questions"] == 19
-    # 19 questions / 38 sittings = 0.5 questions/sitting
     assert result["raw_metrics"]["questions_per_sitting"] == 0.5
     assert result["raw_metrics"]["total_debates"] == 8
     assert result["raw_metrics"]["attendance_status"] == "NOT_GAZETTED_ONLINE"
@@ -274,7 +266,6 @@ def test_3_financial_execution_metrics(db_session):
     assert raw["total_released_inr"] == 5000000.0
     assert raw["total_expended_inr"] == 3000000.0
     assert raw["unspent_released_balance_inr"] == 2000000.0
-    # 3M expended / 5M released = 60.0%
     assert raw["expenditure_to_release_ratio_pct"] == 60.0
 
 
@@ -327,7 +318,6 @@ def test_7_cohort_normalization_and_incompatible_cohort_rejection(db_session):
     """Verifies min-max normalization within MLAs, and rejection of cross-body (MLA vs MP) comparisons."""
     engine = PerformanceMetricsEngine(db=db_session)
 
-    # Valid cohort comparison between two MLAs
     cohort_results = engine.compare_within_cohort(
         cohort_representatives=["REP-MLA-013", "REP-MLA-014"],
         reporting_period="2021-2022",
@@ -338,11 +328,9 @@ def test_7_cohort_normalization_and_incompatible_cohort_rejection(db_session):
     mla1_res = next(r for r in cohort_results if r["representative_id"] == "REP-MLA-013")
     mla2_res = next(r for r in cohort_results if r["representative_id"] == "REP-MLA-014")
 
-    # Min: 0.5 Q/sitting (normalized 0.0), Max: 1.0 Q/sitting (normalized 100.0)
     assert mla1_res["normalized_score"] == 0.0
     assert mla2_res["normalized_score"] == 100.0
 
-    # Incompatible cohort test: comparing MLA with MP must raise IncompatibleCohortError
     with pytest.raises(IncompatibleCohortError):
         engine.compare_within_cohort(
             cohort_representatives=["REP-MLA-013", "REP-MP-004"],
@@ -363,6 +351,6 @@ def test_8_transparent_composite_with_sensitivity_and_anti_pejorative_guard(db_s
     assert "composite_score" in res
     assert res["composite_score"] > 0
     assert "sensitivity_analysis" in res
-    assert len(res["sensitivity_analysis"]) == 2  # +20% and -20% perturbations
+    assert len(res["sensitivity_analysis"]) == 2
     assert "anti_pejorative_disclaimer" in res
     assert "NEVER be used to categorize representatives with defamatory labels" in res["anti_pejorative_disclaimer"]

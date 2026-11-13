@@ -60,25 +60,20 @@ def test_get_records_pagination(seeded_db, db_session):
     assert len(records_page2) == 1
 
 def test_get_records_filters(seeded_db, db_session):
-    # Filter by financial year
     records, total = budget_repo.get_records(db_session, financial_year="2024-25")
     assert total == 2
     
-    # Filter by department name (ilike)
     records, total = budget_repo.get_records(db_session, department_name="edu")
     assert total == 2
     assert records[0].scheme.department.name == "Education"
     
-    # Filter by department id
     records, total = budget_repo.get_records(db_session, department_id=seeded_db["dept2"].id)
     assert total == 1
     assert records[0].amount == 500.0
     
-    # Filter by scheme id
     records, total = budget_repo.get_records(db_session, scheme_id=seeded_db["scheme1"].id)
     assert total == 2
     
-    # Filter by budget stage
     records, total = budget_repo.get_records(db_session, budget_stage=BudgetStage.revised_estimate)
     assert total == 1
     assert records[0].scheme.name == "Hospitals"
@@ -98,7 +93,6 @@ def test_get_metadata_queries(seeded_db, db_session):
     assert schemes[0].name == "Primary Schools"
     
 def test_get_records_invalid_filter(seeded_db, db_session):
-    # Should safely return empty list without crashing
     records, total = budget_repo.get_records(db_session, financial_year="3000-01")
     assert total == 0
     assert len(records) == 0

@@ -21,7 +21,6 @@ from backend.services.event_comparison_service import (
 @pytest.fixture
 def setup_event_test_data(db_session):
     """Sets up synthetic sources, articles, and ground-truth events for cross-source comparison testing."""
-    # 1. Register synthetic sources
     src1 = NewsSource(
         source_id="src_test_alpha",
         source_name="Test Alpha Daily",
@@ -80,7 +79,6 @@ def setup_event_test_data(db_session):
     db_session.add_all([art1, art2])
     db_session.commit()
 
-    # 3. Add Article Features and Entities
     feat1 = ArticleFeature(
         article_id="art_evt_001",
         headline_sentiment=0.4,
@@ -114,7 +112,6 @@ def setup_event_test_data(db_session):
     db_session.add_all([feat1, feat2, ent1, ent2])
     db_session.commit()
 
-    # 4. Create Ground-Truth Political Event & Link Articles
     event = PoliticalEvent(
         event_id="evt_test_metro_2026",
         event_name="Metro Budget Allocation 2026",
@@ -158,7 +155,6 @@ class TestPhase4EventComparison:
         detector = EventCandidateDetector()
         candidates = detector.find_candidates(db_session, days_window=3)
         assert isinstance(candidates, list)
-        # Note: Depending on Jaccard threshold, two overlapping synthetic articles may form a candidate cluster
         if candidates:
             cl = candidates[0]
             assert "cluster_id" in cl
@@ -200,23 +196,19 @@ class TestPhase4EventComparison:
         assert "src_test_alpha" in res["source_coverage"]
         assert "src_test_beta" in res["source_coverage"]
 
-        # Check reporting delay (Alpha published 2h ago, Beta 1h ago -> Beta delay ~60 min)
         beta_cov = res["source_coverage"]["src_test_beta"]
         assert beta_cov["reporting_delay_minutes"] >= 50.0
 
-        # Check signals
         alpha_cov = res["source_coverage"]["src_test_alpha"]
         assert alpha_cov["signals"]["avg_headline_sentiment"] == 0.4
         assert alpha_cov["signals"]["total_quotes"] == 3
 
-        # Check entity emphasis divergence disparity (Alpha 0.85 vs Beta 0.35 -> diff 0.5 >= 0.4)
         disparities = res["coverage_disparities"]
         assert len(disparities) > 0
         
         disparity_types = [d["disparity_type"] for d in disparities]
         assert "entity_emphasis_difference" in disparity_types or "coverage_disparity" in disparity_types
 
-        # Verify neutral wording in descriptions
         for disp in disparities:
             desc = disp["description"]
             assert "Biased" not in desc
@@ -229,7 +221,6 @@ class TestPhase4EventComparison:
         res = comparer.compare_event_coverage(db_session, evt_id)
 
         disparities = res["coverage_disparities"]
-        # src_test_gamma was registered as active but published 0 articles for this event
         omissions = [d for d in disparities if d.get("disparity_type") == "coverage_disparity"]
         assert len(omissions) >= 1
         assert any(d.get("source_id") == "src_test_gamma" for d in omissions)
@@ -257,17 +248,14 @@ class TestPhase4EventComparison:
                 db.add(event)
                 db.commit()
 
-            # 1. GET /api/news/events/candidates
             res_cand = api_client.get('/api/news/events/candidates')
             assert res_cand.status_code == 200
             assert "data" in res_cand.json
 
-            # 2. GET /api/news/events/<event_id>/compare
             res_comp = api_client.get(f'/api/news/events/{evt_id}/compare')
             assert res_comp.status_code == 200
             assert res_comp.json["data"]["event_id"] == evt_id
 
-            # 3. GET /api/news/events/disparities
             res_disp = api_client.get('/api/news/events/disparities')
             assert res_disp.status_code == 200
             assert isinstance(res_disp.json["data"], list)

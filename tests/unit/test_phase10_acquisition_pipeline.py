@@ -71,7 +71,6 @@ def test_1_source_registry_configuration():
     for exp in expected_ids:
         assert exp in source_ids, f"Expected source {exp} missing from registry"
 
-    # Test URL lookup
     cag_config = registry.get_by_url("https://cag.gov.in/en/audit-reports/tamil-nadu")
     assert cag_config is not None
     assert cag_config.source_id == "CAG_AUDIT"
@@ -84,49 +83,40 @@ def test_1_source_registry_configuration():
 
 def test_2_file_type_detection():
     """Verify magic bytes and content-based file type detection."""
-    # PDF Magic bytes
     pdf_fmt, pdf_mime = FileTypeDetector.detect_type(b"%PDF-1.4\nsome content")
     assert pdf_fmt == "PDF"
     assert pdf_mime == "application/pdf"
 
-    # CSV Text
     csv_bytes = get_sample_budget_csv().encode("utf-8")
     csv_fmt, _ = FileTypeDetector.detect_type(csv_bytes, url_or_filename="budget_demands.csv")
     assert csv_fmt == "CSV"
 
-    # JSON Text
     json_bytes = get_sample_beneficiaries_json().encode("utf-8")
     json_fmt, _ = FileTypeDetector.detect_type(json_bytes)
     assert json_fmt == "JSON"
 
-    # HTML
     html_bytes = get_sample_policy_html().encode("utf-8")
     html_fmt, _ = FileTypeDetector.detect_type(html_bytes)
     assert html_fmt == "HTML"
 
-    # Fallback extension
     txt_fmt, _ = FileTypeDetector.detect_type(b"Plain text note", url_or_filename="notes.txt")
     assert txt_fmt == "TXT"
 
 
 def test_3_publication_date_extraction():
     """Verify publication date extraction from Government Orders, CAG reports, and fiscal cycles."""
-    # Government Order Dated line
     go_text = get_sample_go_text()
     go_date = PublicationDateExtractor.extract_date(go_text)
     assert go_date == "2023-08-18"
 
-    # CAG Report year
     cag_text = get_sample_cag_audit_text()
     cag_date = PublicationDateExtractor.extract_date(cag_text)
     assert cag_date == "2024-03-31"
 
-    # Spelled out date in HTML
     html_text = get_sample_policy_html()
     html_date = PublicationDateExtractor.extract_date(html_text)
     assert html_date == "2024-06-25"
 
-    # Fiscal Year string
     fy_date = PublicationDateExtractor.extract_date("Budget Estimates for the financial cycle 2024-2025")
     assert fy_date == "2024-2025"
 
@@ -209,7 +199,6 @@ def test_9_sha256_checksum_and_duplicate_detection(temp_storage):
     )
     assert os.path.exists(storage_path)
 
-    # Secondary check must detect duplicate
     assert storage.is_duplicate(hash1) is True
 
 
@@ -232,7 +221,6 @@ def test_10_manual_import_and_pii_sanitization(temp_storage):
 
     assert result.status == "SUCCESS"
     assert result.file_size_bytes == len(raw_bytes)
-    # Verify PII was redacted
     assert "+91 9841023456" not in result.parsed_text
     assert "senthil.kumar99@gmail.com" not in result.parsed_text
     assert "[PHONE REDACTED]" in result.parsed_text or "[EMAIL REDACTED]" in result.parsed_text or len(result.parsed_text) < len(pii_text)
@@ -244,19 +232,16 @@ def test_11_disallowed_paths_and_domain_restriction(temp_storage):
         storage_manager=PolicyStorageManager(base_storage_dir=temp_storage)
     )
 
-    # 1. Disallowed path on authorized source
     restricted_url = "https://tnbudget.tn.gov.in/admin/secret_budget_draft.pdf"
     res1 = pipeline.acquire_document(url_or_path=restricted_url, source_id="TN_BUDGET")
     assert res1.status == "FAILED"
     assert "restricted" in res1.error_message.lower()
 
-    # 2. Unwhitelisted domain
     unauthorized_url = "https://unauthorized-malicious-site.com/report.pdf"
     res2 = pipeline.acquire_document(url_or_path=unauthorized_url, source_id="TN_BUDGET")
     assert res2.status == "FAILED"
     assert "not whitelisted" in res2.error_message.lower()
 
-    # Verify structured error logs were captured
     logs = pipeline.logger.get_logs()
     assert len(logs) >= 2
 
@@ -284,11 +269,9 @@ def test_12_end_to_end_acquisition_pipeline(temp_storage):
     assert result.storage_path is not None
     assert os.path.exists(result.storage_path)
 
-    # Verify sidecar metadata was written
     sidecar_path = os.path.join(temp_storage, f"{result.sha256_hash}.meta.json")
     assert os.path.exists(sidecar_path)
 
-    # Test duplicate submission of same file
     dup_result = pipeline.acquire_document(
         url_or_path="file://local_test/budget_demand_45_dup.csv",
         source_id="TN_BUDGET",

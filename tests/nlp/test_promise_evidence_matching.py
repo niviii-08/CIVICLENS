@@ -51,7 +51,6 @@ class MockEmbedder:
 class TestPromiseEvidenceMatching(unittest.TestCase):
 
     def setUp(self):
-        # Create SQLite in-memory database
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
@@ -70,7 +69,6 @@ class TestPromiseEvidenceMatching(unittest.TestCase):
         Base.metadata.drop_all(self.engine)
 
     def _populate_test_data(self):
-        # Create Manifesto & Promise
         m = Manifesto(manifesto_id="M_EVID_TEST", party="Party A", election_year=2026)
         p1 = PoliticalPromise(
             promise_id="P_EVID_101",
@@ -88,7 +86,6 @@ class TestPromiseEvidenceMatching(unittest.TestCase):
         self.db.add_all([m, p1])
         self.db.commit()
 
-        # Create Evidence 1: Relevant government order
         ev1 = Evidence(
             content="G.O. Ms. No. 45 dated 15/03/2021: Sanction of Rs. 1000 crore for free laptop distribution to high school students in School Education department.",
             page_number=1,
@@ -101,7 +98,6 @@ class TestPromiseEvidenceMatching(unittest.TestCase):
             result_type="GovernmentEvidence"
         )
 
-        # Create Evidence 2: Irrelevant policy note
         ev2 = Evidence(
             content="Policy Note on Rural Fisheries Development and Coastal Infrastructure.",
             page_number=2,
@@ -116,7 +112,6 @@ class TestPromiseEvidenceMatching(unittest.TestCase):
         self.db.add_all([ev1, ev2])
         self.db.commit()
 
-        # Create Historical Scheme Link for Phase 3.8 signal integration
         dept = BudgetDepartment(name="School Education Department")
         self.db.add(dept)
         self.db.commit()
@@ -145,13 +140,11 @@ class TestPromiseEvidenceMatching(unittest.TestCase):
         self.assertGreater(match_res["relevance_score"], 0.3)
         self.assertEqual(match_res["matching_method"], MATCHING_METHOD)
 
-        # Verify matched_metadata signals
         meta = match_res["matched_metadata"]
         self.assertIn("matched_signals", meta)
         self.assertIn("keywords_entities", meta["matched_signals"])
         self.assertIn("historical_scheme_relationship", meta["matched_signals"])
 
-        # Verify model_information
         self.assertEqual(match_res["model_information"]["model_name"], DEFAULT_MODEL_NAME)
         self.assertEqual(match_res["model_information"]["model_version"], DEFAULT_MODEL_VERSION)
         self.assertIn("timestamp", match_res)
@@ -170,7 +163,6 @@ class TestPromiseEvidenceMatching(unittest.TestCase):
         self.assertGreater(len(top_candidates), 0)
         self.assertEqual(top_candidates[0]["promise_id"], "P_EVID_101")
 
-        # Verify persisted DB records
         links = self.db.query(PromiseEvidenceLink).filter_by(promise_id="P_EVID_101").all()
         self.assertGreater(len(links), 0)
 
@@ -187,14 +179,12 @@ class TestPromiseEvidenceMatching(unittest.TestCase):
         """Verify that irrelevant evidence is filtered out when below relevance_threshold."""
         p = self.db.query(PoliticalPromise).filter_by(promise_id="P_EVID_101").first()
 
-        # High threshold (0.8) should exclude lower relevance items
         high_matches = self.matcher.match_promise_with_evidence_candidates(
             promise=p,
             top_k=5,
             relevance_threshold=0.8,
             persist_links=False
         )
-        # Low threshold (0.1)
         low_matches = self.matcher.match_promise_with_evidence_candidates(
             promise=p,
             top_k=5,

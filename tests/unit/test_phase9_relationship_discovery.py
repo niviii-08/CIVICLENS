@@ -68,7 +68,6 @@ def db_session():
 @pytest.fixture
 def discovery_nodes(db_session):
     """Seed nodes across Phases 1-8 for relationship discovery tests."""
-    # Canonical entity
     canon_dept = CanonicalEntity(
         entity_id="CANON:DEPT:MAWS",
         entity_type=RegistryEntityType.GOVERNMENT_DEPARTMENT,
@@ -82,7 +81,6 @@ def discovery_nodes(db_session):
     db_session.flush()
 
     nodes = {
-        # Phase 1: Budget Department with Demand 34
         "dept_maws": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:DEPT:MAWS_34",
@@ -98,7 +96,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 2: Scheme with Demand 34
         "scheme_water": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:SCHEME:CHENNAI_WATER",
@@ -114,7 +111,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 3: Manifesto Promise
         "promise_breakfast": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:PROM:BREAKFAST_P3",
@@ -128,7 +124,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 2: Breakfast Scheme
         "scheme_breakfast": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:SCHEME:BREAKFAST_P2",
@@ -142,7 +137,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 4: Corporate Donor
         "donor_corp": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:DONOR:MEGA_CORP",
@@ -156,7 +150,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 8: Public Work
         "public_work_bridge": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:WORK:FLYOVER_CHENNAI",
@@ -169,7 +162,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 5: Representative (MLA)
         "rep_mla": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:REP:KOLATHUR_MLA",
@@ -184,7 +176,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 7: Civic Issue in Kolathur
         "issue_sewage": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:ISSUE:SEWAGE_KOLATHUR",
@@ -199,7 +190,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 4: News Article
         "news_article": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:NEWS:DAILY_REPORT",
@@ -212,7 +202,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 6: Fact-checked Claim
         "claim_water_pct": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:CLAIM:WATER_20_PCT",
@@ -225,7 +214,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 8: Grievance Record with Petition Token
         "grievance_token_node": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:GRIEV:PETITION_101",
@@ -239,7 +227,6 @@ def discovery_nodes(db_session):
             },
             is_test_fixture=True,
         ),
-        # Phase 8: Response Record with Matching Petition Token
         "response_token_node": GraphStorageService.create_or_get_node(
             db_session,
             node_id="NODE:RESP:ACTION_101",
@@ -263,7 +250,6 @@ def test_1_exact_identifier_discovery_priority(db_session, discovery_nodes):
     Exact identifier matching yields DETERMINISTIC_ID with high confidence,
     prioritized over heuristic matching.
     """
-    # 1. Matching Demand Number 34 between Budget Department and Scheme
     eval_result = RelationshipDiscoveryEngine.evaluate_candidate_pair(
         session=db_session,
         source_node=discovery_nodes["dept_maws"],
@@ -276,7 +262,6 @@ def test_1_exact_identifier_discovery_priority(db_session, discovery_nodes):
     assert "Demand Number" in eval_result["evidence_supporting_candidate"]
     assert len(eval_result["possible_conflicts"]) == 0
 
-    # 2. Matching Petition ID between Grievance and Response
     eval_petition = RelationshipDiscoveryEngine.evaluate_candidate_pair(
         session=db_session,
         source_node=discovery_nodes["response_token_node"],
@@ -308,7 +293,6 @@ def test_3_canonical_entity_match_discovery(db_session, discovery_nodes):
     """
     Canonical entity matching resolves records sharing the same authority record.
     """
-    # Create another node sharing CANON:DEPT:MAWS
     dept_node_2 = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:DEPT:MAWS_SECRETARIAT",
@@ -336,7 +320,6 @@ def test_4_temporal_and_geographic_compatibility_filtering(db_session, discovery
     """
     Temporal divergence and geographic boundary mismatches are detected and flagged in conflicts.
     """
-    # 1. Geographic mismatch (Chennai vs Madurai)
     node_madurai = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:SCHEME:MADURAI_WTR",
@@ -353,7 +336,6 @@ def test_4_temporal_and_geographic_compatibility_filtering(db_session, discovery
     assert not compat
     assert "District mismatch" in reason
 
-    # 2. Temporal mismatch (>2 years divergence)
     node_old_scheme = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:SCHEME:OLD_SCHEME_2011",
@@ -407,10 +389,9 @@ def test_5_text_similarity_candidate_separation(db_session, discovery_nodes):
 
     assert proposal is not None
     assert proposal.matching_method == MatchingMethod.AUTOMATED_CANDIDATE
-    assert proposal.confidence_score <= 0.70  # Strictly capped
+    assert proposal.confidence_score <= 0.70
     assert proposal.review_status == CandidateReviewDisposition.PENDING_REVIEW
 
-    # Must NOT have created an edge in civic_evidence_edges!
     edge_in_db = (
         db_session.query(CivicEvidenceEdge)
         .filter(
@@ -419,7 +400,7 @@ def test_5_text_similarity_candidate_separation(db_session, discovery_nodes):
         )
         .first()
     )
-    assert edge_in_db is None  # Candidate is strictly isolated
+    assert edge_in_db is None
 
 
 def test_6_false_positive_prevention_funding_to_public_outcome(db_session, discovery_nodes):
@@ -445,7 +426,6 @@ def test_6_false_positive_prevention_funding_to_public_outcome(db_session, disco
     )
     db_session.commit()
 
-    # Attempting to confirm this fatal fallacy proposal MUST be blocked!
     with pytest.raises(EpistemicGuardrailViolation) as exc_info:
         RelationshipDiscoveryEngine.confirm_candidate(
             session=db_session,
@@ -496,7 +476,6 @@ def test_8_false_positive_prevention_promise_scheme_fulfillment(db_session, disc
     Proposing 'implements' without G.O. proof flags CONFLICT_PROMISE_FULFILLMENT and blocks confirmation.
     Proposing 'relates_to' succeeds cleanly.
     """
-    # 1. 'implements' (claiming fulfillment) flags conflict
     eval_impl = RelationshipDiscoveryEngine.evaluate_candidate_pair(
         session=db_session,
         source_node=discovery_nodes["promise_breakfast"],
@@ -506,7 +485,6 @@ def test_8_false_positive_prevention_promise_scheme_fulfillment(db_session, disc
     assert eval_impl is not None
     assert CONFLICT_PROMISE_FULFILLMENT in eval_impl["possible_conflicts"]
 
-    # 2. 'relates_to' (policy alignment without claiming fulfillment) has no fulfillment conflict
     eval_rel = RelationshipDiscoveryEngine.evaluate_candidate_pair(
         session=db_session,
         source_node=discovery_nodes["promise_breakfast"],
@@ -547,7 +525,6 @@ def test_10_human_review_workflow_confirm_reject_defer(db_session, discovery_nod
     Human review lifecycle: Confirm (promotes to verified CivicEvidenceEdge),
     Reject, and Defer candidate proposals.
     """
-    # 1. Propose valid candidate (Demand 34 Department -> Scheme)
     proposal = RelationshipDiscoveryEngine.propose_candidate(
         session=db_session,
         source_node_id=discovery_nodes["dept_maws"].node_id,
@@ -558,7 +535,6 @@ def test_10_human_review_workflow_confirm_reject_defer(db_session, discovery_nod
     db_session.commit()
     prop_id = proposal.proposal_id
 
-    # 2. Confirm candidate: should create CivicEvidenceEdge and update proposal
     updated_prop, edge = RelationshipDiscoveryEngine.confirm_candidate(
         session=db_session,
         proposal_id=prop_id,
@@ -571,12 +547,10 @@ def test_10_human_review_workflow_confirm_reject_defer(db_session, discovery_nod
     assert updated_prop.reviewed_by == "AUDITOR_SARANYA"
     assert updated_prop.confirmed_edge_id == edge.edge_id
 
-    # Verify promoted edge exists in CivicEvidenceEdge table
     assert edge.relationship_type == GraphRelationshipType.FUNDS
     assert edge.review_status == GraphReviewStatus.VERIFIED
     assert edge.matching_method == MatchingMethod.HUMAN_REVIEWED
 
-    # 3. Test Reject workflow on another candidate
     proposal_2 = RelationshipDiscoveryEngine.propose_candidate(
         session=db_session,
         source_node_id=discovery_nodes["promise_breakfast"].node_id,
@@ -595,7 +569,6 @@ def test_10_human_review_workflow_confirm_reject_defer(db_session, discovery_nod
     db_session.commit()
     assert rejected_prop.review_status == CandidateReviewDisposition.REJECTED
 
-    # 4. Test Defer workflow
     proposal_3 = RelationshipDiscoveryEngine.propose_candidate(
         session=db_session,
         source_node_id=discovery_nodes["news_article"].node_id,
@@ -614,7 +587,6 @@ def test_10_human_review_workflow_confirm_reject_defer(db_session, discovery_nod
     db_session.commit()
     assert deferred_prop.review_status == CandidateReviewDisposition.DEFERRED
 
-    # 5. List proposals by review status
     pending = RelationshipDiscoveryEngine.list_proposals(db_session, review_status=CandidateReviewDisposition.PENDING_REVIEW)
     confirmed = RelationshipDiscoveryEngine.list_proposals(db_session, review_status=CandidateReviewDisposition.CONFIRMED)
     rejected = RelationshipDiscoveryEngine.list_proposals(db_session, review_status=CandidateReviewDisposition.REJECTED)

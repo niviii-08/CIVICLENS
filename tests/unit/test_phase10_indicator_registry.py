@@ -49,7 +49,6 @@ def db_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Seed a canonical test objective
     obj = PolicyObjective(
         objective_id="OBJ-TEST-PHASE10-4",
         scheme_id="SCH-TEST-PHASE10-4",
@@ -112,7 +111,6 @@ def test_1_register_all_10_indicator_domains_and_12_attributes(db_session):
             is_test_fixture=True,
         )
 
-        # Verify all 12 required Phase 10.4 attributes via serialized dict
         d = ind.to_dict()
         assert d["indicator_id"] == ind_id
         assert d["indicator_domain"] == domain.value
@@ -138,7 +136,6 @@ def test_2_missing_values_never_treated_as_zero_and_genuine_zero_preserved(db_se
     Verify that missing data (`None`) is strictly preserved as `None` (never coerced to `0.0`),
     while a genuine `0.0` observation is treated as a valid complete number.
     """
-    # Case A: Missing baseline (`None`)
     ind_missing_base = PolicyIndicatorRegistryService.register_indicator(
         db_session,
         indicator_id="IND-TEST-MISSING-BASE",
@@ -159,7 +156,6 @@ def test_2_missing_values_never_treated_as_zero_and_genuine_zero_preserved(db_se
     assert ind_missing_base.baseline_construction_status == BaselineConstructionStatus.UNAVAILABLE
     assert ind_missing_base.missing_data_status == MissingDataStatus.MISSING_BASELINE
 
-    # Case B: Genuine 0.0 baseline (e.g., 0 smart classrooms commissioned prior to scheme launch)
     ind_zero_base = PolicyIndicatorRegistryService.register_indicator(
         db_session,
         indicator_id="IND-TEST-GENUINE-ZERO",
@@ -180,7 +176,6 @@ def test_2_missing_values_never_treated_as_zero_and_genuine_zero_preserved(db_se
     assert ind_zero_base.baseline_construction_status == BaselineConstructionStatus.OFFICIAL_PUBLISHED
     assert ind_zero_base.missing_data_status == MissingDataStatus.COMPLETE
 
-    # Compare observations when baseline is None -> must not fabricate change from 0.0
     obs_base_null = IndicatorObservation(
         observation_id="OBS-TEST-NULL-BASE",
         indicator_id=ind_missing_base.indicator_id,
@@ -241,7 +236,6 @@ def test_3_baseline_construction_provenance_and_partial_coverage_guardrail(db_se
         is_test_fixture=True,
     )
 
-    # 1. Construct from 3 complete district observations -> CALCULATED_FROM_SOURCE_DATA
     obs_d1 = IndicatorObservation(
         observation_id="OBS-TEST-D1",
         indicator_id=ind.indicator_id,
@@ -292,7 +286,6 @@ def test_3_baseline_construction_provenance_and_partial_coverage_guardrail(db_se
     assert ind.baseline_value == 3000.0
     assert ind.baseline_construction_status == BaselineConstructionStatus.CALCULATED_FROM_SOURCE_DATA
 
-    # 2. If one district has missing data (None), must NOT treat it as 0.0 -> UNAVAILABLE + PARTIAL_GEOGRAPHIC_COVERAGE
     obs_d4_missing = IndicatorObservation(
         observation_id="OBS-TEST-D4-MISSING",
         indicator_id=ind.indicator_id,
@@ -344,7 +337,7 @@ def test_4_unit_mismatch_and_explicit_linear_conversion(db_session):
         reference_period="FY2022-23",
         geographic_level="STATE",
         geographic_unit_id="TN-STATE",
-        value=5000.0,  # 5000 Lakh = 50 Crore
+        value=5000.0,
         unit_override="RUPEES_LAKH",
         source_reference="DOC-TEST-BUD-22",
         is_test_fixture=True,
@@ -356,20 +349,18 @@ def test_4_unit_mismatch_and_explicit_linear_conversion(db_session):
         reference_period="FY2024-25",
         geographic_level="STATE",
         geographic_unit_id="TN-STATE",
-        value=75.0,  # 75 Crore
+        value=75.0,
         unit_override="RUPEES_CRORE",
         source_reference="DOC-TEST-BUD-24",
         is_test_fixture=True,
     )
 
-    # 1. Without explicit linear conversion -> must raise UNIT_MISMATCH
     with pytest.raises(IncompatibleIndicatorComparisonError) as exc_info:
         PolicyIndicatorRegistryService.compare_observations(
             ind_budget, obs_lakh, obs_crore, allow_linear_unit_conversion=False
         )
     assert exc_info.value.error_code == "UNIT_MISMATCH"
 
-    # 2. With explicit linear conversion enabled -> 5000 Lakh converts to 50.0 Crore
     converted = PolicyIndicatorRegistryService.compare_observations(
         ind_budget, obs_lakh, obs_crore, allow_linear_unit_conversion=True
     )
@@ -378,7 +369,6 @@ def test_4_unit_mismatch_and_explicit_linear_conversion(db_session):
     assert converted["absolute_change"] == 25.0
     assert converted["percentage_change"] == 50.0
 
-    # 3. Cross-dimension unit mismatch (PERCENTAGE vs RUPEES_CRORE) must fail even with conversion=True
     obs_pct = IndicatorObservation(
         observation_id="OBS-TEST-PCT",
         indicator_id=ind_budget.indicator_id,
@@ -425,7 +415,7 @@ def test_5_incompatible_definition_rejection(db_session):
         geographic_level="STATE",
         geographic_unit_id="TN-STATE",
         value=78.0,
-        definition_code="DEF:WATER:40LPCD",  # Older 40 LPCD norm
+        definition_code="DEF:WATER:40LPCD",
         source_reference="DOC-TEST-TWAD-19",
         is_test_fixture=True,
     )
@@ -437,7 +427,7 @@ def test_5_incompatible_definition_rejection(db_session):
         geographic_level="STATE",
         geographic_unit_id="TN-STATE",
         value=69.5,
-        definition_code="DEF:WATER:55LPCD",  # Newer 55 LPCD norm
+        definition_code="DEF:WATER:55LPCD",
         source_reference="DOC-TEST-TWAD-24",
         is_test_fixture=True,
     )
@@ -476,7 +466,7 @@ def test_6_geographic_boundary_changes_and_level_mismatch(db_session):
         reference_period="FY2018-19",
         geographic_level="DISTRICT",
         geographic_unit_id="TN-DIST-VILLUPURAM",
-        boundary_reference="TN_32_DISTRICTS_PRE_2019",  # Includes Kallakurichi taluks
+        boundary_reference="TN_32_DISTRICTS_PRE_2019",
         value=94.0,
         source_reference="DOC-TEST-DPH-18",
         is_test_fixture=True,
@@ -488,7 +478,7 @@ def test_6_geographic_boundary_changes_and_level_mismatch(db_session):
         reference_period="FY2024-25",
         geographic_level="DISTRICT",
         geographic_unit_id="TN-DIST-VILLUPURAM",
-        boundary_reference="TN_38_DISTRICTS_2020",  # Excludes Kallakurichi district
+        boundary_reference="TN_38_DISTRICTS_2020",
         value=62.0,
         source_reference="DOC-TEST-DPH-24",
         is_test_fixture=True,

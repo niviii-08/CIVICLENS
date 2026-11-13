@@ -75,7 +75,6 @@ def test_3_real_mps_and_legislative_activity_trace(setup_real_phase6_database):
     assert perambalur_mp.official_name == "T. R. Paarivendhar"
     assert perambalur_mp.representative_type == RepresentativeType.LOK_SABHA_MP
 
-    # Verify activity records
     acts = db.query(LegislativeActivity).filter(
         LegislativeActivity.representative_id == "REP-MP-17-PERAMBALUR"
     ).all()
@@ -96,7 +95,6 @@ def test_4_real_mplads_and_census_indicators_trace(setup_real_phase6_database):
     ).all()
     assert len(mplads_works) >= 2
 
-    # Verify Census indicator
     cbe_lit_2011 = db.query(DevelopmentIndicator).filter(
         DevelopmentIndicator.geographic_unit_id == "PC-TN-18",
         DevelopmentIndicator.reference_period == "2011"
@@ -107,21 +105,18 @@ def test_4_real_mplads_and_census_indicators_trace(setup_real_phase6_database):
 
 def test_5_api_endpoints_on_real_data(api_client, setup_real_phase6_database):
     """Verify API responses for real representatives, legislative activity, and indicators."""
-    # 1. Search real MPs
     res = api_client.get("/api/representatives/search?q=Paarivendhar")
     assert res.status_code == 200
     data = res.get_json()["data"]
     assert data["total_count"] >= 1
     assert data["representatives"][0]["representative_id"] == "REP-MP-17-PERAMBALUR"
 
-    # 2. Legislative activity
     res_leg = api_client.get("/api/representatives/REP-MP-17-PERAMBALUR/legislative?period=2019-2024")
     assert res_leg.status_code == 200
     leg_data = res_leg.get_json()["data"]["summary_metrics"]["raw_metrics"]
     assert leg_data["total_questions"] == 268
     assert leg_data["attendance_percentage"] == 62.0
 
-    # 3. Development indicators trajectory
     res_ind = api_client.get("/api/representatives/indicators?unit_id=PC-TN-18&indicator_name=LITERACY_RATE&baseline=2011&current=2021")
     assert res_ind.status_code == 200
     ind_data = res_ind.get_json()["data"]

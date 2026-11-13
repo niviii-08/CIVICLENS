@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.database.base_class import Base
-import backend.database.base  # Ensures all ORM models are registered
+import backend.database.base
 from backend.repositories.funding import FundingRepository
 from backend.schemas.funding import (
     PoliticalPartySchema,
@@ -54,7 +54,6 @@ class TestPhase5DatabaseIntegration:
 
     def test_idempotent_contribution_batch_import(self, db_session):
         """Verifies batch contribution import, idempotence, and reconciliation counting."""
-        # 1. Setup Party and Document
         party_schema = PoliticalPartySchema(party_id="PARTY_TN_DMK", official_name="Dravida Munnetra Kazhagam")
         FundingRepository.ensure_party_exists(db_session, party_schema)
 
@@ -69,7 +68,6 @@ class TestPhase5DatabaseIntegration:
         )
         assert is_created is True
 
-        # 2. Prepare test contributions batch
         contribs = [
             ContributionSchema(
                 contribution_id="CONT_TEST_001",
@@ -95,13 +93,11 @@ class TestPhase5DatabaseIntegration:
             )
         ]
 
-        # First import
         summary1 = FundingRepository.import_contributions_batch(db_session, contribs)
         assert summary1["total_submitted"] == 2
         assert summary1["inserted_count"] == 2
         assert summary1["skipped_duplicates_count"] == 0
 
-        # Second import (same batch) -> Should skip all as duplicates
         summary2 = FundingRepository.import_contributions_batch(db_session, contribs)
         assert summary2["total_submitted"] == 2
         assert summary2["inserted_count"] == 0
@@ -112,7 +108,6 @@ class TestPhase5DatabaseIntegration:
         party_schema = PoliticalPartySchema(party_id="PARTY_TN_DMK", official_name="Dravida Munnetra Kazhagam")
         FundingRepository.ensure_party_exists(db_session, party_schema)
 
-        # 1. Import Statutory Statement Fact
         stmt_schema = FinancialStatementSchema(
             statement_id="STMT_DMK_2021",
             party_id="PARTY_TN_DMK",
@@ -125,7 +120,6 @@ class TestPhase5DatabaseIntegration:
         assert is_new_stmt is True
         assert stmt_orm.total_income == 300000000.0
 
-        # 2. Import Computed Metric (Stored separately)
         metric_orm, is_new_met = FundingRepository.import_financial_metrics(
             db=db_session,
             party_id="PARTY_TN_DMK",
@@ -157,6 +151,5 @@ class TestPhase5DatabaseIntegration:
         inserted = FundingRepository.import_validation_issues(db_session, issues)
         assert inserted == 1
 
-        # Re-importing same issue -> Should skip duplicate
         inserted_again = FundingRepository.import_validation_issues(db_session, issues)
         assert inserted_again == 0

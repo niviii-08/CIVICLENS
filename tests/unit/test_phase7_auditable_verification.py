@@ -129,7 +129,6 @@ class TestPhase7AuditableVerification:
             publisher="DIPR Tamil Nadu",
             document_type="PRESS_RELEASE"
         )
-        # Passage without page number or table
         passage = EvidencePassage(
             passage_id="PAS-002",
             document_id="EVD-DOC-WEB-02",
@@ -158,7 +157,6 @@ class TestPhase7AuditableVerification:
 
     def test_3_ten_point_structured_reasoning_schema(self, memory_db):
         """Test that ClaimVerificationEngine and VerificationResult generate the 10-point reasoning breakdown."""
-        # Setup claim and evidence in DB
         claim = Claim(
             claim_id="CLM-REASON-01",
             original_text="Tamil Nadu GSDP growth rate reached 8.2% in FY 2023-24.",
@@ -223,28 +221,24 @@ class TestPhase7AuditableVerification:
         assert "remaining_uncertainty" in sr
         assert "methodology_and_model" in sr
 
-        # Verify epistemic wording is non-defamatory
         assert "absence of proof" in sr["remaining_uncertainty"].lower() or "proof of falsehood" in sr["remaining_uncertainty"].lower()
 
-        # Also verify helper ensure_structured_reasoning
         helper_sr = ensure_structured_reasoning(FIXTURE_CLAIMS[0])
         assert len(helper_sr) == 10
         assert "claim_evaluated" in helper_sr
 
     def test_4_contradictory_evidence_visibility_guarantee(self):
         """Verify that contradicting evidence is prominently structured and not hidden or suppressed."""
-        dossier = build_evidence_explorer_dossier(FIXTURE_CLAIMS[1])  # CLM_02: School enrollment contradicted
+        dossier = build_evidence_explorer_dossier(FIXTURE_CLAIMS[1])
         assert dossier["claim_id"] == "TEST_FIXTURE_CLM_02"
 
         ev_comp = dossier["evidence_comparison"]
         assert len(ev_comp["contradicting"]) >= 1
         assert len(ev_comp["supporting"]) == 0
 
-        # Verify empty state message for supporting evidence is explicit and neutral
         assert ev_comp["empty_states"]["supporting"] is not None
         assert "absence of evidence" in ev_comp["empty_states"]["supporting"].lower()
 
-        # Contradicting item has full citation
         contra_item = ev_comp["contradicting"][0]
         assert contra_item["evidence_relationship"] == "contradicts"
         assert contra_item["publisher"] is not None
@@ -288,14 +282,13 @@ class TestPhase7AuditableVerification:
         dossier = build_evidence_explorer_dossier(claim_with_syndication)
         ev_comp = dossier["evidence_comparison"]
         assert "CLUSTER-PTI-01" in ev_comp["syndicated_clusters"]
-        # Find the syndicated item
         synd_items = [r for r in ev_comp["supporting"] if r.get("is_syndicated_copy")]
         assert len(synd_items) == 1
         assert synd_items[0]["primary_source_publisher"] == "Press Trust of India"
 
     def test_6_proposition_decomposition_traceability(self):
         """Test that atomic propositions map supporting and contradicting evidence independently."""
-        claim_multi = FIXTURE_CLAIMS[0]  # GSDP claim
+        claim_multi = FIXTURE_CLAIMS[0]
         dossier = build_evidence_explorer_dossier(claim_multi)
 
         atomic_list = dossier["atomic_claims"]
@@ -339,7 +332,6 @@ class TestPhase7AuditableVerification:
             dossier = build_evidence_explorer_dossier(claim)
             dossier_str = str(dossier).lower()
 
-            # Ensure banned concepts are completely absent
             assert "truthfulness score" not in dossier_str
             assert "honesty score" not in dossier_str
             assert "politician rank" not in dossier_str
@@ -352,34 +344,24 @@ class TestPhase7AuditableVerification:
         dossier = build_evidence_explorer_dossier(claim_disputed)
 
         ev_comp = dossier["evidence_comparison"]
-        # Must have both supporting and contradicting evidence
         assert len(ev_comp["supporting"]) >= 1
         assert len(ev_comp["contradicting"]) >= 1
 
         v_reason = dossier["verification_reasoning"]
         assert v_reason["outcome"] == "disputed_evidence"
-        # Reasoning must explain the dual denominator baseline
         assert "per-capita" in v_reason["explanation"].lower() or "budget" in v_reason["explanation"].lower()
 
     def test_10_full_trajectory_dossier_contract(self):
         """Validate the full 8-step auditable verification trajectory contract."""
         dossier = build_evidence_explorer_dossier(FIXTURE_CLAIMS[0])
 
-        # 1. Original Political Claim
         assert dossier["original_claim"]["original_text"] is not None
-        # 2. Atomic Claims
         assert len(dossier["atomic_claims"]) > 0
-        # 3. Supporting Evidence
         assert "supporting" in dossier["evidence_comparison"]
-        # 4. Contradicting Evidence
         assert "contradicting" in dossier["evidence_comparison"]
-        # 5. Contextual Evidence
         assert "contextual" in dossier["evidence_comparison"]
-        # 6. Verification Reasoning
         assert "structured_reasoning" in dossier["verification_reasoning"]
-        # 7. Final Evidence Assessment
         assert "outcome" in dossier["verification_reasoning"]
-        # 8. Original Source Documents
         assert len(dossier["source_documents"]) > 0
         for doc in dossier["source_documents"]:
             assert "document_id" in doc

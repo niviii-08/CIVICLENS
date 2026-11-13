@@ -62,7 +62,6 @@ def db_session():
 @pytest.fixture
 def quality_fixture_graph(db_session):
     """Seed graph nodes and edges covering various quality tiers and conflicts."""
-    # 1. Scheme node
     node_scheme = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:SCHEME:DESAL_NEMMELI",
@@ -73,7 +72,6 @@ def quality_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # 2. Budget record node
     node_budget = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:BUDGET:DEMAND_34_2022",
@@ -84,7 +82,6 @@ def quality_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # 3. High quality statutory edge
     edge_statutory = GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_budget.node_id,
@@ -103,7 +100,6 @@ def quality_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # 4. Conflicting edge with incompatible status and conflicting date
     edge_news_conflicting = GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_scheme.node_id,
@@ -121,7 +117,6 @@ def quality_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # 5. Stale edge from an outdated document prior to 2018
     edge_stale = GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_scheme.node_id,
@@ -134,19 +129,17 @@ def quality_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # 6. Edge with incomplete provenance (missing hash and missing excerpt)
     edge_incomplete = GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_budget.node_id,
         target_node_id=node_scheme.node_id,
         relationship_type=GraphRelationshipType.MENTIONS,
-        evidence_reference=None,  # Missing excerpt!
+        evidence_reference=None,
         source_document_id="DOC-GENERIC-REFERENCE",
-        source_document_hash=None,  # Missing hash!
+        source_document_hash=None,
         is_test_fixture=True,
     )
 
-    # 7. Claim node with conflicting dialectical evidence
     node_claim = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:CLAIM:DESAL_OUTPUT_MET",
@@ -175,7 +168,6 @@ def quality_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # CAG Audit contradicts claim
     edge_cag_contra = GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_doc_cag.node_id,
@@ -190,7 +182,6 @@ def quality_fixture_graph(db_session):
         is_test_fixture=True,
     )
 
-    # Press release supports claim
     edge_pr_support = GraphStorageService.add_evidence_edge(
         db_session,
         source_node_id=node_doc_pr.node_id,
@@ -231,7 +222,6 @@ def test_1_multi_factor_evidence_quality_scorecard(db_session, quality_fixture_g
     assert scorecard["composite_score"] >= 0.85
     assert "HIGH_CREDIBILITY" in scorecard["interpretation"]
 
-    # Verify all 9 documented factors exist in the breakdown
     factors = scorecard["factor_breakdown"]
     expected_factors = [
         "source_authenticity",
@@ -248,7 +238,6 @@ def test_1_multi_factor_evidence_quality_scorecard(db_session, quality_fixture_g
         assert ef in factors
         assert 0.0 <= factors[ef] <= 1.0
 
-    # Verify documented inputs and limitations disclaimer
     assert "source_tier" in scorecard["documented_inputs"]
     assert "limitations" in scorecard
     assert "documentary provenance rigor" in scorecard["limitations"]
@@ -259,22 +248,18 @@ def test_2_source_reliability_tier_mapping():
     Validates documented publisher tier taxonomy:
     Statutory audits vs executive filings vs journalistic media vs citizen reports.
     """
-    # 1. Statutory audit (CAG)
     eval_cag = EvidenceQualityService.assess_source_reliability("DOC-CAG-PERFORMANCE-2022")
     assert eval_cag["source_tier"] == "STATUTORY_AUDIT_GAZETTE"
     assert eval_cag["authority_weight"] == 0.95
 
-    # 2. Executive Departmental Record (G.O.)
     eval_go = EvidenceQualityService.assess_source_reliability("DOC-GO-MS-43-MAWS")
     assert eval_go["source_tier"] == "EXECUTIVE_DEPARTMENTAL_RECORD"
     assert eval_go["authority_weight"] == 0.85
 
-    # 3. Journalistic Media (The Hindu / Dinamalar)
     eval_news = EvidenceQualityService.assess_source_reliability("DOC-NEWS-ARTICLE-DINAMALAR-2023")
     assert eval_news["source_tier"] == "VERIFIED_JOURNALISTIC_MEDIA"
     assert eval_news["authority_weight"] == 0.65
 
-    # 4. Uncited / Informal Source
     eval_none = EvidenceQualityService.assess_source_reliability(None)
     assert eval_none["source_tier"] == "PROVISIONAL_CITIZEN_CLAIM"
     assert eval_none["authority_weight"] == 0.40
@@ -329,12 +314,10 @@ def test_5_contradictory_claim_evidence_and_weight_comparison(db_session, qualit
     assert "supporting_edge" in comparison
     assert "contradicting_edge" in comparison
 
-    # Verify that CAG audit carries higher weight (0.95 tier)
     assert comparison["contradicting_edge"]["source_tier"] == "STATUTORY_AUDIT_GAZETTE"
     assert comparison["supporting_edge"]["source_tier"] == "VERIFIED_JOURNALISTIC_MEDIA"
     assert comparison["contradicting_edge"]["composite_score"] > comparison["supporting_edge"]["composite_score"]
 
-    # Verify non-automatic "newest is correct" rule
     assert "Newer publication date does not automatically override statutory audit" in comparison["methodological_note"]
 
 
@@ -371,7 +354,6 @@ def test_8_evidence_completeness_assessment(db_session, quality_fixture_graph):
     Assesses completeness of statutory evidence chain for an entity:
     Distinguishes completeness from quality scores or verification outcomes.
     """
-    # 1. Scheme with funding edge
     comp_scheme = EvidenceQualityService.assess_evidence_completeness(
         db_session, "NODE:SCHEME:DESAL_NEMMELI"
     )
@@ -380,7 +362,6 @@ def test_8_evidence_completeness_assessment(db_session, quality_fixture_graph):
     assert "MISSING_IMPLEMENTATION_RECORD" in comp_scheme["missing_elements"][0]
     assert comp_scheme["is_complete"] is False
 
-    # 2. Incomplete civic issue without response
     node_isolated_issue = GraphStorageService.create_or_get_node(
         db_session,
         node_id="NODE:ISSUE:ISOLATED_DRAIN",
@@ -420,7 +401,6 @@ def test_9_conflict_persistence_and_preservation(db_session, quality_fixture_gra
     assert rec.edge_a_id is not None
     assert rec.edge_b_id is not None
 
-    # Underlying conflicting edges MUST remain in the database (never suppressed!)
     edge_a = db_session.query(CivicEvidenceEdge).filter(CivicEvidenceEdge.edge_id == rec.edge_a_id).first()
     edge_b = db_session.query(CivicEvidenceEdge).filter(CivicEvidenceEdge.edge_id == rec.edge_b_id).first()
     assert edge_a is not None
@@ -436,17 +416,14 @@ def test_10_rest_api_quality_and_conflict_endpoints(db_session, quality_fixture_
     """
     import backend.api.graph as api_graph_module
 
-    # Pre-extract primitive ID before client calls
     edge_id = quality_fixture_graph["edge_statutory"].edge_id
 
-    # Prevent db.close() inside endpoints from closing db_session
     monkeypatch.setattr(db_session, "close", lambda: None)
     monkeypatch.setattr(api_graph_module, "SessionLocal", lambda: db_session)
 
     app = create_app()
     client = app.test_client()
 
-    # 1. GET /api/graph/conflicts
     resp_conf = client.get("/api/graph/conflicts?node_id=NODE:CLAIM:DESAL_OUTPUT_MET")
     assert resp_conf.status_code == 200
     data_c = resp_conf.get_json()
@@ -454,7 +431,6 @@ def test_10_rest_api_quality_and_conflict_endpoints(db_session, quality_fixture_
     assert "conflicts" in data_c["data"]
     assert len(data_c["data"]["conflicts"]) >= 1
 
-    # 2. GET /api/graph/edges/<edge_id>/quality
     resp_q = client.get(f"/api/graph/edges/{edge_id}/quality")
     assert resp_q.status_code == 200
     data_q = resp_q.get_json()
@@ -462,7 +438,6 @@ def test_10_rest_api_quality_and_conflict_endpoints(db_session, quality_fixture_
     assert "scorecard" in data_q["data"]
     assert data_q["data"]["scorecard"]["composite_score"] >= 0.85
 
-    # 3. GET /api/graph/nodes/<node_id>/completeness
     resp_comp = client.get("/api/graph/nodes/NODE:SCHEME:DESAL_NEMMELI/completeness")
     assert resp_comp.status_code == 200
     data_comp = resp_comp.get_json()

@@ -52,11 +52,9 @@ class TestPhase4IntelligenceLayer:
         """Test formula P_entity = 0.4*Title + 0.3*Lead + 0.3*min(1, Count/5)."""
         calc = EntityProminenceCalculator()
 
-        # Mentioned in Headline, Lead, and 5 times
         high_prom = calc.calculate({"found_in_headline": True, "found_in_lead": True, "mention_count": 5})
         assert high_prom == 1.0
 
-        # Mentioned in body only (1 mention, not lead, not headline)
         low_prom = calc.calculate({"found_in_headline": False, "found_in_lead": False, "mention_count": 1})
         assert low_prom == 0.06
 
@@ -101,32 +99,25 @@ class TestPhase4IntelligenceLayer:
         for ent in analysis["entities"]:
             assert "mention_count" in ent
             assert "prominence_score" in ent
-            # Ensure entity detection does not dictate sentiment
             assert "sentiment_bias_claim" not in ent
 
     def test_database_intelligence_entities_persistence(self, db_session):
         """Test database persistence for PoliticalPerson, PoliticalParty, GovernmentDepartment, PoliticalEntity, PoliticalEvent, and Topic."""
-        # 1. Party
         party = PoliticalParty(party_id="party_test", party_name="Test Party", party_code="TPC")
         db_session.add(party)
 
-        # 2. Person
         person = PoliticalPerson(person_id="person_test", name="Test Leader", party_id="party_test")
         db_session.add(person)
 
-        # 3. Department
         dept = GovernmentDepartment(dept_id="dept_test", dept_code="DOC", name_en="Department of Commerce")
         db_session.add(dept)
 
-        # 4. Entity
         entity = PoliticalEntity(entity_id="ent_test", entity_type="person", name="Test Leader", normalized_name="Test Leader")
         db_session.add(entity)
 
-        # 5. Event
         event = PoliticalEvent(event_id="evt_test", event_name="Test Event", event_date=datetime.now(timezone.utc).date())
         db_session.add(event)
 
-        # 6. Topic
         topic = Topic(topic_id="top_test", topic_code="top_test", topic_name="Test Policy Area")
         db_session.add(topic)
 
