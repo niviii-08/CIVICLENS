@@ -29,6 +29,7 @@ const navItems = [
   { name: 'Political Funding', href: '/funding', icon: CreditCard },
   { name: 'Bilingual News Framing', href: '/news', icon: Newspaper },
   { name: 'Policy Outcome Audit', href: '/policy-evaluation', icon: TrendingUp },
+  { name: 'Public Accountability', href: '/accountability', icon: FileCheck2, badge: 'Phase 11' },
   { name: 'Evidence Graph', href: '/graph', icon: Network },
   { name: 'Tracked & Saved', href: '/saved', icon: Bookmark, badge: 'Local' },
 ];
