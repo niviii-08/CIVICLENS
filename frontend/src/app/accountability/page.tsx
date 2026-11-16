@@ -12,12 +12,23 @@ import {
   ExternalLink,
   ChevronRight,
   Filter,
+  Users,
+  Search,
+  Download,
+  Database,
+  Cpu,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 import { MetricCard } from '../../components/MetricCard';
 import { PageHeader } from '../../components/PageHeader';
 
+type PortalPersona = 'all' | 'citizen' | 'journalist' | 'researcher' | 'admin';
+
 export default function AccountabilityPage() {
-  const [activeTab, setActiveTab] = useState<'cases' | 'procurement' | 'cag' | 'rti' | 'safeguards'>('cases');
+  const [activePersona, setActivePersona] = useState<PortalPersona>('all');
+  const [activeTab, setActiveTab] = useState<'cases' | 'procurement' | 'cag' | 'rti' | 'assurances' | 'safeguards'>('cases');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('All Districts');
 
   const cases = [
     {
@@ -25,7 +36,7 @@ export default function AccountabilityPage() {
       title: "KMUT Beneficiary Exclusion & Appellate Turnaround Verification",
       title_ta: "கலைஞர் மகளிர் உரிமைத் திட்ட விண்ணப்ப மேல்முறையீட்டு ஆய்வு",
       domain: "Social Welfare & DBT",
-      district: "Statewide (38 Districts)",
+      district: "Statewide",
       trigger: "Grievance Appeal Window Lag",
       status: "INDEPENDENTLY_VERIFIED",
       statusColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
@@ -39,7 +50,7 @@ export default function AccountabilityPage() {
       title: "GCC Kosasthalaiyar Basin SWD Package 4 Gradient Rectification",
       title_ta: "சென்னை மாநகராட்சி கொசஸ்தலையாறு வடிநில மழைநீர் வடிகால் பணி",
       domain: "Municipal Administration & Floods",
-      district: "Chennai (Zone 5 & 6)",
+      district: "Chennai",
       trigger: "Procurement Defect Notice",
       status: "CORRECTIVE_ACTION_PENDING",
       statusColor: "text-amber-400 bg-amber-500/10 border-amber-500/30",
@@ -53,7 +64,7 @@ export default function AccountabilityPage() {
       title: "Government High Schools ICT Lab Broadband Connectivity",
       title_ta: "அரசு மேல்நிலைப் பள்ளிகள் கணினி ஆய்வக இணைய வசதி",
       domain: "School Education",
-      district: "624 Schools Across 14 Districts",
+      district: "Madurai",
       trigger: "CAG Audit Paragraph 3.4.2",
       status: "RESPONSE_RECEIVED",
       statusColor: "text-blue-400 bg-blue-500/10 border-blue-500/30",
@@ -73,6 +84,7 @@ export default function AccountabilityPage() {
       award: "₹49.80 Cr (-4.96%)",
       contractor: "Sri Balaji Infrastructure Projects Ltd",
       workId: "WORK-GCC-SWD-KOS-2024",
+      district: "Chennai",
       physicalProgress: "78.5%",
       disbursed: "₹38.60 Cr",
       inspectionStatus: "PASSED_CONFORMANT",
@@ -85,6 +97,7 @@ export default function AccountabilityPage() {
       award: "₹17.90 Cr (-3.24%)",
       contractor: "Delta Earthmovers & Engineering Ltd",
       workId: "WORK-WRD-CAUV-2024",
+      district: "Thanjavur",
       physicalProgress: "100%",
       disbursed: "₹17.90 Cr",
       inspectionStatus: "PASSED_CONFORMANT",
@@ -133,6 +146,23 @@ export default function AccountabilityPage() {
     },
   ];
 
+  const assurances = [
+    {
+      code: "ASSUR-TNLA-16-2023-084",
+      mla: "Dr. T. Velmurugan (Panruti)",
+      minister: "Minister for School Education",
+      dept: "School Education Department",
+      date: "2023-04-12",
+      statement: "Broadband optical fiber connectivity through TANFINET will be commissioned across all 624 remaining secondary schools before December 2023.",
+      status: "IMPLEMENTATION_IN_PROGRESS",
+      statusColor: "text-blue-400 bg-blue-500/10 border-blue-500/30",
+    },
+  ];
+
+  const filteredCases = selectedDistrict === 'All Districts'
+    ? cases
+    : cases.filter(c => c.district === selectedDistrict || c.district === 'Statewide');
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-8 space-y-8">
       {/* Page Header */}
@@ -145,6 +175,96 @@ export default function AccountabilityPage() {
           </span>
         }
       />
+
+      {/* 4 Tailored User Personas Bar */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 ml-2">
+            <Users className="w-3.5 h-3.5 text-blue-400" /> UX Viewport:
+          </span>
+          {[
+            { key: 'all', label: '🌐 All Modules' },
+            { key: 'citizen', label: '👤 Citizen Portal' },
+            { key: 'journalist', label: '📰 Journalist Workbench' },
+            { key: 'researcher', label: '🔬 Researcher Portal' },
+            { key: 'admin', label: '⚙️ Admin Console' },
+          ].map((persona) => (
+            <button
+              key={persona.key}
+              onClick={() => setActivePersona(persona.key as PortalPersona)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activePersona === persona.key
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+              }`}
+            >
+              {persona.label}
+            </button>
+          ))}
+        </div>
+
+        {/* District Filter */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 font-medium">District Filter:</span>
+          <select
+            value={selectedDistrict}
+            onChange={(e) => setSelectedDistrict(e.target.value)}
+            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="All Districts">All Districts (Statewide)</option>
+            <option value="Chennai">Chennai</option>
+            <option value="Madurai">Madurai</option>
+            <option value="Thanjavur">Thanjavur</option>
+            <option value="Coimbatore">Coimbatore</option>
+            <option value="Salem">Salem</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Persona Custom Callouts */}
+      {activePersona === 'citizen' && (
+        <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/20 border border-blue-500/30 rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2 text-blue-300 font-bold text-sm">
+            <span>👤 பொது மக்கள் சேவை முகப்பு (Citizen Hyperlocal Explorer)</span>
+          </div>
+          <p className="text-xs text-slate-300">
+            உங்கள் மாவட்டத்தின் நலத்திட்டங்கள், குடிமக்கள் மனுக்களின் நிலை, மற்றும் நடைபெறும் பொதுப்பணிகளின் முன்னேற்றத்தை எளிமையாக அறியலாம். ஏதேனும் முரண்பாடு இருந்தால் ஆதாரங்களுடன் மேல்முறையீடு செய்யலாம்.
+          </p>
+        </div>
+      )}
+
+      {activePersona === 'journalist' && (
+        <div className="bg-gradient-to-r from-amber-900/30 to-orange-900/20 border border-amber-500/30 rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
+            <span>📰 Investigative Journalist Workbench</span>
+          </div>
+          <p className="text-xs text-slate-300">
+            Detect cross-source discrepancies between Assembly budget allocations, published tenders, contractor disbursements, and ground delivery. Export citation-ready dossiers with cryptographic provenance hashes.
+          </p>
+        </div>
+      )}
+
+      {activePersona === 'researcher' && (
+        <div className="bg-gradient-to-r from-emerald-900/30 to-teal-900/20 border border-emerald-500/30 rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+            <span>🔬 Academic Researcher & Policy Analyst Portal</span>
+          </div>
+          <p className="text-xs text-slate-300">
+            Access bitemporal valid-time data series, sub-document cell extraction lineages, ML Model cards with drift thresholds, and standardized OpenAPI schemas with zero causal leaps.
+          </p>
+        </div>
+      )}
+
+      {activePersona === 'admin' && (
+        <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/20 border border-purple-500/30 rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2 text-purple-300 font-bold text-sm">
+            <span>⚙️ Platform Administrator & Data Governance Console</span>
+          </div>
+          <p className="text-xs text-slate-300">
+            Monitor ingestion pipeline health, automated DPDPA 2023 privacy redactions, Right of Reply dispatch queues under BNS 2023 Sec 356, and audit logs.
+          </p>
+        </div>
+      )}
 
       {/* Epistemic Alert */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-start gap-3 text-xs text-slate-300">
@@ -159,7 +279,7 @@ export default function AccountabilityPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <MetricCard
           title="Accountability Cases"
-          value="3 Tracked"
+          value={`${filteredCases.length} Active`}
           change="6-Stage Resolution"
           changeType="positive"
           accentColor="blue"
@@ -198,6 +318,7 @@ export default function AccountabilityPage() {
           { key: 'procurement', label: '🏗️ Procurement & Works' },
           { key: 'cag', label: '📋 CAG Audit Follow-Through' },
           { key: 'rti', label: '🔍 RTI Intelligence & SLAs' },
+          { key: 'assurances', label: '⚖️ Ministerial Assurances' },
           { key: 'safeguards', label: '🛡️ Provenance & Safeguards' },
         ].map((tab) => (
           <button
@@ -225,7 +346,7 @@ export default function AccountabilityPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {cases.map((c) => (
+            {filteredCases.map((c) => (
               <div
                 key={c.id}
                 className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 hover:border-slate-700 transition-all space-y-4"
@@ -396,7 +517,38 @@ export default function AccountabilityPage() {
         </div>
       )}
 
-      {/* Tab 5: Provenance & Safeguards */}
+      {/* Tab 5: Ministerial Assurances */}
+      {activeTab === 'assurances' && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
+            Tamil Nadu Legislative Assembly (TNLA) Ministerial Assurances
+          </h3>
+          <p className="text-xs text-slate-400">
+            Rule 164 TNLA Follow-Through: Tracking floor commitments through the Committee on Government Assurances.
+          </p>
+          <div className="grid grid-cols-1 gap-4">
+            {assurances.map((a) => (
+              <div key={a.code} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-xs font-mono font-bold text-blue-400">{a.code}</span>
+                    <span className="text-xs text-slate-400 ml-2">Question: {a.mla}</span>
+                    <h4 className="text-sm font-bold text-white mt-1">{a.statement}</h4>
+                    <p className="text-xs text-slate-400 mt-0.5">Minister: {a.minister} ({a.dept}) • Date: {a.date}</p>
+                  </div>
+                  <div>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${a.statusColor}`}>
+                      {a.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 6: Provenance & Safeguards */}
       {activeTab === 'safeguards' && (
         <div className="space-y-6">
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">

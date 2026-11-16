@@ -379,6 +379,64 @@ def seed_phase11_data():
             diagnostic="Incremental webhook polling completed successfully with zero unverified status assumptions.",
         )
 
+        # ----------------------------------------------------------------------
+        # 8. Legislative Ministerial Assurances, G.O.s & ML Model Registry
+        # ----------------------------------------------------------------------
+        from backend.models.governance_advanced import (
+            MinisterialAssurance, GovernmentOrderLifecycle, MLModelRegistry,
+            AssuranceStatus, GOStatus, GOType, ModelTaskType
+        )
+
+        assur_1 = db.query(MinisterialAssurance).filter_by(assurance_code="ASSUR-TNLA-16-2023-084").first()
+        if not assur_1:
+            assur_1 = MinisterialAssurance(
+                assurance_code="ASSUR-TNLA-16-2023-084",
+                assembly_number=16,
+                session_number="Budget Session 2023",
+                question_number="Starred Q. 142",
+                mla_name="Dr. T. Velmurugan",
+                constituency_name="Panruti",
+                minister_name="Minister for School Education",
+                portfolio_department="School Education Department",
+                date_given=date(2023, 4, 12),
+                assurance_statement="Broadband optical fiber connectivity through TANFINET will be commissioned across all 624 remaining secondary schools before December 2023.",
+                assurance_statement_ta="மீதமுள்ள 624 அரசுப் பள்ளிகளுக்கும் டான்ஃபின்நெட் மூலம் இணைய வசதி வழங்கப்படும்.",
+                status=AssuranceStatus.IMPLEMENTATION_IN_PROGRESS,
+            )
+            db.add(assur_1)
+
+        go_1 = db.query(GovernmentOrderLifecycle).filter_by(go_number="G.O. (Ms) No. 34").first()
+        if not go_1:
+            go_1 = GovernmentOrderLifecycle(
+                go_number="G.O. (Ms) No. 34",
+                issuing_department="Special Programme Implementation Department",
+                go_type=GOType.GO_MS,
+                issue_date=date(2023, 7, 7),
+                subject_summary="Implementation guidelines, eligibility criteria, and grievance mechanism for Kalaignar Magalir Urimai Thogai Scheme.",
+                subject_summary_ta="கலைஞர் மகளிர் உரிமைத் திட்ட செயலாக்க வழிகாட்டு நெறிமுறைகள்.",
+                status=GOStatus.ACTIVE,
+                full_gazette_url="https://www.tn.gov.in/go_view/dept/34",
+                gazette_pdf_sha256=hashlib.sha256(b"GO-MS-34-SPID").hexdigest(),
+            )
+            db.add(go_1)
+
+        model_1 = db.query(MLModelRegistry).filter_by(model_identifier="ISOLATION_FOREST_BUDGET_v2.1").first()
+        if not model_1:
+            model_1 = MLModelRegistry(
+                model_identifier="ISOLATION_FOREST_BUDGET_v2.1",
+                model_name="Budget Line-Item Variance Anomaly Detector",
+                task_type=ModelTaskType.ANOMALY_DETECTION,
+                model_version="2.1.0",
+                training_dataset_sha256=hashlib.sha256(b"DATASET-BUDGET-2019-2024").hexdigest(),
+                primary_metric_name="OUTLIER_RECALL",
+                primary_metric_value=0.942,
+                drift_threshold=0.05,
+                last_evaluated_date=date(2024, 11, 1),
+                is_active_in_production=True,
+                automated_accusation_permitted=False,
+            )
+            db.add(model_1)
+
         db.commit()
         print("Phase 11 seed records committed successfully!")
 

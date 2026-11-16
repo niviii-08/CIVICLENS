@@ -26,6 +26,7 @@ from backend.api.procurement import procurement_bp
 from backend.api.cag_audit import cag_audit_bp
 from backend.api.rti import rti_bp
 from backend.api.provenance import provenance_bp
+from backend.api.governance_advanced import governance_advanced_bp
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -79,6 +80,7 @@ api_bp.register_blueprint(procurement_bp)
 api_bp.register_blueprint(cag_audit_bp)
 api_bp.register_blueprint(rti_bp)
 api_bp.register_blueprint(provenance_bp)
+api_bp.register_blueprint(governance_advanced_bp)
 
 namespaces = []
 
