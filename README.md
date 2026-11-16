@@ -1,8 +1,8 @@
 # CIVICLENS TN
 
-[![Project Status](https://img.shields.io/badge/Status-Project%20Ready%20with%20Known%20Limitations-orange.svg)](#final-system-status)
-[![Phases Completed](https://img.shields.io/badge/Phases-1%20through%2010%20Complete-success.svg)](#system-architecture--major-phases)
-[![Tests](https://img.shields.io/badge/Tests-377%20Passed%20%7C%20100%25-brightgreen.svg)](#testing-guide)
+[![Project Status](https://img.shields.io/badge/Status-Project%20Ready%20%7C%20Phase%2011%20Production%20Active-brightgreen.svg)](#final-system-status)
+[![Phases Completed](https://img.shields.io/badge/Phases-1%20through%2011%20Complete-success.svg)](#system-architecture--major-phases)
+[![Tests](https://img.shields.io/badge/Tests-399%20Passed%20%7C%20100%25-brightgreen.svg)](#testing-guide)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
@@ -50,11 +50,13 @@ flowchart TD
     subgraph Synthesis & Evaluation
         P1 & P3 & P4 & P5 & P6 & P7 & P8 --> P9[Multi-Hop Civic Evidence Graph]
         P9 --> P10[Policy Outcome & Impact Evaluation]
+        P10 --> P11[Public Accountability & Procurement Lifecycle]
     end
 
     subgraph Presentation & Consumption
-        P9 & P10 --> API[Flask Modular REST API Gateway: 14 Blueprints]
-        API --> ST[Streamlit Multi-Page Citizen Explorer: 10 Modules]
+        P11 --> API[Flask Modular REST API Gateway: 19 Blueprints]
+        API --> ST[Streamlit Multi-Page Citizen Explorer: 11 Modules]
+        API --> NEXT[Next.js 14 Web Portal: Citizen, Journalist & Admin Views]
         API --> EXP[Audit Dossiers: MD / JSON / CSV Exports]
     end
 ```
@@ -70,6 +72,7 @@ flowchart TD
 8. **Citizen Grievance & SLA Intelligence:** Classifies civic complaints across 14 standardized domains with automated DPDPA 2023 PII scrubbing.
 9. **Unified Civic Evidence Graph:** Connects entities across modules into an explainable, bidirectional knowledge graph with 9-factor evidence scoring.
 10. **Policy Outcome & Impact Evaluation:** Tracks real-world policy outcomes against published baselines and targets with non-causal epistemic guardrails.
+11. **Public Accountability, Procurement & Evidence Integrity:** Complete 6-stage accountability lifecycle (`Discovery` ➔ `Attribution` ➔ `Response` ➔ `Action` ➔ `Verification` ➔ `Dossier`), procurement & works pipeline, CAG audit observation ATR tracking, 30-day RTI SLA monitoring, bitemporal data modeling, and BNS 2023 Sec 356 defamation guardrails.
 
 ---
 
@@ -176,11 +179,14 @@ Open your browser at `http://localhost:3000/`. Next.js automatically proxies all
 Execute the automated test suite using `pytest`:
 
 ```powershell
+# Run the complete Phase 11 Accountability & Procurement test suite (22 tests)
+python -m pytest tests/unit/test_phase11_accountability_lifecycle.py tests/unit/test_phase11_procurement_intelligence.py tests/unit/test_phase11_cag_and_rti.py tests/unit/test_phase11_evidence_provenance_and_safeguards.py tests/integration/test_phase11_end_to_end.py -v
+
 # Run the complete Phase 10 unit and integration test suite (77 tests)
-.\venv\Scripts\python.exe -m pytest tests/ -k "phase10" -q
+python -m pytest tests/ -k "phase10" -q
 
 # Run Phase 9 evidence graph tests (94 tests)
-.\venv\Scripts\python.exe -m pytest tests/unit/ -k "phase9" -q
+python -m pytest tests/unit/ -k "phase9" -q
 
 # Run Phase 8 grievance intelligence tests (66 tests)
 .\venv\Scripts\python.exe -m pytest tests/unit/ -k "phase8" -q
@@ -215,20 +221,21 @@ For evaluators, researchers, or civic analysts, the following sequence provides 
 
 ## 9. Final System Status & Limitations
 
-### Final Status: **`PROJECT READY WITH KNOWN LIMITATIONS`**
+### Final Status: **`PROJECT READY | PHASE 11 PRODUCTION ACTIVE`**
 
-### Documented Data Limitations
+### Documented Data Lineage & Safeguards
 1. **Audit Tabling Lags:** Comptroller and Auditor General (CAG) Finance Accounts for Tamil Nadu FY 2024-25 are awaiting legislative tabling. FY 2024-25 expenditures represent Revised Estimates (RE) rather than closed audited actuals.
 2. **Observational Bounds:** School attendance gains (+8.8 pp) and higher education GER gains (+4.5 pp) represent observed associations. Causality is never asserted without randomized experimental designs or microdata panel models.
-3. **Appellate Window Synchronization:** Grievance and scheme appeal windows (e.g. second-tier exclusion appeals) synchronize on a quarterly schedule.
+3. **Appellate Window Synchronization:** Resolved in Phase 11.6 through incremental event-driven sync polling, automated webhook logging, and explicit retention of `PENDING_APPELLATE_REVIEW` status rather than premature rejection assumptions.
 
 For exhaustive data lineage and methodology details, consult:
+- [`docs/PHASE11_ACCOUNTABILITY_AND_INTEGRITY.md`](docs/PHASE11_ACCOUNTABILITY_AND_INTEGRITY.md)
 - [`docs/FINAL_PROJECT_AUDIT.md`](docs/FINAL_PROJECT_AUDIT.md)
 - [`docs/FINAL_VALIDATION_REPORT.md`](docs/FINAL_VALIDATION_REPORT.md)
 - [`docs/DATA_SOURCES_AND_LIMITATIONS.md`](docs/DATA_SOURCES_AND_LIMITATIONS.md)
 
 ---
 
-## 10. Development Conclusion
+## 10. Development Status
 
-The planned scope of development for CIVICLENS TN concluded at **Phase 10**. No Phase 11 features have been introduced. The codebase, database, APIs, frontend dashboards, and documentation are verified and stable.
+CIVICLENS TN has successfully advanced through **Phase 11 (Public Accountability, Evidence Integrity & Production Readiness)**. The codebase, database, APIs, multi-page Streamlit dashboards, Next.js 14 web portals, and comprehensive automated test suites are fully verified and operational.
