@@ -21,6 +21,11 @@ from backend.api.reports import reports_bp
 from backend.api.tracking import tracking_bp
 from backend.api.freshness import freshness_bp
 from backend.api.acquisition import acquisition_bp
+from backend.api.accountability import accountability_bp
+from backend.api.procurement import procurement_bp
+from backend.api.cag_audit import cag_audit_bp
+from backend.api.rti import rti_bp
+from backend.api.provenance import provenance_bp
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -69,6 +74,11 @@ api_bp.register_blueprint(reports_bp)
 api_bp.register_blueprint(tracking_bp)
 api_bp.register_blueprint(freshness_bp)
 api_bp.register_blueprint(acquisition_bp)
+api_bp.register_blueprint(accountability_bp)
+api_bp.register_blueprint(procurement_bp)
+api_bp.register_blueprint(cag_audit_bp)
+api_bp.register_blueprint(rti_bp)
+api_bp.register_blueprint(provenance_bp)
 
 namespaces = []
 
